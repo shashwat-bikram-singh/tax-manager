@@ -46,8 +46,6 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
   const form = useForm<FiscalyearFormValues>({
     resolver: zodResolver(fiscalyearSchema) as any,
     defaultValues: {
-      name: initialData?.name ?? "",
-      alias: initialData?.alias ?? "",
       startMiti: initialData?.startMiti ?? "",
       endMiti: initialData?.endMiti ?? "",
     },
@@ -94,7 +92,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
 
   // -------------------- UI --------------------
   return (
-    <div className=" p-2 bg-gradient-to-br from-gray-50 to-blue-50/30 ">
+    <div className=" p-2 bg-white">
 
       {/* Header Section */}
       <div className="mb-8">
@@ -104,11 +102,11 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
               <h1 className="text-2xl font-bold text-gray-900">
                 {mode === "add" ? "Add New Fiscal Year" : "Edit Fiscal Year"}
               </h1>
-              <p className="text-gray-600 text-sm mt-1">
+              {/* <p className="text-gray-600 text-sm mt-1">
                 {mode === "add"
                   ? "Create a new fiscal year"
                   : `Update details for ${initialData?.name}`}
-              </p>
+              </p> */}
             </div>
           </div>
 
@@ -125,6 +123,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
 
 
       </div>
+      
 
       {/* Form Section */}
 
@@ -150,7 +149,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="Enter name (e.g. 2080/081)"
+                          placeholder="Enter name (eg. 80/81)"
                           className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                           disabled={loading}
                         />
@@ -192,12 +191,6 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                         Start Miti <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        {/* <NepaliDatePicker
-                          inputClassName="form-control w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                          className="w-full"
-                          value={field.value}
-                          onChange={(value: string) => field.onChange(value)}
-                          options={{ calenderLocale: "en", valueLocale: "en" }} /> */}
                         <NepaliDatePicker
                           id="nepali-datepicker"
                           name="nepali-datepicker"

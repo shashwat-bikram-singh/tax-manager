@@ -2,79 +2,122 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
+import { 
+  LayoutDashboard, 
+  Building, 
+  FolderOpen, 
+  Scale, 
+  BarChart3, 
+  Calendar, 
+  Building2, 
+  LogOut, 
+  X
+} from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
+  onClose?: () => void; // Added for mobile close functionality
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { logout } = useAuthStore();
   const navigate = useNavigate();
   const role = useAuthStore(state => state.role);
-  // const subOffice = sessionStorage.getItem("SubOffice");
-  // const username = sessionStorage.getItem("Username");
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
+  // Mapping icon names to Lucide components
+  const iconMap: Record<string, React.ElementType> = {
+    dashboard: LayoutDashboard,
+    domain: Building,
+    folder_shared: FolderOpen,
+    gavel: Scale,
+    analytics: BarChart3,
+    CalendarDays: Calendar,
+    corporate_fare: Building2,
+    logout: LogOut,
+  };
+
   return (
-    <aside className={cn(
-      "h-full flex flex-col bg-surface-container-low transition-all duration-300",
-      isOpen ? "w-64" : "w-20"
-    )}>
+    <aside 
+      className={cn(
+        "h-full flex flex-col bg-slate-50 border-r border-slate-200 transition-all duration-300 relative z-20",
+        isOpen ? "w-60" : "w-20"
+      )}
+    >
       {/* Branding */}
-      <div className="flex items-center gap-3 p-6">
-        <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shrink-0">
-          <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance</span>
-        </div>
-        {isOpen && (
-          <div className="overflow-hidden">
-            <h1 className="font-headline font-black text-primary leading-tight truncate">TU PMS</h1>
-            <p className="text-[10px] uppercase tracking-widest text-outline font-bold truncate">Property Authority</p>
+      <div className="flex items-center justify-between p-6 h-20">
+        <div className="flex items-center gap-3 overflow-hidden">
+          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+            <Building2 className="text-white w-6 h-6" />
           </div>
+          {isOpen && (
+            <div className="overflow-hidden transition-opacity duration-200">
+              <h1 className="font-bold text-slate-900 leading-tight truncate text-lg">TU PMS</h1>
+              <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold truncate">Property Authority</p>
+            </div>
+          )}
+        </div>
+        {/* Close button for mobile view */}
+        {!isOpen && (
+           <div className="w-10 h-10 flex items-center justify-center text-slate-400">
+             {/* Placeholder or minimal icon if needed */}
+           </div>
         )}
       </div>  
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
         <NavItem
           to="/"
           icon="dashboard"
           label="Dashboard"
           isOpen={isOpen}
+          iconMap={iconMap}
         />
         <NavItem
           to="/property-inventory"
           icon="domain"
           label="Property Inventory"
           isOpen={isOpen}
+          iconMap={iconMap}
         />
         <NavItem
           to="/document-vault"
           icon="folder_shared"
           label="Document Vault"
           isOpen={isOpen}
+          iconMap={iconMap}
         />
         <NavItem
           to="/tax-compliance"
           icon="gavel"
           label="Tax Compliance"
           isOpen={isOpen}
-          isActiveOverride={true}
+          iconMap={iconMap}
         />
         <NavItem
           to="/analytics"
           icon="analytics"
           label="Analytics"
           isOpen={isOpen}
+          iconMap={iconMap}
+        />
+        <NavItem
+          to="/fiscalyear"
+          icon="CalendarDays"
+          label="Fiscal Year"
+          isOpen={isOpen}
+          iconMap={iconMap}
         />
 
-        {/* Existing Modules (Simplified or Collapsible) - can be added back if needed */}
+        {/* Admin Sections */}
         {role === "Admin" && isOpen && (
           <div className="pt-6 pb-2 px-3">
-            <p className="text-[10px] uppercase tracking-widest text-outline font-bold">Administration</p>
+            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Administration</p>
           </div>
         )}
         {(role === "Admin" || role === "OfficeAdmin") && (
@@ -83,29 +126,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
             icon="corporate_fare"
             label="Sub Offices"
             isOpen={isOpen}
+            iconMap={iconMap}
           />
         )}
       </nav>
 
       {/* Bottom Actions */}
-      <div className="p-4 space-y-4">
-        {/* {isOpen && (
-          <button className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-            <span className="material-symbols-outlined text-sm">add_circle</span>
-            Generate Report
-          </button>
-        )} */}
-
-
-        <div className={cn("pt-4 border-t border-outline/10 space-y-1", !isOpen && "flex flex-col items-center")}>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2 text-outline text-sm hover:text-secondary transition-colors w-full text-left"
-          >
-            <span className="material-symbols-outlined">logout</span>
-            {isOpen && <span>Logout</span>}
-          </button>
-        </div>
+      <div className="p-4 border-t border-slate-200">
+        <button
+          onClick={handleLogout}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 text-slate-500 text-sm hover:text-red-600 hover:bg-red-50 transition-colors w-full rounded-lg group",
+            !isOpen && "justify-center"
+          )}
+        >
+          <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          {isOpen && <span>Logout</span>}
+        </button>
       </div>
     </aside>
   );
@@ -116,22 +153,34 @@ interface NavItemProps {
   icon: string;
   label: string;
   isOpen: boolean;
-  isActiveOverride?: boolean;
+  iconMap: Record<string, React.ElementType>;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isOpen, isActiveOverride }) => {
+const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isOpen, iconMap }) => {
+  const IconComponent = iconMap[icon];
+
   return (
     <NavLink
       to={to}
+      end
       className={({ isActive }) => cn(
         "flex items-center gap-3 px-3 py-2.5 transition-all rounded-lg text-sm font-medium",
-        (isActive || isActiveOverride) ? "bg-white text-primary shadow-sm font-semibold" : "text-outline hover:bg-white/60 hover:text-primary",
-        !isOpen && "justify-center px-0"
+        isActive 
+          ? "bg-white text-blue-600 shadow-sm border border-slate-100" 
+          : "text-slate-600 hover:bg-white hover:text-slate-900",
+        !isOpen && "justify-center px-0 py-2.5"
       )}
-      title={label}
+      title={!isOpen ? label : undefined}
     >
-      <span className="material-symbols-outlined">{icon}</span>
-      {isOpen && <span>{label}</span>}
+      {IconComponent && (
+        <IconComponent 
+          className={cn(
+            "w-5 h-5 shrink-0",
+            // Optional: Make icon slightly larger or colored when active
+          )} 
+        />
+      )}
+      {isOpen && <span className="truncate">{label}</span>}
     </NavLink>
   );
 };

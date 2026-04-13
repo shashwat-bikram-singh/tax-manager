@@ -38,7 +38,7 @@ const MainLayout: React.FC = () => {
         {/* Desktop Sidebar - Fixed with external toggle */}
         <aside className={cn(
           "hidden lg:flex flex-col h-screen sticky top-0 transition-all duration-300 z-50 ambient-shadow",
-          isSidebarOpen ? "w-64" : "w-20"
+          isSidebarOpen ? "w-60" : "w-20"
         )}>
           <Sidebar isOpen={isSidebarOpen} />
         </aside>

@@ -43,46 +43,79 @@ import {
   ChevronsLeft,
   ChevronsRight,
   CirclePower,
+  FileX,
+  CheckCircle2,
+  Clock,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Card } from "@/components/ui/card";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import { useMutate } from "@/hooks/useMutate";
-import type { FiscalYear } from "@/type/fiscalyear";
 import FiscalyearForm from "./fiscalyear-form";
+import type { FiscalYear } from "@/type/fiscalyear";
+
+// Helper Component for Status Badges
+const StatusBadge: React.FC<{ status: number }> = ({ status }) => {
+  const variants: Record<number, { label: string; className: string; icon: React.ReactNode }> = {
+    0: { label: "Inactive", className: "bg-slate-100 text-slate-600 border-slate-200", icon: <XCircle className="w-3 h-3 mr-1" /> },
+    1: { label: "Active", className: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: <CheckCircle2 className="w-3 h-3 mr-1" /> },
+    2: { label: "Pending", className: "bg-amber-100 text-amber-700 border-amber-200", icon: <Clock className="w-3 h-3 mr-1" /> },
+    3: { label: "Closed", className: "bg-red-100 text-red-700 border-red-200", icon: <XCircle className="w-3 h-3 mr-1" /> },
+  };
+
+  const config = variants[status] || variants[0];
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
+      {config.icon}
+      {config.label}
+    </span>
+  );
+};
+
+// Helper Component for Active Toggle Badge
+const ActiveBadge: React.FC<{ isActive: boolean }> = ({ isActive }) => {
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-colors ${
+      isActive 
+        ? "bg-blue-50 text-blue-700 border-blue-200" 
+        : "bg-gray-50 text-gray-500 border-gray-200"
+    }`}>
+      {isActive ? (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mr-1.5 animate-pulse"></span>
+          Current
+        </>
+      ) : (
+        "Archived"
+      )}
+    </span>
+  );
+};
 
 export default function FiscalyearList() {
-  const { items: fyData, isLoadingItems, error: fetchError } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
+  const { items: fyData, isLoadingItems } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
   const { delete: deleteFy } = useMutate<FiscalYear>("/api/fiscalyear", "fiscalyear");
   const { update } = useMutate<FiscalYear>("/api/changefiscalyear", "fiscalyear");
+  
   const [fyToActive, setFyToActive] = useState<FiscalYear | null>(null);
 
-  function getfiscalYears(fyData: any) {
-    if (!fyData) return [];
-    if (Array.isArray(fyData)) return fyData;
-    const dataCandidate = (fyData as any).Data || (fyData as any).data;
-    if (Array.isArray(dataCandidate)) return dataCandidate;
-
-    const items: FiscalYear[] = [];
-    let i = 0;
-    while ((fyData as any)[i] !== undefined) {
-      items.push((fyData as any)[i]);
-      i++;
-    }
-    if (items.length > 0) return items;
-
+  function getfiscalYears(data: any): FiscalYear[] {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    const nestedData = data.data || data.Data;
+    if (Array.isArray(nestedData)) return nestedData;
     return [];
   }
 
   const fiscalYears = getfiscalYears(fyData);
-
-
 
   const [editingFy, setEditingFy] = useState<FiscalYear | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  
   const [sortConfig, setSortConfig] = useState<{
     key: keyof FiscalYear;
     direction: "ascending" | "descending";
@@ -91,109 +124,86 @@ export default function FiscalyearList() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activeDialogOpen, setActiveDialogOpen] = useState(false);
   const [fyToDelete, setFyToDelete] = useState<FiscalYear | null>(null);
+  
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >({
     sn: true,
-    name: true,
-    alias: true,
+    fiscalYear: true,
+    status: true,
     startMiti: true,
     endMiti: true,
     isActive: true,
     actions: true,
   });
 
-
   const handleEdit = (id: number) => {
     const item = fiscalYears.find((v) => v.id === id);
-    if (item) {
-      setEditingFy(item);
-    }
+    if (item) setEditingFy(item);
   };
 
-  const handleAddNew = () => {
-    setIsAddingNew(true);
-  };
+  const handleAddNew = () => setIsAddingNew(true);
 
   function sortFiscalYears<T extends Record<string, any>>(
     items: T[],
     sortConfig: { key: keyof T; direction: "ascending" | "descending" } | null
   ): T[] {
     const sortableItems = [...items];
-
     if (!sortConfig) return sortableItems;
-
     sortableItems.sort((a, b) => {
       const aValue = a[sortConfig.key];
       const bValue = b[sortConfig.key];
-
       if (aValue == null || bValue == null) return 0;
-
       if (typeof aValue === "string" && typeof bValue === "string") {
         return sortConfig.direction === "ascending"
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
       }
-
       if (typeof aValue === "number" && typeof bValue === "number") {
-        return sortConfig.direction === "ascending"
-          ? aValue - bValue
-          : bValue - aValue;
+        return sortConfig.direction === "ascending" ? aValue - bValue : bValue - aValue;
       }
-
+      if (typeof aValue === "boolean" && typeof bValue === "boolean") {
+         return sortConfig.direction === "ascending" 
+          ? (aValue === bValue ? 0 : aValue ? 1 : -1)
+          : (aValue === bValue ? 0 : aValue ? -1 : 1);
+      }
       return 0;
     });
-
     return sortableItems;
   }
 
   const sortedFiscalYears = sortFiscalYears(fiscalYears, sortConfig);
 
   const filteredFiscalYears = sortedFiscalYears.filter((item) => {
-    const matchesSearch =
-      searchTerm === "" ||
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.alias && item.alias.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesSearch;
+    return searchTerm === "" ||
+      (item.fiscalYear && item.fiscalYear.toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
-  // Pagination
   const totalPages = Math.ceil(filteredFiscalYears.length / entriesPerPage);
   const startIndex = (currentPage - 1) * entriesPerPage;
-  const paginatedFiscalYears =
-    filteredFiscalYears.slice(startIndex, startIndex + entriesPerPage);
+  const paginatedFiscalYears = filteredFiscalYears.slice(startIndex, startIndex + entriesPerPage);
 
-  // Request sort
   const requestSort = (key: keyof FiscalYear) => {
     let direction: "ascending" | "descending" = "ascending";
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === "ascending"
-    ) {
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "ascending") {
       direction = "descending";
     }
     setSortConfig({ key, direction });
   };
 
-  // Get sort indicator
   const getSortIndicator = (key: keyof FiscalYear) => {
     if (!sortConfig || sortConfig.key !== key) return null;
     return sortConfig.direction === "ascending" ? (
-      <ChevronUp className="inline h-4 w-4" />
+      <ChevronUp className="inline h-3 w-3 ml-1 text-slate-400" />
     ) : (
-      <ChevronDown className="inline h-4 w-4" />
+      <ChevronDown className="inline h-3 w-3 ml-1 text-slate-400" />
     );
   };
 
-  // Page navigation
   const goToPage = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
-  // Handle delete
   const confirmDelete = (item: FiscalYear) => {
     setFyToDelete(item);
     setDeleteDialogOpen(true);
@@ -205,8 +215,7 @@ export default function FiscalyearList() {
   };
 
   const handleActive = () => {
-    if (!fyToActive) return;
-
+    if (!fyToActive || !fyToActive.id) return;
     update.mutate({ id: fyToActive.id } as unknown as FiscalYear, {
       onSuccess: () => {
         toast.success("Fiscal Year activated successfully ✅", {
@@ -215,255 +224,211 @@ export default function FiscalyearList() {
         setActiveDialogOpen(false);
         setFyToActive(null);
       },
-      onError: () => {
-        toast.error("Failed to activate Fiscal Year ❌");
-      },
+      onError: () => toast.error("Failed to activate Fiscal Year ❌"),
     });
   };
 
-
   const handleDelete = async () => {
-    if (fyToDelete) {
+    if (fyToDelete && fyToDelete.id) {
       try {
         await deleteFy.mutateAsync(fyToDelete.id);
-        toast.success("Fiscal Year deleted successfully ✅", {
-          style: { background: "#10b981", color: "white" },
-        });
+        toast.success("Fiscal Year deleted successfully ✅");
         setDeleteDialogOpen(false);
         setFyToDelete(null);
       } catch (err) {
-        toast.error("Failed to delete fiscal year", {
-          style: { background: "#c6212d", color: "white" },
-        });
+        toast.error("Failed to delete fiscal year");
       }
     }
   };
 
-  if (isLoadingItems) return <div className="p-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
-  if (fetchError) return <div className="p-4 text-red-500 bg-red-50 rounded-lg">Failed to load fiscal years: {fetchError.message}</div>;
+  if (isLoadingItems) {
+    return (
+      <div className="p-8 flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
-  // Mobile responsive card view
   const MobileFiscalyearCard = ({ item }: { item: FiscalYear }) => (
-    <div className="bg-white rounded-lg border p-4 mb-4 shadow-sm">
-      <div className="flex justify-between items-start mb-3">
+    <div className="bg-white rounded-xl border border-slate-200 p-5 mb-4 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="font-semibold text-lg">{item.name}</h3>
-          <p className="text-sm text-gray-500">{item.alias}</p>
+          <h3 className="font-bold text-lg text-slate-900">{item.fiscalYear}</h3>
+          <div className="mt-2 flex gap-2">
+            <ActiveBadge isActive={!!item.isActive} />
+            <StatusBadge status={item.status} />
+          </div>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+      
+      <div className="bg-slate-50 rounded-lg p-3 mb-4 grid grid-cols-2 gap-4">
         <div>
-          <span className="text-gray-400">Start Miti:</span> {item.startMiti || "-"}
+          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Start Miti</span>
+          <span className="text-sm font-medium text-slate-700">{item.startMiti || "-"}</span>
         </div>
         <div>
-          <span className="text-gray-400">End Miti:</span> {item.endMiti || "-"}
+          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-1">End Miti</span>
+          <span className="text-sm font-medium text-slate-700">{item.endMiti || "-"}</span>
         </div>
       </div>
-      <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 w-8 p-0"
-          onClick={() => handleEdit(item.id)}
-        >
-          <Pencil size={16} />
+
+      <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+        <Button size="sm" variant="ghost" className="text-green-600 hover:bg-green-50 h-9 w-9 p-0" onClick={() => confirmActive(item)} title="Activate">
+          <CirclePower size={18} />
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-          onClick={() => confirmDelete(item)}
-        >
-          <Trash size={16} />
+        <Button size="sm" variant="ghost" className="text-slate-600 hover:bg-slate-100 h-9 w-9 p-0" onClick={() => handleEdit(item.id!)} title="Edit">
+          <Pencil size={18} />
+        </Button>
+        <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50 h-9 w-9 p-0" onClick={() => confirmDelete(item)} title="Delete">
+          <Trash size={18} />
         </Button>
       </div>
     </div>
   );
 
   return (
-    <div className="p-4 md:p-6 bg-white rounded-lg shadow-sm">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h2 className="text-2xl font-semibold text-gray-800">Fiscal Year List</h2>
-        <Button
-          className="bg-blue-600 hover:bg-blue-700"
-          onClick={handleAddNew}
-        >
-          Add Fiscal Year
+    <div className="p-4 md:p-1 max-w-9xl mx-auto space-y-4">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Fiscal Years</h2>
+          <p className="text-sm text-slate-500 mt-1">Manage your organization's fiscal periods.</p>
+        </div>
+        <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white" onClick={handleAddNew}>
+          <span className="mr-2 text-lg leading-none">+</span> Add Fiscal Year
         </Button>
       </div>
 
-      {/* Controls */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
-        <div className="relative w-full lg:w-80">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+      {/* Controls Bar */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+        <div className="relative w-full
+         lg:w-96 group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
           <Input
             type="search"
             placeholder="Search fiscal years..."
-            className="pl-8 w-full"
+            className="pl-9 w-50 bg-slate-50 border-slate-200 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           />
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-          <div className="hidden sm:flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto">
-                  Columns <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {Object.entries(columnVisibility).map(([key, visible]) => (
-                  <DropdownMenuCheckboxItem
-                    key={key}
-                    checked={visible}
-                    onCheckedChange={() =>
-                      setColumnVisibility({
-                        ...columnVisibility,
-                        [key]: !visible,
-                      })
-                    }
-                  >
-                    {key.charAt(0).toUpperCase() + key.slice(1)}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+        <div className="flex items-center gap-3 w-full lg:w-auto justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50">
+                <span className="hidden sm:inline mr-2">Columns</span> 
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {Object.entries(columnVisibility).map(([key, visible]) => (
+                <DropdownMenuCheckboxItem
+                  key={key}
+                  checked={visible}
+                  onCheckedChange={() => setColumnVisibility({ ...columnVisibility, [key]: !visible })}
+                >
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      {/* Desktop Table (hidden on mobile) */}
-      <div className="hidden md:block rounded-md border mb-6">
+      {/* Desktop Table */}
+      <div className="hidden md:block rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <Table>
-          <TableHeader>
-            <TableRow>
+          <TableHeader className="bg-slate-50 border-b border-slate-200">
+            <TableRow className="hover:bg-slate-50/50">
               {columnVisibility.sn && (
-                <TableHead className="w-8">S.N.</TableHead>
+                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">S.N.</TableHead>
               )}
-              {columnVisibility.name && (
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => requestSort("name")}
-                >
-                  Name {getSortIndicator("name")}
+              {columnVisibility.fiscalYear && (
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("fiscalYear")}>
+                  Fiscal Year {getSortIndicator("fiscalYear")}
                 </TableHead>
               )}
-              {columnVisibility.alias && (
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => requestSort("alias")}
-                >
-                  Alias {getSortIndicator("alias")}
+              {columnVisibility.status && (
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("status")}>
+                  Status {getSortIndicator("status")}
                 </TableHead>
               )}
               {columnVisibility.startMiti && (
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => requestSort("startMiti")}
-                >
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("startMiti")}>
                   Start Miti {getSortIndicator("startMiti")}
                 </TableHead>
               )}
               {columnVisibility.endMiti && (
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => requestSort("endMiti")}
-                >
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("endMiti")}>
                   End Miti {getSortIndicator("endMiti")}
                 </TableHead>
               )}
               {columnVisibility.isActive && (
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => requestSort("isActive")}
-                >
-                  Active {getSortIndicator("isActive")}
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("isActive")}>
+                  Current {getSortIndicator("isActive")}
                 </TableHead>
               )}
               {columnVisibility.actions && (
-                <TableHead className="text-center">Actions</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 w-24">Actions</TableHead>
               )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedFiscalYears.length > 0 ? (
               paginatedFiscalYears.map((item, index) => (
-                <TableRow key={item.id}>
+                <TableRow key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                   {columnVisibility.sn && (
-                    <TableCell>
+                    <TableCell className="text-center text-sm text-slate-500 font-medium py-4">
                       {(currentPage - 1) * entriesPerPage + index + 1}
                     </TableCell>
                   )}
-                  {columnVisibility.name && (
-                    <TableCell >{item.name}</TableCell>
+                  {columnVisibility.fiscalYear && (
+                    <TableCell className="font-semibold text-slate-900 py-4">{item.fiscalYear}</TableCell>
                   )}
-                  {columnVisibility.alias && (
-                    <TableCell> {item.alias || "-"}</TableCell>
+                  {columnVisibility.status && (
+                    <TableCell className="py-4">
+                      <StatusBadge status={item.status} />
+                    </TableCell>
                   )}
                   {columnVisibility.startMiti && (
-                    <TableCell>{item.startMiti || "-"}</TableCell>
+                    <TableCell className="text-sm text-slate-600 py-4">{item.startMiti ?? "-"}</TableCell>
                   )}
                   {columnVisibility.endMiti && (
-                    <TableCell>{item.endMiti || "-"}</TableCell>
+                    <TableCell className="text-sm text-slate-600 py-4">{item.endMiti ?? "-"}</TableCell>
                   )}
                   {columnVisibility.isActive && (
-                    <TableCell>
-                      {item.isActive && (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
-                          Active
-                        </span>
-                      )}
+                    <TableCell className="py-4">
+                      <ActiveBadge isActive={!!item.isActive} />
                     </TableCell>
-
                   )}
                   {columnVisibility.actions && (
-                    <TableCell className="flex gap-2 justify-center">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0 text-green-500 hover:text-green-700"
-                        onClick={() => confirmActive(item)}
-                      >
-                        <CirclePower size={16} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0"
-                        onClick={() => handleEdit(item.id)}
-                      >
-                        <Pencil size={16} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                        onClick={() => confirmDelete(item)}
-                      >
-                        <Trash size={16} />
-                      </Button>
-
-
+                    <TableCell className="py-4">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-700" onClick={() => confirmActive(item)} title="Activate">
+                          <CirclePower size={16} strokeWidth={2.5} />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => handleEdit(item.id!)} title="Edit">
+                          <Pencil size={16} strokeWidth={2} />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => confirmDelete(item)} title="Delete">
+                          <Trash size={16} strokeWidth={2} />
+                        </Button>
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={
-                    Object.values(columnVisibility).filter(Boolean).length
-                  }
-                  className="h-24 text-center"
-                >
-                  No fiscal years found.
+                <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length} className="h-64 text-center">
+                  <div className="flex flex-col items-center justify-center text-slate-400">
+                    <FileX className="w-12 h-12 mb-3 opacity-50" />
+                    <p className="text-sm font-medium">No fiscal years found.</p>
+                    <p className="text-xs mt-1">Try adjusting your search or filters.</p>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -471,169 +436,114 @@ export default function FiscalyearList() {
         </Table>
       </div>
 
-      {/* Mobile Cards (visible only on mobile) */}
-      <div className="md:hidden">
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-4">
         {paginatedFiscalYears.length > 0 ? (
           paginatedFiscalYears.map((item) => (
             <MobileFiscalyearCard key={item.id} item={item} />
           ))
         ) : (
-          <div className="text-center py-8 bg-gray-50 rounded-lg">
-            <p className="text-gray-500">No fiscal years found.</p>
+          <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
+            <FileX className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+            <p className="text-slate-500 font-medium">No results found</p>
           </div>
         )}
       </div>
+
       {/* Pagination */}
-      <div className="hidden sm:flex items-center justify-between px-2 mt-4 flex-col sm:flex-row gap-4">
-        <div className="flex items-center text-sm text-muted-foreground">
-          Showing{" "}
-          {filteredFiscalYears.length === 0
-            ? 0
-            : (currentPage - 1) * entriesPerPage + 1}{" "}
-          to {Math.min(currentPage * entriesPerPage, filteredFiscalYears.length)} of{" "}
-          {filteredFiscalYears.length} entries
+      <div className="hidden sm:flex items-center justify-between px-2 pt-4">
+        <div className="text-sm text-slate-500">
+          Showing <span className="font-medium text-slate-900">
+            {filteredFiscalYears.length === 0 ? 0 : (currentPage - 1) * entriesPerPage + 1}
+          </span> to <span className="font-medium text-slate-900">
+            {Math.min(currentPage * entriesPerPage, filteredFiscalYears.length)}
+          </span> of <span className="font-medium text-slate-900">{filteredFiscalYears.length}</span> results
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium">Show</p>
-            <Select
-              value={entriesPerPage.toString()}
-              onValueChange={(value) => {
-                setEntriesPerPage(Number(value));
-                setCurrentPage(1);
-              }}
-            >
+            <p className="text-sm font-medium text-slate-700">Rows per page</p>
+            <Select value={entriesPerPage.toString()} onValueChange={(v) => { setEntriesPerPage(Number(v)); setCurrentPage(1); }}>
               <SelectTrigger className="h-8 w-[70px]">
                 <SelectValue placeholder={entriesPerPage} />
               </SelectTrigger>
               <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={pageSize.toString()}>
-                    {pageSize}
-                  </SelectItem>
+                {[10, 20, 30, 40, 50].map((size) => (
+                  <SelectItem key={size} value={size.toString()}>{size}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-sm font-medium">entries</p>
           </div>
 
           <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => goToPage(1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <span className="text-sm">
+            <div className="flex w-[100px] items-center justify-center text-sm font-medium text-slate-700">
               Page {currentPage} of {totalPages}
-            </span>
-
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages || totalPages === 0}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => goToPage(totalPages)}
-              disabled={currentPage === totalPages || totalPages === 0}
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={() => goToPage(1)} disabled={currentPage === 1}>
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" className="h-8 w-8 p-0" onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" className="h-8 w-8 p-0" onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages || totalPages === 0}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0}>
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the fiscal year{" "}
-              {fyToDelete?.name}? This action cannot be undone.
+            <DialogTitle className="text-slate-900">Delete Fiscal Year</DialogTitle>
+            <DialogDescription className="text-slate-500 pt-2">
+              Are you sure you want to delete <strong className="text-slate-800">{fyToDelete?.fiscalYear}</strong>? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
-            </Button>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Active Confirmation Dialog */}
       <Dialog open={activeDialogOpen} onOpenChange={setActiveDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Confirm Activation</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to activate the fiscal year{" "}
-              {fyToActive?.name}? This action cannot be undone.
+            <DialogTitle className="text-slate-900">Activate Fiscal Year</DialogTitle>
+            <DialogDescription className="text-slate-500 pt-2">
+              Are you sure you want to set <strong className="text-slate-800">{fyToActive?.fiscalYear}</strong> as the current active fiscal year?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setActiveDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button className="bg-green-600 hover:bg-green-700" onClick={handleActive}>
-              Activate
-            </Button>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setActiveDialogOpen(false)}>Cancel</Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleActive}>Activate</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Edit Modal */}
       {editingFy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <Card className="w-full max-w-3xl max-h-[90vh] p-2 shadow-lg overflow-hidden">
-            <div className="overflow-y-auto max-h-[calc(90vh-1rem)]">
-              <FiscalyearForm
-                mode="edit"
-                initialData={editingFy}
-                onSuccess={() => setEditingFy(null)}
-                onCancel={() => setEditingFy(null)}
-              />
-            </div>
-          </Card>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
+            <FiscalyearForm mode="edit" initialData={editingFy} onSuccess={() => setEditingFy(null)} onCancel={() => setEditingFy(null)} />
+          </div>
         </div>
       )}
 
+      {/* Add Modal */}
       {isAddingNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <Card className="w-full max-w-3xl max-h-[90vh] p-2 shadow-lg overflow-hidden">
-            <div className="overflow-y-auto max-h-[calc(90vh-1rem)]">
-              <FiscalyearForm
-                mode="add"
-                onSuccess={() => setIsAddingNew(false)}
-                onCancel={() => setIsAddingNew(false)}
-              />
-            </div>
-          </Card>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
+            <FiscalyearForm mode="add" onSuccess={() => setIsAddingNew(false)} onCancel={() => setIsAddingNew(false)} />
+          </div>
         </div>
       )}
     </div>
