@@ -1,0 +1,59 @@
+/* Print styles for report table */
+@media print {
+    body {
+        margin: 0;
+        padding: 20px;
+    }
+
+    /* Show the print header */
+    .print-header {
+        display: block !important;
+        page-break-after: avoid;
+    }
+
+    /* Table styles */
+    #data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        border: 1px solid #d1d5db;
+        page-break-inside: auto;
+    }
+
+    #data-table th,
+    #data-table td {
+        border: 1px solid #e5e7eb;
+        padding: 8px;
+        page-break-inside: avoid;
+    }
+
+    #data-table thead {
+        display: table-header-group;
+    }
+
+    #data-table thead th {
+        background: #f3f4f6 !important;
+        font-weight: 700;
+        text-transform: uppercase;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    #data-table tbody tr:last-child td {
+        background: #f3f4f6 !important;
+        font-weight: 700;
+        border-top: 2px solid #9ca3af;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    #data-table td:last-child,
+    #data-table th:last-child {
+        text-align: right;
+    }
+
+    /* Prevent page breaks inside table rows */
+    #data-table tr {
+        page-break-inside: avoid;
+    }
+}

@@ -1,0 +1,21 @@
+export interface User {
+    id: number,
+    officeId: number,
+    subOfficeId: number,
+    subOffice: string,
+    name: string,
+    username: string,
+    email: string,
+    role: string,
+    roleId: number,
+    password?: string,
+    moduleId?: number,
+    module?: string,
+    subModuleId?: number,
+    subModule?: string,
+    address?: string,
+    contactNo?: string,
+    vehicleNo?: string,
+    categoryId?: number,
+    category?: string
+}
