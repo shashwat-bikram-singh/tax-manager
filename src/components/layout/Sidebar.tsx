@@ -9,17 +9,14 @@ import {
   Scale, 
   BarChart3, 
   Calendar, 
-  Building2, 
-  LogOut, 
-  X
+  LogOut
 } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
-  onClose?: () => void; // Added for mobile close functionality
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
   const { logout } = useAuthStore();
   const navigate = useNavigate();
   const role = useAuthStore(state => state.role);
@@ -37,7 +34,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     gavel: Scale,
     analytics: BarChart3,
     CalendarDays: Calendar,
-    corporate_fare: Building2,
     logout: LogOut,
   };
 
@@ -51,8 +47,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {/* Branding */}
       <div className="flex items-center justify-between p-6 h-20">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm">
-            <Building2 className="text-white w-6 h-6" />
+          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+            <img src="/TU.png" alt="TU" className="w-8 h-8 object-contain" />
           </div>
           {isOpen && (
             <div className="overflow-hidden transition-opacity duration-200">

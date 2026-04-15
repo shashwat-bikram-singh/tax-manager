@@ -4,11 +4,25 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Sidebar from './Sidebar';
 import MobileSidebar from './MobileSidebar';
+import { useFetchAll } from '@/hooks/useFetchAll';
+import type { FiscalYear } from '@/type/fiscalyear';
 // import UserDropdown from './UserDropdown';
 
 const MainLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const { items: fyData } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
+
+  function getfiscalYears(data: any): FiscalYear[] {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    const nestedData = data.data || data.Data;
+    if (Array.isArray(nestedData)) return nestedData;
+    return [];
+  }
+
+  const fiscalYears = getfiscalYears(fyData);
+  const activeFy = fiscalYears.find(fy => fy.isActive);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -49,6 +63,7 @@ const MainLayout: React.FC = () => {
           <DesktopHeader
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={toggleSidebar}
+            activeFy={activeFy?.fiscalYear}
           />
 
           {/* Page Content */}
@@ -64,10 +79,12 @@ const MainLayout: React.FC = () => {
 interface DesktopHeaderProps {
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
+  activeFy?: string;
 }
 
 const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   onToggleSidebar,
+  activeFy,
 }) => {
   return (
     <header className="hidden lg:flex h-16 items-center justify-between px-8 sticky top-0 z-40 bg-surface text-primary">
@@ -82,9 +99,8 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
         </Button>
         <h2 className="font-headline font-bold tracking-tight text-xl">Tax Compliance Tracker</h2>
         <div className="relative group">
-          <div className="flex items-center gap-2 bg-surface-container-low px-4 py-1.5 rounded-full text-xs font-semibold text-primary border border-primary/10">
-            <span>F/Y 2080/81</span>
-            <span className="material-symbols-outlined text-sm">expand_more</span>
+          <div className="flex items-center gap-2 bg-surface-container-low px-4 py-1 rounded-full text-xs font-semibold text-primary border border-primary/10">
+            <span>{activeFy ? `F/Y ${activeFy}` : 'No Active FY'}</span>
           </div>
         </div>
       </div>

@@ -1,8 +1,9 @@
 import { useAuthStore } from '@/store/authStore'
 import axios from 'axios'
 
+
 // Get base URL from environment variable or use default
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "https://localhost:44398"
+const BASE_URL = import.meta.env.VITE_API_BASE_URL 
 
 // Create axios instance
 const axiosInstance = axios.create({
@@ -10,6 +11,7 @@ const axiosInstance = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    
 })
 
 // Request interceptor to add Bearer token to all requests (except login)
