@@ -13,20 +13,9 @@ const EditFiscalyear: React.FC = () => {
   const { items: fyData, isLoadingItems, error } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
 
 
-  function getFiscalYears(fyData: any) {
+  function getFiscalYears(fyData: FiscalYear[] | null): FiscalYear[] {
     if (!fyData) return [];
     if (Array.isArray(fyData)) return fyData;
-    const dataCandidate = (fyData as any).Data || (fyData as any).data;
-    if (Array.isArray(dataCandidate)) return dataCandidate;
-
-    // Handle if the response is an object with numeric keys (0, 1, 2...)
-    const items: FiscalYear[] = [];
-    let i = 0;
-    while ((fyData as any)[i] !== undefined) {
-      items.push((fyData as any)[i]);
-      i++;
-    }
-    if (items.length > 0) return items;
 
     return [];
   }

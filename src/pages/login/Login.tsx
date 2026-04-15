@@ -122,24 +122,18 @@ const Login = () => {
             <div className="w-full max-w-[480px] bg-white rounded-3xl p-10 ambient-shadow relative z-10 border border-surface-container">
                 {/* Branding */}
                 <div className="flex flex-col items-center gap-4 mb-10">
-                    <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
-                        <span className="material-symbols-outlined text-white text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance</span>
-                    </div>
+                    <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden">
+                        <img src="/TU.png" alt="Logo" className="w-full h-full object-contain" />
+                      </div>
                     <div className="text-center">
                         <h1 className="font-headline font-black text-2xl text-primary leading-tight">Institutional PMS</h1>
                         <p className="text-xs uppercase tracking-[0.2em] text-outline font-bold mt-1">Property Authority Portal</p>
                     </div>
-                </div>
-
-                <div className="mb-8">
-                    <h2 className="text-xl font-bold text-primary">System Authentication</h2>
-                    <p className="text-sm text-outline mt-1 font-medium">Please enter your specialized credentials to proceed.</p>
-                </div>
-
+                </div> 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
                         <label htmlFor="username" className="text-[10px] font-black uppercase tracking-widest text-outline ml-1">
-                            Identification Code
+                            Username
                         </label>
                         <div className="relative group">
                             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">person</span>
@@ -157,7 +151,7 @@ const Login = () => {
 
                     <div className="space-y-2">
                         <label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-outline ml-1">
-                            Secure Passkey
+                            Password
                         </label>
                         <div className="relative group">
                             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">lock</span>
@@ -202,17 +196,11 @@ const Login = () => {
                         ) : (
                             <>
                                 <span className="material-symbols-outlined text-xl">login</span>
-                                <span>Establish Connection</span>
+                                <span>Sign In</span>
                             </>
                         )}
                     </button>
                 </form>
-
-                <div className="mt-8 text-center">
-                    <button className="text-[10px] font-black uppercase tracking-widest text-outline hover:text-primary transition-colors">
-                        Forgot Access Credentials?
-                    </button>
-                </div>
             </div>
 
             {/* Bottom Footer */}

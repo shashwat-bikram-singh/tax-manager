@@ -54,9 +54,9 @@ function App() {
       </Route>
 
       <Route path="/" element={
-        <ProtectedRoute>
+        // <ProtectedRoute>
           <MainLayout />
-        </ProtectedRoute>
+        // </ProtectedRoute>
       } >
         <Route index element={<Dashboard />} />
         <Route path="suboffice" element={<SubofficeList />} />
