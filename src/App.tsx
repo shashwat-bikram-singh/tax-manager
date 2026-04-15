@@ -14,6 +14,7 @@ import SuperAdminDashboard from "./superadmin-Layout/super-admin-dashboard";
 import OfficeListPage from "./superadmin-Layout/Office/office-list";
 import UserReport from "./components/report/report";
 import RevenueReport from "./components/report/revenue-report";
+import PropertyInventoryPage from "./pages/property/PropertyInventory";
 
 
 // Super admin private route
@@ -65,6 +66,7 @@ function App() {
         <Route path="documentnumbering" element={<DocumentNumberingList />} />
         <Route path="user-report" element={<UserReport />} />
         <Route path="revenue-report" element={<RevenueReport />} />
+        <Route path="property-inventory" element={<PropertyInventoryPage />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
