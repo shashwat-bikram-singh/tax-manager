@@ -75,7 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           iconMap={iconMap}
         />
         <NavItem
-          to="/property-inventory"
+          to="/property"
           icon="domain"
           label="Property Inventory"
           isOpen={isOpen}
