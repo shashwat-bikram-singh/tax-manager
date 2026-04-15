@@ -1,7 +1,9 @@
 export interface FiscalYear {
-    id: number,
+    id?: number,
     officeId: number,
+    fiscalYear: string,
+    status: number,
+    isActive: boolean,
     startMiti: string,
-    endMiti: string,
-    isActive: boolean
-} 
+    endMiti: string
+}

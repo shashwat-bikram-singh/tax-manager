@@ -16,13 +16,13 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { X } from "lucide-react";
 import { useMutate } from "@/hooks/useMutate";
+import { useFetchAll } from "@/hooks/useFetchAll";
 import type { FiscalYear } from "@/type/fiscalyear";
 import NepaliDatePicker from "../ui/NepaliDatePicker";
 
 // -------------------- SCHEMA --------------------
 const fiscalyearSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  alias: z.string().min(1, "Alias is required"),
   startMiti: z.string().min(1, "Start Miti is required"),
   endMiti: z.string().min(1, "End Miti is required"),
 });
@@ -41,13 +41,22 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const { create, update } = useMutate<FiscalYear>("/api/fiscalyear", "fiscalyear");
+  const { items: fyData } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
+
+  function getfiscalYears(data: any): FiscalYear[] {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    const nestedData = data.data || data.Data;
+    if (Array.isArray(nestedData)) return nestedData;
+    return [];
+  }
+
+  const fiscalYears = getfiscalYears(fyData);
 
   // -------------------- FORM --------------------
   const form = useForm<FiscalyearFormValues>({
     resolver: zodResolver(fiscalyearSchema) as any,
     defaultValues: {
-      name: initialData?.name ?? "",
-      alias: initialData?.alias ?? "",
       startMiti: initialData?.startMiti ?? "",
       endMiti: initialData?.endMiti ?? "",
     },
@@ -57,9 +66,21 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
     setLoading(true);
 
     try {
+      const existingFy = fiscalYears.find(fy => 
+        fy.fiscalYear.toLowerCase() === values.name.toLowerCase() && 
+        fy.id !== initialData?.id
+      );
+
+      if (existingFy) {
+        toast.error(`Fiscal Year "${values.name}" already exists`, {
+          style: { background: "#c6212d", color: "white" },
+        });
+        setLoading(false);
+        return;
+      }
+
       const payload: any = {
-        name: values.name,
-        alias: values.alias,
+        fiscalYear: values.name,
         startMiti: values.startMiti,
         endMiti: values.endMiti,
       };
@@ -94,7 +115,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
 
   // -------------------- UI --------------------
   return (
-    <div className=" p-2 bg-gradient-to-br from-gray-50 to-blue-50/30 ">
+    <div className=" p-2 bg-white">
 
       {/* Header Section */}
       <div className="mb-8">
@@ -104,11 +125,11 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
               <h1 className="text-2xl font-bold text-gray-900">
                 {mode === "add" ? "Add New Fiscal Year" : "Edit Fiscal Year"}
               </h1>
-              <p className="text-gray-600 text-sm mt-1">
+              {/* <p className="text-gray-600 text-sm mt-1">
                 {mode === "add"
                   ? "Create a new fiscal year"
                   : `Update details for ${initialData?.name}`}
-              </p>
+              </p> */}
             </div>
           </div>
 
@@ -125,6 +146,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
 
 
       </div>
+      
 
       {/* Form Section */}
 
@@ -150,28 +172,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="Enter name (e.g. 2080/081)"
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                          disabled={loading}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-red-600 text-sm mt-1" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="alias"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                        Alias <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter alias"
+                          placeholder="Enter name (eg. 2080/81)"
                           className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                           disabled={loading}
                         />
@@ -192,16 +193,9 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                         Start Miti <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        {/* <NepaliDatePicker
-                          inputClassName="form-control w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                          className="w-full"
-                          value={field.value}
-                          onChange={(value: string) => field.onChange(value)}
-                          options={{ calenderLocale: "en", valueLocale: "en" }} /> */}
                         <NepaliDatePicker
-                          id="nepali-datepicker"
-                          name="nepali-datepicker"
-                          label="Select Date"
+                          id="start-miti"
+                          name="start-miti"
                           value={field.value}
                           onSelect={(value: any) => {
                             field.onChange(value.value);
@@ -223,9 +217,8 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                       </FormLabel>
                       <FormControl>
                         <NepaliDatePicker
-                          id="nepali-datepicker"
-                          name="nepali-datepicker"
-                          label="Select Date"
+                          id="end-miti"
+                          name="end-miti"
                           value={field.value}
                           onSelect={(value: any) => {
                             field.onChange(value.value);
