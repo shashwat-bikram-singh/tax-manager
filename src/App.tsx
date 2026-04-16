@@ -15,6 +15,7 @@ import OfficeListPage from "./superadmin-Layout/Office/office-list";
 import UserReport from "./components/report/report";
 import RevenueReport from "./components/report/revenue-report";
 import PropertyInventoryPage from "./pages/property/PropertyInventory";
+import DocumentForm from "./components/document/documentForm";
 
 
 // Super admin private route
@@ -63,7 +64,7 @@ function App() {
         <Route path="suboffice" element={<SubofficeList />} />
         <Route path="user" element={<UserList />} />
         <Route path="fiscalyear" element={<FiscalyearList />} />
-        <Route path="documentnumbering" element={<DocumentNumberingList />} />
+        <Route path="document-vault" element={<DocumentForm mode="add" />} />
         <Route path="user-report" element={<UserReport />} />
         <Route path="revenue-report" element={<RevenueReport />} />
         <Route path="property-inventory" element={<PropertyInventoryPage />} />

@@ -22,12 +22,15 @@ import {
 import { toast } from "sonner";
 import { X, ShieldCheck } from "lucide-react";
 import { useFetchAll } from "@/hooks/useFetchAll";
-import type { District, LegalStatus, Localbody, OwnershipType, PropertyType, UsageRights, UsageType } from "@/type/property";
+import { useMutate } from "@/hooks/useMutate";
+import type { District, LegalStatus, Localbody, OwnershipType, PropertyType, UsageRights, UsageType, PropertyDetail } from "@/type/property";
+import NepaliDatePicker from "@/components/ui/NepaliDatePicker";
 
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
 const propertySchema = z.object({
 
   province: z.string().optional().nullable(),
+  name: z.string().optional().nullable(),
   district: z.string().optional().nullable(),
   localbody: z.string().optional().nullable(),
   wardNo: z.string().optional().nullable(),
@@ -36,27 +39,30 @@ const propertySchema = z.object({
   currentUsage: z.string().optional().nullable(),
   legalstatus: z.string().optional().nullable(),
   valuation: z.string().optional().nullable(),
-  kittaNo: z.string().optional().nullable(),
+  kittaNumber: z.string().optional().nullable(),
+  sheetNumber: z.string().optional().nullable(),
   groundCode: z.string().optional().nullable(),
   constructionYear: z.string().optional().nullable(),
-  totalArea: z.coerce.number().min(0).optional().nullable(),
+  areaInSqMeters: z.coerce.number().min(0).optional().nullable(),
   ownershipType: z.string().optional().nullable(),
   legalStatus: z.string().optional().nullable(),
   usageRights: z.string().optional().nullable(),
   usageTypes: z.string().optional().nullable(),
   encroachmentRisk: z.string().optional().nullable(),
-  noOfFloors: z.coerce.number().optional().nullable(),
+  noOfFloor: z.coerce.number().optional().nullable(),
+  ownershipTransferMiti: z.string().optional().nullable(),
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
 
 interface PropertyFormProps {
   mode: "add" | "edit" | "view";
-  initialData?: Partial<PropertyFormValues> & {
-    kittaNo?: string | null;
-    verificationStatus?: "verified" | "unverified" | "pending";
-    lastUpdated?: string | null;
-  };
+  // initialData?: Partial<PropertyFormValues> & {
+  //   kittaNo?: string | null;
+  //   verificationStatus?: "verified" | "unverified" | "pending";
+  //   lastUpdated?: string | null;
+  // };
+  initialData?: PropertyDetail;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
@@ -221,6 +227,8 @@ function StatusBadge({ status }: { status?: string }) {
 export default function PropertyForm({ mode, initialData, onSuccess, onCancel }: PropertyFormProps) {
   const [loading, setLoading] = useState(false);
 
+  const { create, update } = useMutate<PropertyDetail>("/api/property", "property");
+
   const { items: rawpropertyTypeData, isLoadingItems } = useFetchAll<PropertyType>("/api/propertytype", ["propertytype"]);
   const PropertyData = rawpropertyTypeData?.data
 
@@ -240,26 +248,27 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema) as any,
     defaultValues: {
-      propertytype: initialData?.propertytype ?? null,
-      province: initialData?.province ?? null,
-      district: initialData?.district ?? null,
-      localbody: initialData?.localbody ?? null,
-      description: initialData?.description ?? null,
-      kittaNo: initialData?.kittaNo ?? null,
-      wardNo: initialData?.wardNo ?? null,
-      groundCode: initialData?.groundCode ?? null,
-      constructionYear: initialData?.constructionYear ?? null,
-      legalstatus: initialData?.legalstatus ?? null,
-      totalArea: initialData?.totalArea ?? null,
-      ownershipType: initialData?.ownershipType ?? null,
-      legalStatus: initialData?.legalStatus ?? null,
-      usageRights: initialData?.usageRights ?? null,
-      usageTypes: initialData?.usageTypes ?? null,
-      encroachmentRisk: initialData?.encroachmentRisk ?? null,
-      currentUsage: initialData?.currentUsage ?? null,
-      noOfFloors: initialData?.noOfFloors ?? null,
-      valuation: initialData?.valuation ?? null,
-
+      propertytype: initialData?.propertyTypeId?.toString() ?? "",
+      name: initialData?.name ?? "",
+      province: initialData?.provinceId?.toString() ?? "",
+      district: initialData?.districtId?.toString() ?? "",
+      localbody: initialData?.localBodyId?.toString() ?? "",
+      description: initialData?.description ?? "",
+      kittaNumber: initialData?.kittaNumber ?? null,
+      wardNo: initialData?.wardNo?.toString() ?? "",
+      groundCode: initialData?.geoCoordinates ?? "",
+      constructionYear: initialData?.constructionYear ?? "",
+      legalstatus: initialData?.legalStatusId?.toString() ?? "",
+      areaInSqMeters: initialData?.areaInSqMeters ?? 0,
+      ownershipType: initialData?.ownershipTypeId?.toString() ?? "",
+      usageRights: initialData?.usageRightsId?.toString() ?? "",
+      usageTypes: initialData?.usageId?.toString() ?? "",
+      noOfFloor: initialData?.noOfFloor ?? 0,
+      legalStatus: "",
+      encroachmentRisk: "",
+      currentUsage: "",
+      valuation: "",
+      ownershipTransferMiti: initialData?.ownershipTransferMiti ?? "",
     },
   });
 
@@ -283,25 +292,27 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
   useEffect(() => {
     if (initialData) {
       form.reset({
-        propertytype: (initialData as any).campusName ?? null,
-        kittaNo: initialData.kittaNo ?? null,
-        wardNo: initialData.wardNo ?? null,
-        description: initialData.description ?? null,
-        groundCode: initialData.groundCode ?? null,
-        constructionYear: initialData.constructionYear ?? null,
-        legalstatus: initialData.legalstatus ?? null,
-        totalArea: (initialData as any).totalArea ?? null,
-        ownershipType: (initialData as any).ownershipType ?? null,
-        legalStatus: (initialData as any).legalStatus ?? null,
-        usageRights: (initialData as any).usageRights ?? null,
-        usageTypes: (initialData as any).usageTypes ?? null,
-        encroachmentRisk: (initialData as any).encroachmentRisk ?? null,
-        province: (initialData as any).province ?? null,
-        district: (initialData as any).district ?? null,
-        currentUsage: (initialData as any).currentUsage ?? null,
-        noOfFloors: (initialData as any).noOfFloors ?? null,
-        valuation: (initialData as any).valuation ?? null,
-
+        propertytype: initialData.propertyTypeId?.toString() ?? "",
+        name: initialData.name ?? "",
+        province: initialData.provinceId?.toString() ?? "",
+        district: initialData.districtId?.toString() ?? "",
+        localbody: initialData.localBodyId?.toString() ?? "",
+        description: initialData.description ?? "",
+        kittaNumber: initialData.kittaNumber ?? null,
+        wardNo: initialData.wardNo?.toString() ?? "",
+        groundCode: initialData.geoCoordinates ?? "",
+        constructionYear: initialData.constructionYear ?? "",
+        legalstatus: initialData.legalStatusId?.toString() ?? "",
+        areaInSqMeters: initialData.areaInSqMeters ?? 0,
+        ownershipType: initialData.ownershipTypeId?.toString() ?? "",
+        usageRights: initialData.usageRightsId?.toString() ?? "",
+        usageTypes: initialData.usageId?.toString() ?? "",
+        noOfFloor: initialData.noOfFloor ?? 0,
+        legalStatus: "",
+        encroachmentRisk: "",
+        currentUsage: "",
+        valuation: "",
+        ownershipTransferMiti: initialData?.ownershipTransferMiti ?? "",
       });
     }
   }, [initialData, form]);
@@ -309,16 +320,47 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
   const onSubmit = async (values: PropertyFormValues) => {
     setLoading(true);
     try {
-      console.log("Submitting:", values);
-      await new Promise((r) => setTimeout(r, 800));
-      toast.success(mode === "edit" ? "Property updated successfully" : "Property saved successfully", {
+      const payload: Partial<PropertyDetail> = {
+        // userId: 
+        propertyTypeId: Number(values.propertytype) || 0,
+        name: values.name || "",
+        provinceId: Number(values.province) || 0,
+        districtId: Number(values.district) || 0,
+        localBodyId: Number(values.localbody) || 0,
+        wardNo: Number(values.wardNo) || 0,
+        kittaNumber: values.kittaNumber || "",
+        sheetNumber: values.sheetNumber || "",
+        description: values.description || "",
+        areaInSqMeters: Number(values.areaInSqMeters) || 0,
+        geoCoordinates: values.groundCode || "",
+        noOfFloor: Number(values.noOfFloor) || 0,
+        constructionYear: values.constructionYear || "",
+        usageId: Number(values.usageTypes) || 0,
+        legalStatusId: Number(values.legalstatus) || 0,
+        usageRightsId: Number(values.usageRights) || 0,
+        ownershipTypeId: Number(values.ownershipType) || 0,
+        ownershipTransferMiti: values.ownershipTransferMiti || "",
+      };
+
+      if (mode === "edit" && initialData?.id) {
+        payload.id = initialData.id;
+        await update.mutateAsync(payload as PropertyDetail);
+      } else {
+        await create.mutateAsync(payload as PropertyDetail);
+      }
+
+      toast.success(mode === "edit" ? "Property updated successfully ✅" : "Property saved successfully ✅", {
         style: { background: "#10b981", color: "white" },
       });
       onSuccess?.();
-    } catch {
-      toast.error("Failed to save property", {
-        style: { background: "#c6212d", color: "white" },
-      });
+    } catch (error: any) {
+      console.error("Save error:", error);
+      toast.error(
+        Array.isArray(error?.response?.data?.errors)
+          ? error.response.data.errors.join(", ")
+          : error?.response?.data?.errors || "Failed to save property",
+        { style: { background: "#c6212d", color: "white" } }
+      );
     } finally {
       setLoading(false);
     }
@@ -522,7 +564,7 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
                   {PropertyData?.find((p: PropertyType) => p.id.toString() === form.watch("propertytype"))?.propertyType?.toLowerCase() === "building" && (
                     <FormField
                       control={form.control}
-                      name="noOfFloors"
+                      name="noOfFloor"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">No of Floors</FormLabel>
@@ -548,7 +590,7 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
                   {PropertyData?.find((p: PropertyType) => p.id.toString() === form.watch("propertytype"))?.propertyType?.toLowerCase() === "land" && (
                     <FormField
                       control={form.control}
-                      name="kittaNo"
+                      name="kittaNumber"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Kitta No</FormLabel>
@@ -567,6 +609,25 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
                       )}
                     />
                   )}
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value || null)}
+                            disabled={disabled}
+                            className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="description"
@@ -595,13 +656,33 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
                       <FormItem>
                         <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Construction Year</FormLabel>
                         <FormControl>
-                          <Input
-                            {...field}
+                          <NepaliDatePicker
+                            id="constructionYear"
+                            name="constructionYear"
                             value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value || null)}
-                            placeholder="e.g. 2065 B.S."
-                            disabled={disabled}
-                            className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                            onSelect={(value: any) => {
+                              field.onChange(value.value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="ownershipTransferMiti"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ownership Transfer Miti</FormLabel>
+                        <FormControl>
+                          <NepaliDatePicker
+                            id="ownershipTransferMiti"
+                            name="ownershipTransferMiti"
+                            value={field.value ?? ""}
+                            onSelect={(value: any) => {
+                              field.onChange(value.value);
+                            }}
                           />
                         </FormControl>
                         <FormMessage />
@@ -672,7 +753,7 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
 
                       <FormField
                         control={form.control}
-                        name="totalArea"
+                        name="areaInSqMeters"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-[9px] uppercase tracking-tighter text-gray-400 font-semibold">Total Area</FormLabel>
