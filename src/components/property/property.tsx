@@ -34,10 +34,11 @@ import { useMutate } from "@/hooks/useMutate";
 interface Property {
   id: number;
   name?: string;
-  propertytype?: string;
-  totalArea?: number;
-  taxStatus?: string;
+  propertyType?: string;
+  landArea?: number;
+  legalStatus?: string;
   usageTypes?: string;
+  ownershipType?: string;
 }
 
 export default function PropertyList() {
@@ -77,7 +78,7 @@ export default function PropertyList() {
     const searchLower = searchTerm.toLowerCase();
     return (
       searchTerm === "" ||
-      (item.propertytype && item.propertytype.toLowerCase().includes(searchLower)) ||
+      (item.propertyType && item.propertyType.toLowerCase().includes(searchLower)) ||
       (item.usageTypes && item.usageTypes.toLowerCase().includes(searchLower))
     );
   });
@@ -156,9 +157,10 @@ export default function PropertyList() {
               <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">S.N.</TableHead>
               <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Name</TableHead>
               <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Property Type</TableHead>
-              <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Total Area (sq.m)</TableHead>
-              <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Tax Status</TableHead>
+              <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Land Area (sq.m)</TableHead>
+              <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Legal Status</TableHead>
               <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Usage Type</TableHead>
+              <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Ownership Type</TableHead>
               <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -170,10 +172,12 @@ export default function PropertyList() {
                     {(currentPage - 1) * entriesPerPage + index + 1}
                   </TableCell>
                   <TableCell className="font-semibold text-slate-900 py-4">{item.name ?? "-"}</TableCell>
-                  <TableCell className="text-sm text-slate-600 py-4">{item.propertytype ?? "-"}</TableCell>
-                  <TableCell className="text-sm text-slate-600 py-4">{item.totalArea ?? "-"}</TableCell>
-                  <TableCell className="text-sm text-slate-600 py-4">{item.taxStatus ?? "-"}</TableCell>
+                  <TableCell className="text-sm text-slate-600 py-4">{item.propertyType ?? "-"}</TableCell>
+                  <TableCell className="text-sm text-slate-600 py-4">{item.landArea ?? "-"} sq.m</TableCell>
+                  <TableCell className="text-sm text-slate-600 py-4">{item.legalStatus ?? "-"}</TableCell>
                   <TableCell className="text-sm text-slate-600 py-4">{item.usageTypes ?? "-"}</TableCell>
+                  <TableCell className="text-sm text-slate-600 py-4">{item.ownershipType ?? "-"}</TableCell>
+
                   <TableCell className="py-4">
                     <div className="flex items-center justify-center gap-1.5">
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => handleEdit(item.id)} title="Edit">
