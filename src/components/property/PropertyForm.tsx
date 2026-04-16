@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -225,6 +226,7 @@ function StatusBadge({ status }: { status?: string }) {
 
 // ─── Main Form ────────────────────────────────────────────────────────────────
 export default function PropertyForm({ mode, initialData, onSuccess, onCancel }: PropertyFormProps) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   const { create, update } = useMutate<PropertyDetail>("/api/property", "property");
@@ -368,6 +370,11 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
 
   const disabled = loading;
 
+  const handleCancel = () => {
+    if (onCancel) onCancel();
+    else navigate("/property");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/40 p-6">
       {/* ── Page Header ── */}
@@ -378,11 +385,9 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          {onCancel && (
-            <Button type="button" variant="ghost" size="icon" onClick={onCancel} className="text-gray-400 hover:text-gray-600">
-              <X className="w-4 h-4" />
-            </Button>
-          )}
+          <Button type="button" variant="ghost" size="icon" onClick={handleCancel} className="text-gray-400 hover:text-gray-600">
+            <X className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
@@ -914,7 +919,7 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
               <Button
                 type="button"
                 variant="outline"
-                onClick={onCancel}
+                onClick={handleCancel}
                 className="h-12 px-6 rounded-xl border-gray-200 text-gray-600 hover:bg-gray-100"
               >
                 Cancel

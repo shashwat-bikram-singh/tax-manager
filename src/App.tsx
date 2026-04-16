@@ -8,7 +8,6 @@ import UserList from "./components/user/user";
 import ProtectedRoute from "./ProtectedRoute";
 import FiscalyearList from "./components/fiscalyear/fiscalyear";
 import FiscalyearForm from "./components/fiscalyear/fiscalyear-form";
-import DocumentNumberingList from "./components/documentNumbering/documentNumbering";
 import PropertyList from "./components/property/property";
 import PropertyForm from "./components/property/PropertyForm";
 import { useEffect, useState, type ReactNode } from "react";
@@ -18,6 +17,7 @@ import OfficeListPage from "./superadmin-Layout/Office/office-list";
 import UserReport from "./components/report/report";
 import RevenueReport from "./components/report/revenue-report";
 import DocumentForm from "./components/document/documentForm";
+import DocumentList from "./components/document/document";
 
 
 // Super admin private route
@@ -71,9 +71,10 @@ function App() {
         <Route path="property" element={<PropertyList />} />
         <Route path="property/add" element={<PropertyForm mode="add" onSuccess={() => navigate("/property")} />} />
         <Route path="property/edit/:id" element={<PropertyForm mode="edit" onSuccess={() => navigate("/property")} />} />
-        <Route path="document-vault" element={<DocumentForm mode="add" />} />
+        <Route path="document-vault" element={<DocumentList />} />
         <Route path="user-report" element={<UserReport />} />
         <Route path="revenue-report" element={<RevenueReport />} />
+        <Route path="documentForm/add" element={<DocumentForm mode="add" onSuccess={()=> navigate("/documentForm")}/>}/>
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

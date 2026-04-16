@@ -26,18 +26,29 @@ import {
   ChevronsLeft,
   ChevronsRight,
   FileX,
+  Upload,
+  Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import { useMutate } from "@/hooks/useMutate";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Property {
   id: number;
   name?: string;
   propertyType?: string;
   landArea?: number;
+  buildingArea?: number;
   legalStatus?: string;
-  usageTypes?: string;
+  usageName?: string;
   ownershipType?: string;
 }
 
@@ -45,6 +56,15 @@ export default function PropertyList() {
   const navigate = useNavigate();
   const { items: propertyData, isLoadingItems } = useFetchAll<Property>("/api/property", ["property"]);
   const { delete: deleteProperty } = useMutate<Property>("/api/property", "property");
+
+  const getAreaDisplay = (item: Property) => {
+    const land = item.landArea;
+    const building = item.buildingArea;
+    if (land && building) return `${land} sq.m / ${building} sq.m`;
+    if (land) return `${land} sq.m`;
+    if (building) return `${building} sq.m`;
+    return "-";
+  };
 
   function getProperties(data: any): Property[] {
     if (!data) return [];
@@ -57,17 +77,30 @@ export default function PropertyList() {
   const properties = getProperties(propertyData);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
+    sn: true,
+    name: true,
+    propertyType: true,
+    landArea: true,
+    buildingArea:true,
+    legalStatus: true,
+    usageName: true,
+    ownershipType: true,
+    actions: true,
+  });
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
 
-  const columnsCount = 7;
-
   const handleEdit = (id: number) => {
     navigate(`/property/edit/${id}`);
+  };
+  const handleUpload = (id: number) => {
+    navigate(`/documentForm/add?propertyId=${id}`);
   };
 
   const handleAddNew = () => {
@@ -79,7 +112,10 @@ export default function PropertyList() {
     return (
       searchTerm === "" ||
       (item.propertyType && item.propertyType.toLowerCase().includes(searchLower)) ||
-      (item.usageTypes && item.usageTypes.toLowerCase().includes(searchLower))
+      (item.name && item.name .toLowerCase().includes(searchLower)) ||
+      (item.legalStatus && item.legalStatus .toLowerCase().includes(searchLower)) ||
+      (item.ownershipType && item.ownershipType .toLowerCase().includes(searchLower)) ||
+      (item.usageName && item.usageName.toLowerCase().includes(searchLower)) 
     );
   });
 
@@ -134,17 +170,48 @@ export default function PropertyList() {
       <div className="hidden md:block rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="relative w-full sm:w-80 group">
-            <Input
-              ref={searchInputRef}
-              type="search"
-              placeholder="Search properties..."
-              className="pl-9 w-full bg-slate-50 border-slate-200 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="text-slate-500 border-slate-200 hover:bg-slate-50 p-2 h-9 w-9 shrink-0"
+            onClick={() => setSearchOpen(!searchOpen)}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+          
+          {searchOpen && (
+            <div className="relative w-full sm:w-80 group">
+              <Input
+                ref={searchInputRef}
+                type="search"
+                placeholder="Search fiscal years..."
+                className="pl-9 w-full bg-slate-50 border-2 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              />
+            </div>
+          )}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 shrink-0">
+                <Settings2 />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {Object.entries(columnVisibility).map(([key, visible]) => (
+                <DropdownMenuCheckboxItem
+                  key={key}
+                  checked={visible}
+                  onCheckedChange={() => setColumnVisibility({ ...columnVisibility, [key]: !visible })}
+                >
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0" onClick={handleAddNew}>
@@ -154,45 +221,79 @@ export default function PropertyList() {
         <Table>
           <TableHeader className="bg-slate-50 border-b border-slate-200">
             <TableRow className="hover:bg-slate-50/50">
-              <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">S.N.</TableHead>
-              <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Name</TableHead>
-              <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Property Type</TableHead>
-              <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Land Area (sq.m)</TableHead>
-              <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Legal Status</TableHead>
-              <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Usage Type</TableHead>
-              <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Ownership Type</TableHead>
-              <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 w-24">Actions</TableHead>
+              {columnVisibility.sn && (
+                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">S.N.</TableHead>
+              )}
+              {columnVisibility.name && (
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Name</TableHead>
+              )}
+              {columnVisibility.propertyType && (
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Property Type</TableHead>
+              )}
+              {(columnVisibility.landArea || columnVisibility.buildingArea) && (
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Area (sq.m)</TableHead>
+              )}
+              {columnVisibility.legalStatus && (
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Legal Status</TableHead>
+              )}
+              {columnVisibility.usageName && (
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Reason to Use</TableHead>
+              )}
+              {columnVisibility.ownershipType && (
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Ownership Type</TableHead>
+              )}
+              {columnVisibility.actions && (
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 w-24">Actions</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedProperties.length > 0 ? (
               paginatedProperties.map((item, index) => (
                 <TableRow key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                  <TableCell className="text-center text-sm text-slate-500 font-medium py-4">
-                    {(currentPage - 1) * entriesPerPage + index + 1}
-                  </TableCell>
-                  <TableCell className="font-semibold text-slate-900 py-4">{item.name ?? "-"}</TableCell>
-                  <TableCell className="text-sm text-slate-600 py-4">{item.propertyType ?? "-"}</TableCell>
-                  <TableCell className="text-sm text-slate-600 py-4">{item.landArea ?? "-"} sq.m</TableCell>
-                  <TableCell className="text-sm text-slate-600 py-4">{item.legalStatus ?? "-"}</TableCell>
-                  <TableCell className="text-sm text-slate-600 py-4">{item.usageTypes ?? "-"}</TableCell>
-                  <TableCell className="text-sm text-slate-600 py-4">{item.ownershipType ?? "-"}</TableCell>
-
-                  <TableCell className="py-4">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => handleEdit(item.id)} title="Edit">
-                        <Pencil size={16} strokeWidth={2} />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => confirmDelete(item)} title="Delete">
-                        <Trash size={16} strokeWidth={2} />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {columnVisibility.sn && (
+                    <TableCell className="text-center text-sm text-slate-500 font-medium py-4">
+                      {(currentPage - 1) * entriesPerPage + index + 1}
+                    </TableCell>
+                  )}
+                  {columnVisibility.name && (
+                    <TableCell className="font-semibold text-slate-900 py-4">{item.name ?? "-"}</TableCell>
+                  )}
+                  {columnVisibility.propertyType && (
+                    <TableCell className="text-sm text-slate-600 py-4">{item.propertyType ?? "-"}</TableCell>
+                  )}
+                  {(columnVisibility.landArea || columnVisibility.buildingArea) && (
+                    <TableCell className="text-sm text-slate-600 py-4">{getAreaDisplay(item)}</TableCell>
+                  )}
+                  {columnVisibility.legalStatus && (
+                    <TableCell className="text-sm text-slate-600 py-4">{item.legalStatus ?? "-"}</TableCell>
+                  )}
+                  {columnVisibility.usageName && (
+                    <TableCell className="text-sm text-slate-600 py-4">{item.usageName ?? "-"}</TableCell>
+                  )}
+                  {columnVisibility.ownershipType && (
+                    <TableCell className="text-sm text-slate-600 py-4">{item.ownershipType ?? "-"}</TableCell>
+                  )}
+                  {columnVisibility.actions && (
+                    <TableCell className="py-4">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => handleUpload(item.id)} title="Upload">
+                          <Upload size={16} strokeWidth={2} />
+                         </Button>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => handleEdit(item.id)} title="Edit">
+                          <Pencil size={16} strokeWidth={2} />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => confirmDelete(item)} title="Delete">
+                          <Trash size={16} strokeWidth={2} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columnsCount} className="h-64 text-center">
+                <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length + 1} className="h-64 text-center">
                   <div className="flex flex-col items-center justify-center text-slate-400">
                     <FileX className="w-12 h-12 mb-3 opacity-50" />
                     <p className="text-sm font-medium">No properties found.</p>
