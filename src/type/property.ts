@@ -44,3 +44,28 @@ export interface Localbody {
     isMunicipality: boolean
 }
 
+
+export interface PropertyDetail {
+    id: number;
+    userId: number;
+    name: string;
+    propertyTypeId: number;
+    fiscalYearId: number;
+    provinceId: number;
+    districtId: number;
+    localBodyId: number;
+    wardNo: number;
+    kittaNumber: string;
+    sheetNumber: string | null;
+    description: string;
+    areaInSqMeters: number;
+    geoCoordinates: string;
+    noOfFloor: number;
+    constructionYear: string;
+    usageId: number;
+    legalStatusId: number;
+    usageRightsId: number;
+    ownershipTypeId: number;
+    ownershipTransferMiti: string;
+
+}

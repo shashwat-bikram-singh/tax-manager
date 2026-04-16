@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import axiosInstance from '@/config/axios'
 import { jwtDecode } from 'jwt-decode'
-import { cn } from '@/lib/utils'
 
 interface LoginResponse {
     response: string
@@ -12,6 +11,7 @@ interface LoginResponse {
     token: string
     refreshToken: string
     Id?: string
+    message?: string
 }
 
 const Login = () => {
@@ -62,7 +62,7 @@ const Login = () => {
                 let moduleId: number | null = null
                 let subModuleId: number | null = null
                 let subOfficeId: number | null = null
-                
+
                 try {
                     const decoded: any = jwtDecode(token)
                     role = decoded.Role || null
@@ -71,7 +71,7 @@ const Login = () => {
                     moduleId = decoded.ModuleId ? Number(decoded.ModuleId) : null
                     subModuleId = decoded.SubModuleId ? Number(decoded.SubModuleId) : null
                     subOfficeId = decoded.SubOfficeId ? Number(decoded.SubOfficeId) : null
-                    
+
                     sessionStorage.setItem('OfficeId', String(officeId))
                     sessionStorage.setItem('Username', decoded.Username || '')
                     sessionStorage.setItem('SubOffice', decoded.SubOffice || '')
@@ -100,9 +100,10 @@ const Login = () => {
                     navigate('/')
                 }
             } else {
-                setError('Invalid credentials. Please try again.')
+                setError(response.data?.message || 'Invalid credentials. Please try again.')
             }
         } catch (err: any) {
+
             setError(
                 err.response?.data?.message ||
                 err.message ||
@@ -124,12 +125,12 @@ const Login = () => {
                 <div className="flex flex-col items-center gap-4 mb-10">
                     <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden">
                         <img src="/TU.png" alt="Logo" className="w-full h-full object-contain" />
-                      </div>
+                    </div>
                     <div className="text-center">
                         <h1 className="font-headline font-black text-2xl text-primary leading-tight">Institutional PMS</h1>
                         <p className="text-xs uppercase tracking-[0.2em] text-outline font-bold mt-1">Property Authority Portal</p>
                     </div>
-                </div> 
+                </div>
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
                         <label htmlFor="username" className="text-[10px] font-black uppercase tracking-widest text-outline ml-1">
@@ -178,7 +179,7 @@ const Login = () => {
 
                     {error && (
                         <div className="bg-error-container/30 border border-error-container text-on-error-container px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                           <span className="material-symbols-outlined text-error">warning</span>
+                            <span className="material-symbols-outlined text-error">warning</span>
                             <span>{error}</span>
                         </div>
                     )}
