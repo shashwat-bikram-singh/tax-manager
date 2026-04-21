@@ -383,15 +383,16 @@ export default function DocumentSearchForm (){
 
       {/* ४. कन्टेन्ट एरिया (परिमार्जित Logic) */}
       <div className="flex-grow bg-slate-200 flex flex-col overflow-hidden relative">
-        {selectedFileUrl.toLowerCase().includes('.pdf') ? (
-          <div className="w-full h-full">
-            {/* Google Docs Viewer ले क्लाउड लिङ्कहरूलाई राम्रोसँग ह्यान्डल गर्छ */}
-            <iframe
-              src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedFileUrl)}&embedded=true`}
-              className="w-full h-full border-none shadow-inner"
-              title="Secure PDF Viewer"
-            />
-          </div>
+  {selectedFileUrl.toLowerCase().includes('.pdf') ? (
+    /* 1. Container lai overflow-hidden rakhne */
+    <div className="w-full h-full overflow-hidden relative border-none shadow-inner">
+      {/* 2. iframe lai ali mathi push garne (approx -45px to -65px) mathi ko bar lukauna */}
+      <iframe
+        src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedFileUrl)}&embedded=true`}
+        className="absolute w-full h-[calc(100%+65px)] -top-[65px] left-0 border-none"
+        title="Secure PDF Viewer"
+      />
+    </div>
         ) : (
           /* यदि इमेज हो भने */
           <div className="w-full h-full flex items-center justify-center p-4 bg-slate-300 overflow-auto">
