@@ -24,12 +24,15 @@ import {
   ChevronsLeft,
   ChevronsRight,
   FileX,
-  Eye, // Added Eye icon for View Receipt
+  Eye,
   Settings2,
   Download,
+  X,
+  Plus,
+  Pencil,
+  PencilLine,
 } from "lucide-react";
 import { useFetchAll } from "@/hooks/useFetchAll";
-import { useFiscalYear } from "@/context/FiscalYearContext";
 import axiosInstance from "@/config/axios";
 import {
   DropdownMenu,
@@ -39,19 +42,31 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import type { FiscalYear } from "@/type/fiscalyear";
 import type { Payment } from "@/type/payment";
+import { useAuthStore } from "@/store/authStore";
+import { jwtDecode } from "jwt-decode";
+import TaxPaymentForm from "./tax-payment-form";
 
 export default function PaymentList() {
   const navigate = useNavigate();
   
+  // --- Auth Logic for Modal Download Button ---
+  const {token} = useAuthStore();
+  const decoded: any = token ? jwtDecode(token) : {};
+  const Role = decoded.Role || "User"; 
+
   // --- Local State for Fiscal Year ---
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [selectedFiscalYearId, setSelectedFiscalYearId] = useState<number | undefined>(undefined);
   
-  // --- NEW: File View/Modal State ---
+  // --- File View/Modal State ---
   const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // --- Edit Modal State (New) ---
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
 
   // Fetch Fiscal Years Locally
   const { items: fyData, isLoadingItems: isLoadingFy } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
@@ -73,7 +88,6 @@ export default function PaymentList() {
 
   useEffect(() => {
     if (fiscalYears.length > 0 && !selectedFiscalYearId) {
-      // Auto-select active fiscal year
       const activeFy = fiscalYears.find((fy) => fy.isActive === true || fy.isActive === 1);
       if (activeFy) {
         setSelectedFiscalYearId(activeFy.id);
@@ -92,10 +106,34 @@ export default function PaymentList() {
   // Helper to normalize Payment data
   function getPayment(data: any): Payment[] {
     if (!data) return [];
-    if (Array.isArray(data)) return data;
-    const nestedData = data.data || data.Data;
-    if (Array.isArray(nestedData)) return nestedData;
-    return [];
+    
+    let arr: any[] = [];
+    if (Array.isArray(data)) {
+      arr = data;
+    } else if (data.data && Array.isArray(data.data)) {
+      arr = data.data;
+    } else if (data.Data && Array.isArray(data.Data)) {
+      arr = data.Data;
+    } else {
+      return [];
+    }
+
+    const normalized = arr.map((item: any) => {
+      const normalizedId = item.id ?? item.Id ?? item.taxId ?? item.TaxId ?? item.paymentId ?? item.PaymentId;
+      return {
+        ...item,
+        id: normalizedId,
+        taxRecordId: item.taxRecordId ?? item.TaxRecordId ?? item.taxrecordid ?? normalizedId,
+        amountPaid: item.amountPaid ?? item.amount ?? item.Amount,
+        propertyId: item.propertyId ?? item.PropertyId,
+        property: item.property ?? item.Property,
+        receiptNo: item.receiptNo ?? item.ReceiptNo,
+        paymentMiti: item.paymentMiti ?? item.PaymentMiti,
+        isPaid: item.isPaid ?? item.IsPaid,
+      };
+    });
+    
+    return normalized as Payment[];
   }
 
   const payments = getPayment(paymentData);
@@ -109,7 +147,7 @@ export default function PaymentList() {
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // --- NEW: Tab State ---
+  // --- Tab State ---
   const [activeTab, setActiveTab] = useState<"all" | "paid" | "unpaid">("all");
 
   // Column Visibility State
@@ -121,6 +159,7 @@ export default function PaymentList() {
     paymentMiti: true,
     file: true,
     status: true,
+    action: true,
   });
 
   const handleSearch = (val: string) => {
@@ -128,12 +167,9 @@ export default function PaymentList() {
     setCurrentPage(1);
   };
 
-  const handleUpload = (id: number) => {
-    navigate(`/documentForm/add?TaxId=${id}`);
-  };
 
   const handleAddNew = () => {
-    navigate("/tax-payments/add");
+    navigate("/tax-payer/add");
   };
 
   const handleFiscalYearChange = (val: string) => {
@@ -142,17 +178,31 @@ export default function PaymentList() {
     setCurrentPage(1); 
   };
 
-  // --- NEW: View File Logic ---
+  const handleEdit = (paymentId: number | undefined) => {
+    if (!paymentId) {
+      alert("Cannot edit: Invalid record ID");
+      return;
+    }
+    // Find the item in the normalized list
+    const item = payments.find((p) => p.id === paymentId);
+    if (item) {
+      setEditingPayment(item);
+    }
+  };
+
+  // --- View File Logic ---
   interface ApiResponseViewFile {
     url: string;
   }
 
-  const handleViewFile = async (id: number) => {
+  const handleViewFile = async (taxRecordId: number) => {
+    if (!taxRecordId) {
+      console.error("Invalid taxRecordId provided:", taxRecordId);
+      alert("Cannot view file: Invalid record ID");
+      return;
+    }
     try {
-      // 1. Fetch URL using the ID
-      const response = await axiosInstance.get<ApiResponseViewFile>(`/api/view-receipt?id=${id}`);
-
-      // 2. Check for URL and open modal
+      const response = await axiosInstance.get<ApiResponseViewFile>(`/api/view-receipt?id=${taxRecordId}`);
       if (response?.data?.url) {
         setSelectedFileUrl(response.data.url);
         setIsModalOpen(true);
@@ -165,7 +215,33 @@ export default function PaymentList() {
     }
   };
 
-  // Close Modal
+  // --- Download Logic ---
+  const handleDownload = async () => {
+    if (!selectedFileUrl) return;
+  
+    try {
+      const response = await fetch(selectedFileUrl);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      const fileName = selectedFileUrl.split('/').pop()?.split('?')[0] || 'document.pdf';
+      a.download = fileName;
+      
+      document.body.appendChild(a);
+      a.click();
+      
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download Error:", error);
+      window.open(selectedFileUrl, '_blank');
+    }
+  };
+
   const closeFileModal = () => {
     setIsModalOpen(false);
     setSelectedFileUrl(null);
@@ -176,13 +252,11 @@ export default function PaymentList() {
     const searchLower = searchTerm.toLowerCase();
     const amountStr = item.amountPaid ? item.amountPaid.toString() : "";
     
-    // 1. Status Filter Logic
     const statusMatch =
       activeTab === "all" ||
       (activeTab === "paid" && (item.isPaid === 1 || item.isPaid === true)) ||
       (activeTab === "unpaid" && item.isPaid !== 1 && item.isPaid !== true);
 
-    // 2. Search Logic
     const searchMatch =
       searchTerm === "" ||
       (item.property && typeof item.property === 'string' && item.property.toLowerCase().includes(searchLower)) ||
@@ -218,14 +292,12 @@ export default function PaymentList() {
         </div>
       </div>
 
-      {/* --- NEW: Tabs Section --- */}
+      {/* Tabs Section */}
       <div className="flex gap-2 p-1 bg-white border-b border-slate-200">
         <button
           onClick={() => { setActiveTab("all"); setCurrentPage(1); }}
           className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${
-            activeTab === "all"
-              ? "bg-blue-600 text-white"
-              : "text-slate-500 hover:bg-slate-100"
+            activeTab === "all" ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100"
           }`}
         >
           All
@@ -233,9 +305,7 @@ export default function PaymentList() {
         <button
           onClick={() => { setActiveTab("paid"); setCurrentPage(1); }}
           className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${
-            activeTab === "paid"
-              ? "bg-green-600 text-white"
-              : "text-slate-500 hover:bg-slate-100"
+            activeTab === "paid" ? "bg-green-600 text-white" : "text-slate-500 hover:bg-slate-100"
           }`}
         >
           Paid
@@ -243,9 +313,7 @@ export default function PaymentList() {
         <button
           onClick={() => { setActiveTab("unpaid"); setCurrentPage(1); }}
           className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${
-            activeTab === "unpaid"
-              ? "bg-red-600 text-white"
-              : "text-slate-500 hover:bg-slate-100"
+            activeTab === "unpaid" ? "bg-red-600 text-white" : "text-slate-500 hover:bg-slate-100"
           }`}
         >
           Unpaid
@@ -316,11 +384,11 @@ export default function PaymentList() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
 
-        <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0 w-full sm:w-auto" onClick={handleAddNew}>
-          <span className="mr-2 text-lg leading-none">+</span> Add Payment
-        </Button>
+          <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0 w-full sm:w-auto ml-auto" onClick={handleAddNew}>
+            <Plus className="mr-2 h-4 w-4" /> Add Payment
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -329,26 +397,29 @@ export default function PaymentList() {
           <TableHeader className="bg-slate-50 border-b border-slate-200">
             <TableRow className="hover:bg-slate-50/50">
               {columnVisibility.sn && (
-                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">S.N.</TableHead>
+                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">S.N.</TableHead>
               )}
               {columnVisibility.property && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Property Name</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Property Name</TableHead>
               )}
               {columnVisibility.receiptNo && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Receipt No</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Receipt No</TableHead>
               )}
               {columnVisibility.amount && (
-                <TableHead className="text-right text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Amount</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Amount</TableHead>
               )}
               {columnVisibility.paymentMiti && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Payment Date</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Payment Date</TableHead>
               )}
               {columnVisibility.status && (
-                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Status</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Status</TableHead>
               )}
-              {columnVisibility.file && (
-                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Receipt</TableHead>
-              )}
+               {columnVisibility.file && (
+                 <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Receipt</TableHead>
+               )}
+               {columnVisibility.action && (
+                 <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">Action</TableHead>
+               )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -356,32 +427,32 @@ export default function PaymentList() {
               paginatedpayments.map((item, index) => (
                 <TableRow key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                   {columnVisibility.sn && (
-                    <TableCell className="text-center text-sm text-slate-500 font-medium py-4">
+                    <TableCell className="text-center text-sm text-slate-500 font-medium py-2">
                       {(currentPage - 1) * entriesPerPage + index + 1}
                     </TableCell>
                   )}
                   {columnVisibility.property && (
-                    <TableCell className="font-semibold text-slate-900 py-4">
+                    <TableCell className="font-semibold text-slate-900 py-2">
                       {item.property ?? "-"}
                     </TableCell>
                   )}
                   {columnVisibility.receiptNo && (
-                    <TableCell className="text-sm text-slate-600 py-4">
+                    <TableCell className="text-sm text-slate-600 py-2">
                       {item.receiptNo ?? "-"}
                     </TableCell>
                   )}
                   {columnVisibility.amount && (
-                    <TableCell className="text-sm text-slate-600 font-medium py-4">
+                    <TableCell className="text-sm text-slate-600 font-medium py-2">
                       {item.amountPaid ? `Rs. ${Number(item.amountPaid).toLocaleString()}` : "-"}
                     </TableCell>
                   )}
                   {columnVisibility.paymentMiti && (
-                    <TableCell className="text-sm text-slate-600 py-4">
+                    <TableCell className="text-sm text-slate-600 py-2">
                       {item.paymentMiti ?? "-"}
                     </TableCell>
                   )}
                   {columnVisibility.status && (
-                    <TableCell className="text-center text-sm font-semibold py-4">
+                    <TableCell className="text-center text-sm font-semibold py-2">
                       {item.isPaid === 1 || item.isPaid === true ? (
                         <span className="text-green-600">Paid</span>
                       ) : (
@@ -390,26 +461,38 @@ export default function PaymentList() {
                     </TableCell>
                   )}
                   
-                  {/* Receipt Column - View Button Logic */}
-                  {columnVisibility.file && (
-                    <TableCell className="text-center text-sm font-semibold py-4">
-                      {/* Show View Receipt Button if paid */}
-                      {item.isPaid === 1 || item.isPaid === true ? (
+                   {columnVisibility.file && (
+                     <TableCell className="text-center text-sm font-semibold py-2">
+                       {item.isPaid === 1 || item.isPaid === true ? (
+                         <Button
+                           size="sm"
+                           variant="ghost"
+                           className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                           onClick={() => handleViewFile(item.taxRecordId)}
+                           title="View Receipt"
+                         >
+                           <Eye size={16} strokeWidth={2} />
+                         </Button>
+                       ) : (
+                         <span className="text-slate-400">-</span>
+                       )}
+                     </TableCell>
+                   )}
+                    {columnVisibility.action && (
+                      <TableCell className="text-center text-sm font-semibold py-2">
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
-                          onClick={() => handleViewFile(item.id)}
-                          title="View Receipt"
+                          className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-green-600"
+                          onClick={() => handleEdit(item.id)}
+                          disabled={!item.id}
+                          title="Edit Payment"
                         >
-                          <Eye size={16} strokeWidth={2} />
+                        <PencilLine />
                         </Button>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </TableCell>
-                  )}
-                </TableRow>
+                      </TableCell>
+                    )}
+                 </TableRow>
               ))
             ) : (
               <TableRow>
@@ -473,60 +556,99 @@ export default function PaymentList() {
         </div>
       </div>
       
-      {/* --- NEW: File Viewer Modal Overlay --- */}
+      {/* --- POPUP MODAL (File Viewer) --- */}
       {isModalOpen && selectedFileUrl && (
-        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm transition-opacity duration-300">
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] relative">
-              
-              {/* Modal Header */}
-              <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-4">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-800">Receipt View</h2>
-                  <p className="text-sm text-slate-500">Secure preview of your payment record</p>
-                </div>
-                <button
-                  onClick={closeFileModal}
-                  className="absolute top-4 right-4 p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors"
-                >
-                  <X className="h-5 w-5 text-slate-500" />
-                </button>
-              </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden p-4">
+          <div 
+            className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm transition-opacity"
+            onClick={() => { setIsModalOpen(false); setSelectedFileUrl(null); }}
+          ></div>
 
-              {/* File Viewer / Download Section */}
-              <div className="flex flex-col items-center justify-center flex-grow h-full">
-                {selectedFileUrl.toLowerCase().endsWith('.pdf') ? (
-                  // PDF Viewer using Google Docs Viewer
-                  <div className="w-full h-full relative rounded-lg overflow-hidden">
-                    <iframe 
-                      src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedFileUrl)}&embedded=true&embedded=true&source=web`}
-                      className="w-full h-full border-none"
-                      title="Secure PDF Viewer"
-                    />
-                  </div>
+          <div className="relative bg-white w-full max-w-6xl h-[95vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            
+            <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="bg-red-100 p-2 rounded-lg">
+                  <span className="text-red-600 font-bold text-xs">PDF</span>
+                </div>
+                <div className="overflow-hidden">
+                  <h3 className="text-sm font-bold text-slate-800 truncate max-w-[200px] md:max-w-md">
+                    {selectedFileUrl.split('/').pop()?.split('?')[0] || "Document Preview"}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 italic font-medium">Secure Cloud Viewer</p>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => { setIsModalOpen(false); setSelectedFileUrl(null); }}
+                className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-all"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-grow bg-slate-200 flex flex-col overflow-hidden relative">
+              {selectedFileUrl.toLowerCase().includes('.pdf') ? (
+                <div className="w-full h-full">
+                  <iframe
+                    src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(selectedFileUrl)}`}
+                    className="w-full h-full border-none shadow-inner"
+                    title="Secure PDF Viewer"
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center p-4 bg-slate-300 overflow-auto">
+                  <img 
+                    src={selectedFileUrl} 
+                    alt="Preview" 
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-xl bg-white p-1"
+                    onError={(e) => {
+                      e.currentTarget.src = "https://placehold.co/600x400?text=Preview+Not+Available";
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-2 bg-white border-t border-gray-100 flex justify-between items-center">
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-50 rounded-lg transition"
+              >
+                Close
+              </button>
+
+              <div className="flex items-center gap-4">
+                {Role === 'Admin' ? (
+                  <button 
+                    type="button"
+                    onClick={handleDownload}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 transition-all active:scale-95"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Document
+                  </button>
                 ) : (
-                  // Image/Other Viewer (using native browser window.open for simplicity in this example, or an image tag)
-                  <div className="w-full h-full flex items-center justify-center">
-                     {/* Placeholder for non-PDF files or if the user wants a download button */}
-                     <div className="flex flex-col items-center gap-4">
-                        <Button 
-                          onClick={() => window.open(selectedFileUrl, '_blank')}
-                          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg transition-transform hover:scale-105"
-                        >
-                          Open in New Tab
-                        </Button>
-                        <Button 
-                          onClick={() => window.open(selectedFileUrl, '_blank')}
-                          className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-lg transition-transform hover:scale-105"
-                         title="Open in New Tab"
-                         >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                     </div>
+                  <div className="flex items-center gap-2 text-slate-500 bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
+                    <span className="text-[10px] font-bold uppercase tracking-widest italic">View Only Mode</span>
                   </div>
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- EDIT MODAL (Same pattern as FiscalyearList) --- */}
+      {editingPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
+            <TaxPaymentForm 
+              mode="edit" 
+              initialData={editingPayment} 
+              onSuccess={() => setEditingPayment(null)} 
+              onCancel={() => setEditingPayment(null)} 
+            />
           </div>
         </div>
       )}

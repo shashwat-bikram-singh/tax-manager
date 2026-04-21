@@ -276,7 +276,7 @@ export default function UserList() {
       )}
 
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Users</h2>
         </div>
@@ -341,22 +341,22 @@ export default function UserList() {
             <TableHeader className="bg-slate-50 border-b border-slate-200">
               <TableRow className="hover:bg-slate-50/50">
                 {columnVisibility.sn && (
-                  <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">S.N.</TableHead>
+                  <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">S.N.</TableHead>
                 )}
                 {columnVisibility.name && (
-                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Name</TableHead>
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Name</TableHead>
                 )}
                 {columnVisibility.role && (
-                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Role</TableHead>
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Role</TableHead>
                 )}
                 {columnVisibility.username && (
-                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Username</TableHead>
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Username</TableHead>
                 )}
                 {columnVisibility.email && (
-                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Email</TableHead>
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Email</TableHead>
                 )}
                 {columnVisibility.actions && (
-                  <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 w-24">Actions</TableHead>
+                  <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">Actions</TableHead>
                 )}
               </TableRow>
             </TableHeader>
@@ -365,24 +365,24 @@ export default function UserList() {
                 paginatedUsers.map((item, index) => (
                   <TableRow key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                     {columnVisibility.sn && (
-                      <TableCell className="text-center text-sm text-slate-500 font-medium py-4">
+                      <TableCell className="text-center text-sm text-slate-500 font-medium py-2">
                         {(currentPage - 1) * entriesPerPage + index + 1}
                       </TableCell>
                     )}
                     {columnVisibility.name && (
-                      <TableCell className="text-sm text-slate-900 font-medium py-4">{item.name}</TableCell>
+                      <TableCell className="text-sm text-slate-900 font-medium py-2">{item.name}</TableCell>
                     )}
                     {columnVisibility.role && (
-                      <TableCell className="text-sm text-slate-600 py-4">{item.role || "-"}</TableCell>
+                      <TableCell className="text-sm text-slate-600 py-2">{item.role || "-"}</TableCell>
                     )}
                     {columnVisibility.username && (
-                      <TableCell className="text-sm text-slate-600 py-4">{item.username || "-"}</TableCell>
+                      <TableCell className="text-sm text-slate-600 py-2">{item.username || "-"}</TableCell>
                     )}
                     {columnVisibility.email && (
-                      <TableCell className="text-sm text-slate-600 py-4">{item.email || "-"}</TableCell>
+                      <TableCell className="text-sm text-slate-600 py-2">{item.email || "-"}</TableCell>
                     )}
                     {columnVisibility.actions && (
-                      <TableCell className="py-4">
+                      <TableCell className="py-2">
                         <div className="flex items-center justify-center gap-1.5">
                           <Button
                             size="sm"

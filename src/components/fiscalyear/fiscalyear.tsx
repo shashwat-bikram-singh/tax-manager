@@ -351,26 +351,26 @@ export default function FiscalyearList() {
           <TableHeader className="bg-slate-50 border-b border-slate-200">
             <TableRow className="hover:bg-slate-50/50">
               {columnVisibility.sn && (
-                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">S.N.</TableHead>
+                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">S.N.</TableHead>
               )}
               {columnVisibility.fiscalYear && (
-                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("fiscalYear")}>
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 hover:text-slate-700 transition-colors" onClick={() => requestSort("fiscalYear")}>
                   Fiscal Year {getSortIndicator("fiscalYear")}
                 </TableHead>
               )}
               {columnVisibility.startMiti && (
-                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("startMiti")}>
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 hover:text-slate-700 transition-colors" onClick={() => requestSort("startMiti")}>
                   Start Miti {getSortIndicator("startMiti")}
                 </TableHead>
               )}
               {columnVisibility.endMiti && (
-                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("endMiti")}>
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 hover:text-slate-700 transition-colors" onClick={() => requestSort("endMiti")}>
                   End Miti {getSortIndicator("endMiti")}
                 </TableHead>
               )}
              
               {columnVisibility.actions && (
-                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 w-24">Actions</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">Actions</TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -379,12 +379,12 @@ export default function FiscalyearList() {
               paginatedFiscalYears.map((item, index) => (
                 <TableRow key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                   {columnVisibility.sn && (
-                    <TableCell className="text-center text-sm text-slate-500 font-medium py-4">
+                    <TableCell className="text-center text-sm text-slate-500 font-medium">
                       {(currentPage - 1) * entriesPerPage + index + 1}
                     </TableCell>
                   )}
                   {columnVisibility.fiscalYear && (
-                    <TableCell className="py-4">
+                    <TableCell className="py-2">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-slate-900">{item.fiscalYear}</span>
                         <StatusBadge status={item.status} isActive={!!item.isActive} />
@@ -392,13 +392,13 @@ export default function FiscalyearList() {
                     </TableCell>
                   )}
                   {columnVisibility.startMiti && (
-                    <TableCell className="text-sm text-slate-600 py-4">{item.startMiti ?? "-"}</TableCell>
+                    <TableCell className="text-sm text-slate-600 py-2">{item.startMiti ?? "-"}</TableCell>
                   )}
                   {columnVisibility.endMiti && (
-                    <TableCell className="text-sm text-slate-600 py-4">{item.endMiti ?? "-"}</TableCell>
+                    <TableCell className="text-sm text-slate-600 py-2">{item.endMiti ?? "-"}</TableCell>
                   )}
                   {columnVisibility.actions && (
-                    <TableCell className="py-4">
+                    <TableCell className="py-2">
                       <div className="flex items-center justify-center gap-1.5">
                         {item.isActive ? (
                           <div className="h-8 w-8 flex items-center justify-center text-green-600" title="Active">

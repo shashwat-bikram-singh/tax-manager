@@ -100,30 +100,7 @@ export default function DocumentSearchForm (){
     }
   };
 
-  // --- Download Handler ---
-  // const handleDownload = async () => {
-  //   if (!selectedFileUrl) return;
-    
-  //   try {
-  //     // Fetch the file as a blob
-  //     const response = await axiosInstance.get(selectedFileUrl, { responseType: 'blob' });
-  //     const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
-      
-  //     // Create a temporary link to trigger download
-  //     const link = document.createElement('a');
-  //     link.href = blobUrl;
-  //     link.setAttribute('download', 'document-file'); // You can improve this filename logic later
-  //     document.body.appendChild(link);
-  //     link.click();
-      
-  //     // Cleanup
-  //     link.remove();
-  //     window.URL.revokeObjectURL(blobUrl);
-  //   } catch (err) {
-  //     console.error(err);
-  //     alert("Download failed. Direct access restricted or network error.");
-  //   }
-  // };
+
   const handleDownload = async () => {
   if (!selectedFileUrl) return;
 
@@ -229,8 +206,8 @@ export default function DocumentSearchForm (){
                   </Button>
                 </PopoverTrigger>
                 
-                <PopoverContent className="w-full p-0" align="start">
-                  <Command className="w-full">
+                <PopoverContent className="w-full px-6 py-3" align="start">
+                  <Command className="w-full -mt-2 -ml-2">
                     <CommandInput placeholder="Search property..." />
                     <CommandList>
                       <CommandEmpty>No property found.</CommandEmpty>

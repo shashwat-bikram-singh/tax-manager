@@ -21,9 +21,12 @@ export function useFetchOne<T>(
             if (!identifier) {
                 throw new Error("Id is required");
             }
-            const response = await axiosInstance.get<Response<T>>(
-                `${import.meta.env.VITE_API_BASE_URL}${apiUrl}?${otherFields}`,
-            );
+            // Build URL with id parameter and any other fields
+            let url = `${import.meta.env.VITE_API_BASE_URL}${apiUrl}?id=${identifier}`;
+            if (otherFields) {
+                url += `&${otherFields}`;
+            }
+            const response = await axiosInstance.get<Response<T>>(url);
             return response.data;
         },
         enabled: !!identifier,

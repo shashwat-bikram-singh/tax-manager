@@ -10,7 +10,8 @@ import {
   BarChart3, 
   Calendar, 
   LogOut,
-  Users
+  Users,
+  Building2
 } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
 interface SidebarProps {
@@ -39,6 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     CalendarDays: Calendar,
     logout: LogOut,
     person: Users,
+    corporate_fare: Building2,
   };
 
   return (
@@ -106,19 +108,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           isOpen={isOpen}
           iconMap={iconMap}
         />
-        <NavItem
-          to="/fiscalyear"
-          icon="CalendarDays"
-          label="Fiscal Year"
-          isOpen={isOpen}
-          iconMap={iconMap}
-        />
 
         {/* Admin Sections */}
         {Role === "Admin" && isOpen && (
           <div className="pt-6 pb-2 px-3">
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Administration</p>
           </div>
+        )}
+        {Role === "Admin" && (
+          <NavItem
+            to="/fiscalyear"
+            icon="CalendarDays"
+            label="Fiscal Year"
+            isOpen={isOpen}
+            iconMap={iconMap}
+          />
         )}
         {(Role === "Admin" || Role === "OfficeAdmin") && (
           <NavItem
