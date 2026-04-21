@@ -7,7 +7,6 @@ import {
   Building,
   FolderOpen,
   Scale,
-  BarChart3,
   Calendar,
   LogOut,
   Users,
@@ -103,12 +102,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           iconMap={iconMap}
         />
         <NavItem
-          to="/analytics"
-          icon="analytics"
-          label="Analytics"
+          to="/converter"
+          icon="converter"
+          label="Area Converter"
           isOpen={isOpen}
           iconMap={iconMap}
         />
+
 
         {/* Admin Sections */}
         {Role === "Admin" && isOpen && (

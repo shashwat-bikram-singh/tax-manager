@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom"
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom"
 import MainLayout from "./components/layout/Mainlayout"
 import NotFound from "./pages/NotFound"
 import Dashboard from "./components/dashboard/Dashboard"
@@ -42,12 +42,6 @@ const SuperAdminRoute = ({ children }: { children: ReactNode }) => {
   return isSuperAdmin ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
-// Forces full remount of PropertyForm when the :id param changes
-function PropertyEditWrapper() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  return <PropertyForm key={id} mode="edit" onSuccess={() => navigate("/property")} />;
-}
 
 function App() {
   const navigate = useNavigate();
