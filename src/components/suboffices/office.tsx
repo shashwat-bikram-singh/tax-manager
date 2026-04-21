@@ -287,7 +287,7 @@ export default function OfficeList() {
           <TableHeader className="bg-slate-50 border-b border-slate-200">
             <TableRow className="hover:bg-slate-50/50">
               {columnVisibility.sn && (
-                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">S.N.</TableHead>
+                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">S.N.</TableHead>
               )}
               {columnVisibility.name && (
                 <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("name")}>
@@ -295,12 +295,12 @@ export default function OfficeList() {
                 </TableHead>
               )}
               {columnVisibility.code && (
-                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("code")}>
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 hover:text-slate-700 transition-colors" onClick={() => requestSort("code")}>
                   Code {getSortIndicator("code")}
                 </TableHead>
               )}
               {columnVisibility.parentId && (
-                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("parentId")}>
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 hover:text-slate-700 transition-colors" onClick={() => requestSort("parentId")}>
                   Parent Office {getSortIndicator("parentId")}
                 </TableHead>
               )}
@@ -312,7 +312,7 @@ export default function OfficeList() {
               )}
 
               {columnVisibility.actions && (
-                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 w-24">Actions</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">Actions</TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -321,22 +321,22 @@ export default function OfficeList() {
               paginatedOffices.map((item, index) => (
                 <TableRow key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                   {columnVisibility.sn && (
-                    <TableCell className="text-center text-sm text-slate-500 font-medium py-4">
+                    <TableCell className="text-center text-sm text-slate-500 font-medium py-2">
                       {(currentPage - 1) * entriesPerPage + index + 1}
                     </TableCell>
                   )}
                   {columnVisibility.name && (
-                    <TableCell className="py-4">
+                    <TableCell className="py-2">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-slate-900">{item.name}</span>
                       </div>
                     </TableCell>
                   )}
                   {columnVisibility.code && (
-                    <TableCell className="text-sm text-slate-600 py-4">{item.code ?? "-"}</TableCell>
+                    <TableCell className="text-sm text-slate-600 py-2">{item.code ?? "-"}</TableCell>
                   )}
                   {columnVisibility.parentId && (
-                    <TableCell className="text-sm text-slate-600 py-4">
+                    <TableCell className="text-sm text-slate-600 py-2">
                       {Offices.find(o => o.id === item.parentId)?.name || item.parentId || "-"}
                     </TableCell>
                   )}
@@ -348,7 +348,7 @@ export default function OfficeList() {
                     </TableCell>
                   )}
                   {columnVisibility.actions && (
-                    <TableCell className="py-4">
+                    <TableCell className="py-2">
                       <div className="flex items-center justify-center gap-1.5">
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => handleEdit(item.id!)} title="Edit">
                           <Pencil size={16} strokeWidth={2} />

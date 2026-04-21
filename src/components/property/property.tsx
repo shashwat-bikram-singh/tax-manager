@@ -222,31 +222,31 @@ export default function PropertyList() {
           <TableHeader className="bg-slate-50 border-b border-slate-200">
             <TableRow className="hover:bg-slate-50/50">
               {columnVisibility.sn && (
-                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">S.N.</TableHead>
+                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">S.N.</TableHead>
               )}
               {columnVisibility.name && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Name</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Name</TableHead>
               )}
               {columnVisibility.propertyType && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Property Type</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Property Type</TableHead>
               )}
               {columnVisibility.province && (
                 <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Province</TableHead>
               )}
               {(columnVisibility.landArea || columnVisibility.buildingArea) && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Area (sq.m)</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Area (sq.m)</TableHead>
               )}
               {columnVisibility.legalStatus && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Legal Status</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Legal Status</TableHead>
               )}
               {columnVisibility.usageName && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Reason to Use</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Reason to Use</TableHead>
               )}
               {columnVisibility.ownershipType && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Ownership Type</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">Ownership Type</TableHead>
               )}
               {columnVisibility.actions && (
-                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 w-24">Actions</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">Actions</TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -255,33 +255,33 @@ export default function PropertyList() {
               paginatedProperties.map((item, index) => (
                 <TableRow key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                   {columnVisibility.sn && (
-                    <TableCell className="text-center text-sm text-slate-500 font-medium py-4">
+                    <TableCell className="text-center text-sm text-slate-500 font-medium py-2">
                       {(currentPage - 1) * entriesPerPage + index + 1}
                     </TableCell>
                   )}
                   {columnVisibility.name && (
-                    <TableCell className="font-semibold text-slate-900 py-4">{item.name ?? "-"}</TableCell>
+                    <TableCell className="font-semibold text-slate-900 py-2">{item.name ?? "-"}</TableCell>
                   )}
                   {columnVisibility.propertyType && (
-                    <TableCell className="text-sm text-slate-600 py-4">{item.propertyType ?? "-"}</TableCell>
+                    <TableCell className="text-sm text-slate-600 py-2">{item.propertyType ?? "-"}</TableCell>
                   )}
                   {columnVisibility.province && (
                     <TableCell className="text-sm text-slate-600 py-4">{item.province ?? "-"}</TableCell>
                   )}
                   {(columnVisibility.landArea || columnVisibility.buildingArea) && (
-                    <TableCell className="text-sm text-slate-600 py-4">{getAreaDisplay(item)}</TableCell>
+                    <TableCell className="text-sm text-slate-600 py-2">{getAreaDisplay(item)}</TableCell>
                   )}
                   {columnVisibility.legalStatus && (
-                    <TableCell className="text-sm text-slate-600 py-4">{item.legalStatus ?? "-"}</TableCell>
+                    <TableCell className="text-sm text-slate-600 py-2">{item.legalStatus ?? "-"}</TableCell>
                   )}
                   {columnVisibility.usageName && (
-                    <TableCell className="text-sm text-slate-600 py-4">{item.usageName ?? "-"}</TableCell>
+                    <TableCell className="text-sm text-slate-600 py-2">{item.usageName ?? "-"}</TableCell>
                   )}
                   {columnVisibility.ownershipType && (
-                    <TableCell className="text-sm text-slate-600 py-4">{item.ownershipType ?? "-"}</TableCell>
+                    <TableCell className="text-sm text-slate-600 py-2">{item.ownershipType ?? "-"}</TableCell>
                   )}
                   {columnVisibility.actions && (
-                    <TableCell className="py-4">
+                    <TableCell className="py-2">
                       <div className="flex items-center justify-center gap-1.5">
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => handleUpload(item.id)} title="Upload">
                           <Upload size={16} strokeWidth={2} />

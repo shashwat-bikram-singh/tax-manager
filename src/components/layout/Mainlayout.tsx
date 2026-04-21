@@ -1,50 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Outlet } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useFetchAll } from "@/hooks/useFetchAll";
 import Sidebar from './Sidebar';
 import MobileSidebar from './MobileSidebar';
-import { useMutate } from '@/hooks/useMutate';
-import { useFiscalYear } from '@/context/FiscalYearContext';
+// Keeping import if Sidebar/Outlet need it, but removing dependency for the header display
+import { useFiscalYear } from '@/context/FiscalYearContext'; 
 import type { FiscalYear } from '@/type/fiscalyear';
-import { Calendar } from 'lucide-react';
+import { Calendar, Loader2 } from 'lucide-react';
 import NotificationPanel from './NotificationPanel';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 const MainLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  
+  // Fetch the full list of fiscal years
+  const { items: rawFyData, isLoadingItems: isLoadingFy } = useFetchAll<any>("/api/fiscalyear", ["fiscalyear"]);
 
-  // Get fiscal year context
-  const context = useFiscalYear();
-  const fiscalYears = context?.fiscalYears || [];
-  const activeFy = context?.selectedFiscalYear;
-  const setSelectedFiscalYear = context?.setSelectedFiscalYear;
+  // Helper to normalize data
+  const fiscalYears = useMemo(() => {
+    if (!rawFyData) return [];
+    if (Array.isArray(rawFyData)) return rawFyData;
+    const nestedData = rawFyData.data || rawFyData.Data;
+    if (Array.isArray(nestedData)) return nestedData;
+    return [];
+  }, [rawFyData]);
 
-  const { update } = useMutate<FiscalYear>("/api/changefiscalyear", "fiscalyear");
+  // Logic: Find the specific Fiscal Year from the API where isActive is 1 or true
+  const displayFy = useMemo(() => {
+    if (!fiscalYears || fiscalYears.length === 0) return null;
+    
+    // Filter for the active fiscal year
+    const activeFy = fiscalYears.find((fy: FiscalYear) => 
+      fy.isActive === 1 || fy.isActive === true
+    );
 
-  // Filter valid fiscal years (id > 0)
-  const validFiscalYears = fiscalYears.filter(fy => fy.id && fy.id > 0);
-
+    return activeFy || null;
+  }, [fiscalYears]);
+  
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const handleFiscalYearChange = (fyId: string) => {
-    const selectedFy = fiscalYears.find(fy => fy.id === Number(fyId));
-    if (selectedFy && selectedFy.id && setSelectedFiscalYear) {
-      update.mutate({
-        id: selectedFy.id,
-        fiscalYear: selectedFy.fiscalYear
-      } as unknown as FiscalYear);
-      setSelectedFiscalYear(selectedFy.id);
-    }
   };
 
   return (
@@ -68,7 +64,7 @@ const MainLayout: React.FC = () => {
       </header>
 
       <div className="flex">
-        {/* Desktop Sidebar - Fixed with external toggle */}
+        {/* Desktop Sidebar */}
         <aside className={cn(
           "hidden lg:flex flex-col h-screen sticky top-0 transition-all duration-300 z-50 ambient-shadow",
           isSidebarOpen ? "w-60" : "w-20"
@@ -78,13 +74,12 @@ const MainLayout: React.FC = () => {
 
         {/* Main Content */}
         <main className={cn("flex-1 lg:transition-all lg:duration-300 bg-surface")}>
-          {/* Desktop Header with Sidebar Toggle */}
+          {/* Desktop Header */}
           <DesktopHeader
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={toggleSidebar}
-            activeFy={activeFy}
-            fiscalYears={validFiscalYears}
-            onFiscalYearChange={handleFiscalYearChange}
+            activeFy={displayFy}
+            isLoading={isLoadingFy}
           />
 
           {/* Page Content */}
@@ -100,16 +95,14 @@ const MainLayout: React.FC = () => {
 interface DesktopHeaderProps {
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
-  activeFy?: FiscalYear;
-  fiscalYears: FiscalYear[];
-  onFiscalYearChange: (fyId: string) => void;
+  activeFy?: FiscalYear | null;
+  isLoading?: boolean;
 }
 
 const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   onToggleSidebar,
   activeFy,
-  fiscalYears,
-  onFiscalYearChange,
+  isLoading,
 }) => {
   return (
     <header className="hidden lg:flex h-16 items-center justify-between px-8 sticky top-0 z-40 bg-surface text-primary">
@@ -122,26 +115,33 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
         >
           <span className="material-symbols-outlined">menu</span>
         </Button>
+        
         <h2 className="font-headline font-bold tracking-tight text-xl">Tax Compliance Tracker</h2>
-
-        {/* Fiscal Year Dropdown */}
-        <Select
-          value={activeFy?.id?.toString() || ""}
-          onValueChange={onFiscalYearChange}
-        >
-          <SelectTrigger className="w-[200px] h-10 bg-primary/5 border border-primary/20 hover:bg-primary/10 rounded-lg">
-            <SelectValue placeholder="Select Fiscal Year" />
-          </SelectTrigger>
-          <SelectContent>
-            {fiscalYears.map((fy) => (
-              <SelectItem key={fy.id} value={fy.id?.toString() || ""}>
-                {fy.fiscalYear} {fy.isActive ? "(Active)" : ""}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        
+        {/* Active Fiscal Year Display based on API Flag */}
+        {isLoading ? (
+          <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg w-[140px] animate-pulse">
+            <Loader2 className="h-4 w-4 text-slate-400 animate-spin" />
+            <span className="text-sm text-slate-400">Loading...</span>
+          </div>
+        ) : activeFy ? (
+          <div className="flex items-center gap-2 h-10 px-3 bg-primary/5 border border-primary/20 rounded-lg">
+            <Calendar className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-primary">
+              FY {activeFy.fiscalYear}
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 h-10 px-3 bg-red-50 border border-red-200 rounded-lg">
+            <Calendar className="h-4 w-4 text-red-500" />
+            <span className="text-sm font-medium text-red-600">
+              No Active FY Found
+            </span>
+          </div>
+        )}
 
       </div>
+      
       <div className="flex items-center gap-4">
         <NotificationPanel />
         <span className="material-symbols-outlined p-2 text-outline hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">settings</span>

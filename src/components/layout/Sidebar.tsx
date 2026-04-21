@@ -11,6 +11,7 @@ import {
   Calendar,
   LogOut,
   Users,
+  Building2,
   Calculator
 } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
@@ -40,6 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     CalendarDays: Calendar,
     logout: LogOut,
     person: Users,
+    corporate_fare: Building2,
   };
 
   return (
@@ -101,16 +103,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           iconMap={iconMap}
         />
         <NavItem
-          to="/converter"
-          icon="converter"
-          label="Area Converter"
-          isOpen={isOpen}
-          iconMap={iconMap}
-        />
-        <NavItem
-          to="/fiscalyear"
-          icon="CalendarDays"
-          label="Fiscal Year"
+          to="/analytics"
+          icon="analytics"
+          label="Analytics"
           isOpen={isOpen}
           iconMap={iconMap}
         />
@@ -120,6 +115,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           <div className="pt-6 pb-2 px-3">
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Administration</p>
           </div>
+        )}
+        {Role === "Admin" && (
+          <NavItem
+            to="/fiscalyear"
+            icon="CalendarDays"
+            label="Fiscal Year"
+            isOpen={isOpen}
+            iconMap={iconMap}
+          />
         )}
         {(Role === "Admin" || Role === "OfficeAdmin") && (
           <NavItem

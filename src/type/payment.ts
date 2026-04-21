@@ -9,5 +9,5 @@ export interface Payment{
     amountPaid: number,
     paymentMiti:string,
     isPaid: number,
-    filePath?: string,
+    taxRecordId: number,
 }
