@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useNavigate } from "react-router-dom"
 import MainLayout from "./components/layout/Mainlayout"
 import NotFound from "./pages/NotFound"
 import Dashboard from "./components/dashboard/Dashboard"
+import LeaderboardPage from "./components/dashboard/LeaderboardPage"
 import Login from "./pages/login/Login";
 import SubofficeList from "./components/suboffices/office";
 import UserList from "./components/user/user";
@@ -69,6 +70,7 @@ function App() {
         </ProtectedRoute>
       } >
         <Route index element={<Dashboard />} />
+        <Route path="leaderboard" element={<LeaderboardPage />} />
         <Route path="office" element={<SubofficeList />} />
         <Route path="user" element={<UserList />} />
         <Route path="fiscalyear" element={<FiscalyearList />} />
