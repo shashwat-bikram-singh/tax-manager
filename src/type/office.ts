@@ -4,4 +4,5 @@ export interface Office {
     parentId: number;
     code: string;
     userId:number
+    measurementUnit: string;
 }

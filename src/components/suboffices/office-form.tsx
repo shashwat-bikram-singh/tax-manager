@@ -25,6 +25,7 @@ const OfficeSchema = z.object({
   name: z.string().min(1, "Name is required"),
   code: z.string().min(1, "Code is required"),
   parentId: z.number().optional().nullable(),
+  measurementUnit: z.string().optional().nullable(),
 });
 
 type OfficeFormValues = z.infer<typeof OfficeSchema>;
@@ -63,6 +64,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
       name: initialData?.name || "",
       code: initialData?.code || "",
       parentId: initialData?.parentId || null,
+      measurementUnit: initialData?.measurementUnit || null,
     },
   });
 
@@ -70,8 +72,8 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
     setLoading(true);
 
     try {
-      const existingFy = Offices.find(fy => 
-        fy.name.toLowerCase() === values.name.toLowerCase() && 
+      const existingFy = Offices.find(fy =>
+        fy.name.toLowerCase() === values.name.toLowerCase() &&
         fy.id !== initialData?.id
       );
 
@@ -87,6 +89,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
         name: values.name,
         code: values.code,
         parentId: values.parentId || null,
+        measurementUnit: values.measurementUnit || null,
       };
 
       if (mode === "edit" && initialData?.id) {
@@ -121,17 +124,17 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
   return (
     <div className="">
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300">
-        
+
         {/* Header Section */}
         <div className="bg-white border-b border-gray-100 p-8 pb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-start gap-4">
-            
+
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
                   {mode === "add" ? "Add New Office" : "Edit Office"}
                 </h1>
-                
+
               </div>
             </div>
 
@@ -153,9 +156,9 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
               <div className="space-y-6">
                 <div className="flex items-center gap-2">
-                  <div className="h-px bg-gray-200 flex-grow"></div>
-                  
-                  <div className="h-px bg-gray-200 flex-grow"></div>
+                  <div className="h-px bg-gray-200 grow"></div>
+
+                  <div className="h-px bg-gray-200 grow"></div>
                 </div>
 
                 {/* Row 1: Name & Code */}
@@ -188,7 +191,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                           Code
+                          Code
                           <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
@@ -244,6 +247,34 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                     )}
                   />
                 </div>
+
+                {/* // create a dropdown using selection hardcoded input filed for the Measurement Unit the units are Sq.m, Terai, Hilly */}
+                <FormField
+                  control={form.control}
+                  name="measurementUnit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-700">
+                        Measurement Unit
+                      </FormLabel>
+                      <FormControl>
+                        <select
+                          {...field}
+                          disabled={loading}
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value || null)}
+                          className="w-full border rounded px-2 py-2"
+                        >
+                          <option value="">No Measurement Unit</option>
+                          <option value="Sq.m">Sq.m</option>
+                          <option value="Terai">Terai(Bigha,Dhur,Kattha)</option>
+                          <option value="Hilly">Hilly(Ropani,Aana,Paisa,Dam)</option>
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               {/* Action Buttons */}

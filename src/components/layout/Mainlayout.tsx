@@ -6,14 +6,14 @@ import { useFetchAll } from "@/hooks/useFetchAll";
 import Sidebar from './Sidebar';
 import MobileSidebar from './MobileSidebar';
 // Keeping import if Sidebar/Outlet need it, but removing dependency for the header display
-import { useFiscalYear } from '@/context/FiscalYearContext'; 
 import type { FiscalYear } from '@/type/fiscalyear';
 import { Calendar, Loader2 } from 'lucide-react';
+import NotificationPanel from './NotificationPanel';
 
 const MainLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  
+
   // Fetch the full list of fiscal years
   const { items: rawFyData, isLoadingItems: isLoadingFy } = useFetchAll<any>("/api/fiscalyear", ["fiscalyear"]);
 
@@ -29,15 +29,15 @@ const MainLayout: React.FC = () => {
   // Logic: Find the specific Fiscal Year from the API where isActive is 1 or true
   const displayFy = useMemo(() => {
     if (!fiscalYears || fiscalYears.length === 0) return null;
-    
+
     // Filter for the active fiscal year
-    const activeFy = fiscalYears.find((fy: FiscalYear) => 
+    const activeFy = fiscalYears.find((fy: FiscalYear) =>
       fy.isActive === 1 || fy.isActive === true
     );
 
     return activeFy || null;
   }, [fiscalYears]);
-  
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
@@ -82,7 +82,7 @@ const MainLayout: React.FC = () => {
           />
 
           {/* Page Content */}
-          <div className="p-8 max-w-7xl mx-auto space-y-8">
+          <div className="p-4 max-w-7xl mx-auto space-y-8">
             <Outlet />
           </div>
         </main>
@@ -114,9 +114,9 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
         >
           <span className="material-symbols-outlined">menu</span>
         </Button>
-        
+
         <h2 className="font-headline font-bold tracking-tight text-xl">Tax Compliance Tracker</h2>
-        
+
         {/* Active Fiscal Year Display based on API Flag */}
         {isLoading ? (
           <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg w-[140px] animate-pulse">
@@ -140,12 +140,9 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
         )}
 
       </div>
-      
+
       <div className="flex items-center gap-4">
-        <div className="relative">
-          <span className="material-symbols-outlined p-2 text-outline hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">notifications</span>
-          <span className="absolute top-2 right-2 w-2 h-2 bg-secondary rounded-full border-2 border-surface"></span>
-        </div>
+        <NotificationPanel />
         <span className="material-symbols-outlined p-2 text-outline hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">settings</span>
         <div className="h-8 w-8 rounded-full overflow-hidden border border-outline-variant">
           <img

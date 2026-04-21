@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Form,
   FormControl,
@@ -52,10 +51,7 @@ interface DocumentFormProps {
 
 // ─── Main Form ────────────────────────────────────────────────────────────────
 export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps) {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [searchParams] = useSearchParams();
-  const propertyIdParam = searchParams.get("propertyId");
 
   // We assume the backend expects POST to /api/document for files
   const { create } = useMutate<any>("/api/document", "document");
@@ -79,7 +75,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
     defaultValues: {
       documents: [
         {
-          propertyId: propertyIdParam || "",
+          propertyId: "",
           documentType: "",
           fileTagId: "",
           fiscalYearId: "",
@@ -94,12 +90,6 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
     name: "documents",
     control: form.control,
   });
-
-  useEffect(() => {
-    if (propertyIdParam) {
-      form.setValue("documents.0.propertyId", propertyIdParam);
-    }
-  }, [propertyIdParam, form]);
 
   const onSubmit = async (values: DocumentFormValues) => {
     setLoading(true);
@@ -141,11 +131,6 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
     }
   };
 
-  const handleCancel = () => {
-    if (onCancel) onCancel();
-    else navigate("/property");
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/40 p-6">
       <p className="text-xs uppercase tracking-widest text-gray-400 font-semibold mb-3">
@@ -154,15 +139,17 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={handleCancel}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <X className="w-4 h-4" />
-          </Button>
+          {onCancel && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onCancel}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -397,7 +384,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleCancel}
+                onClick={onCancel}
                 className="h-10 px-4 rounded-xl border-gray-200 text-gray-600 hover:bg-gray-100"
               >
                 Cancel
