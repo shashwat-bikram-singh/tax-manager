@@ -9,9 +9,10 @@ import {
   Scale, 
   BarChart3, 
   Calendar, 
-  LogOut
+  LogOut,
+  Users
 } from 'lucide-react';
-
+import { jwtDecode } from 'jwt-decode';
 interface SidebarProps {
   isOpen: boolean;
 }
@@ -19,7 +20,9 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
   const { logout } = useAuthStore();
   const navigate = useNavigate();
-  const role = useAuthStore(state => state.role);
+   const {token} = useAuthStore();
+    const decoded: any = jwtDecode(token!);
+    const Role = decoded.Role;
 
   const handleLogout = () => {
     logout();
@@ -35,6 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     analytics: BarChart3,
     CalendarDays: Calendar,
     logout: LogOut,
+    person: Users,
   };
 
   return (
@@ -111,16 +115,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
         />
 
         {/* Admin Sections */}
-        {role === "Admin" && isOpen && (
+        {Role === "Admin" && isOpen && (
           <div className="pt-6 pb-2 px-3">
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Administration</p>
           </div>
         )}
-        {(role === "Admin" || role === "OfficeAdmin") && (
+        {(Role === "Admin" || Role === "OfficeAdmin") && (
           <NavItem
-            to="/suboffice"
+            to="/office"
             icon="corporate_fare"
-            label="Sub Offices"
+            label="Office"
+            isOpen={isOpen}
+            iconMap={iconMap}
+          />
+        )}
+        {(Role === "Admin" || Role === "OfficeAdmin") && (
+          <NavItem
+            to="/user"
+            icon="person"
+            label="User"
             isOpen={isOpen}
             iconMap={iconMap}
           />

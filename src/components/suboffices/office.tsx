@@ -42,55 +42,24 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  CirclePower,
   FileX,
-  CheckCircle2,
-  Clock,
-  XCircle,
   Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useFetchAll } from "@/hooks/useFetchAll";
-import { useMutate } from "@/hooks/useMutate";
-import FiscalyearForm from "./fiscalyear-form";
-import type { FiscalYear } from "@/type/fiscalyear";
+import { useMutate } from "@/hooks/useMutate"
+import type { Office } from "@/type/office";
+import OfficeForm from "./office-form";
 
-// Helper Component for Status Badges
-const StatusBadge: React.FC<{ status: number; isActive?: boolean }> = ({ status, isActive }) => {
-  const variants: Record<number, { label: string; className: string; icon: React.ReactNode }> = {
-    2: { label: "Pending", className: "bg-amber-100 text-amber-700 border-amber-200", icon: <Clock className="w-3 h-3 mr-1" /> },
-    3: { label: "Closed", className: "bg-red-100 text-red-700 border-red-200", icon: <XCircle className="w-3 h-3 mr-1" /> },
-  };
 
-  if (isActive) {
-    return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border bg-emerald-100 text-emerald-700 border-emerald-200">
-        <CheckCircle2 className="w-3 h-3 mr-1" />
-      </span>
-    );
-  }
-
-  if (status === 2 || status === 3) {
-    const config = variants[status];
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
-        {config.icon}
-        {config.label}
-      </span>
-    );
-  }
-
-  return null;
-};
-
-export default function FiscalyearList() {
-  const { items: fyData, isLoadingItems } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
-  const { delete: deleteFy } = useMutate<FiscalYear>("/api/fiscalyear", "fiscalyear");
-  const { update } = useMutate<FiscalYear>("/api/changefiscalyear", "fiscalyear");
+export default function OfficeList() {
+  const { items: fyData, isLoadingItems } = useFetchAll<Office>("/api/office", ["office"]);
+  const { delete: deleteFy } = useMutate<Office>("/api/office", "office");
   
-  const [fyToActive, setFyToActive] = useState<FiscalYear | null>(null);
+  
 
-  function getfiscalYears(data: any): FiscalYear[] {
+
+  function getOffices(data: any): Office[] {
     if (!data) return [];
     if (Array.isArray(data)) return data;
     const nestedData = data.data || data.Data;
@@ -98,9 +67,9 @@ export default function FiscalyearList() {
     return [];
   }
 
-  const fiscalYears = getfiscalYears(fyData);
+  const Offices = getOffices(fyData);
 
-  const [editingFy, setEditingFy] = useState<FiscalYear | null>(null);
+  const [editingFy, setEditingFy] = useState<Office | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -109,33 +78,31 @@ export default function FiscalyearList() {
   const [currentPage, setCurrentPage] = useState(1);
   
   const [sortConfig, setSortConfig] = useState<{
-    key: keyof FiscalYear;
+    key: keyof Office;
     direction: "ascending" | "descending";
   } | null>(null);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [activeDialogOpen, setActiveDialogOpen] = useState(false);
-  const [fyToDelete, setFyToDelete] = useState<FiscalYear | null>(null);
+  const [fyToDelete, setFyToDelete] = useState<Office | null>(null);
   
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >({
     sn: true,
-    fiscalYear: true,
-    status: true,
-    startMiti: true,
-    endMiti: true,
+    name: true,
+    code: true,
+    parentId: true,
     actions: true,
   });
 
   const handleEdit = (id: number) => {
-    const item = fiscalYears.find((v) => v.id === id);
+    const item = Offices.find((v) => v.id === id);
     if (item) setEditingFy(item);
   };
 
   const handleAddNew = () => setIsAddingNew(true);
 
-  function sortFiscalYears<T extends Record<string, any>>(
+  function sortOffices<T extends Record<string, any>>(
     items: T[],
     sortConfig: { key: keyof T; direction: "ascending" | "descending" } | null
   ): T[] {
@@ -163,18 +130,18 @@ export default function FiscalyearList() {
     return sortableItems;
   }
 
-  const sortedFiscalYears = sortFiscalYears(fiscalYears, sortConfig);
+  const sortedOffices = sortOffices(Offices, sortConfig);
 
-  const filteredFiscalYears = sortedFiscalYears.filter((item) => {
+  const filteredOffices = sortedOffices.filter((item) => {
     return searchTerm === "" ||
-      (item.fiscalYear && item.fiscalYear.toLowerCase().includes(searchTerm.toLowerCase()));
+      (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
-  const totalPages = Math.ceil(filteredFiscalYears.length / entriesPerPage);
+  const totalPages = Math.ceil(filteredOffices.length / entriesPerPage);
   const startIndex = (currentPage - 1) * entriesPerPage;
-  const paginatedFiscalYears = filteredFiscalYears.slice(startIndex, startIndex + entriesPerPage);
+  const paginatedOffices = filteredOffices.slice(startIndex, startIndex + entriesPerPage);
 
-  const requestSort = (key: keyof FiscalYear) => {
+  const requestSort = (key: keyof Office) => {
     let direction: "ascending" | "descending" = "ascending";
     if (sortConfig && sortConfig.key === key && sortConfig.direction === "ascending") {
       direction = "descending";
@@ -182,7 +149,7 @@ export default function FiscalyearList() {
     setSortConfig({ key, direction });
   };
 
-  const getSortIndicator = (key: keyof FiscalYear) => {
+  const getSortIndicator = (key: keyof Office) => {
     if (!sortConfig || sortConfig.key !== key) return null;
     return sortConfig.direction === "ascending" ? (
       <ChevronUp className="inline h-3 w-3 ml-1 text-slate-400" />
@@ -195,42 +162,19 @@ export default function FiscalyearList() {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
 
-  const confirmDelete = (item: FiscalYear) => {
+  const confirmDelete = (item: Office) => {
     setFyToDelete(item);
     setDeleteDialogOpen(true);
   };
-
-  const confirmActive = (item: FiscalYear) => {
-    setFyToActive(item);
-    setActiveDialogOpen(true);
-  };
-
-  const handleActive = () => {
-    if (!fyToActive || !fyToActive.id) return;
-    update.mutate({ 
-      id: fyToActive.id,
-      fiscalYear: fyToActive.fiscalYear
-    } as unknown as FiscalYear, {
-      onSuccess: () => {
-        toast.success(`Fiscal Year ${fyToActive.fiscalYear} is now active ✅`, {
-          style: { background: "#10b981", color: "white" },
-        });
-        setActiveDialogOpen(false);
-        setFyToActive(null);
-      },
-      onError: () => toast.error("Failed to activate Fiscal Year ❌"),
-    });
-  };
-
   const handleDelete = async () => {
     if (fyToDelete && fyToDelete.id) {
       try {
         await deleteFy.mutateAsync(fyToDelete.id);
-        toast.success("Fiscal Year deleted successfully ✅");
+        toast.success("Office deleted successfully ✅");
         setDeleteDialogOpen(false);
         setFyToDelete(null);
       } catch (err) {
-        toast.error("Failed to delete fiscal year");
+        toast.error("Failed to delete Office");
       }
     }
   };
@@ -243,32 +187,28 @@ export default function FiscalyearList() {
     );
   }
 
-  const MobileFiscalyearCard = ({ item }: { item: FiscalYear }) => (
+  const MobileOfficeCard = ({ item }: { item: Office }) => (
     <div className="bg-white rounded-xl border border-slate-200 p-5 mb-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="font-bold text-lg text-slate-900">{item.fiscalYear}</h3>
+          <h3 className="font-bold text-lg text-slate-900">{item.name}</h3>
           <div className="mt-2 flex gap-2">
-            <StatusBadge status={item.status} isActive={!!item.isActive} />
           </div>
         </div>
       </div>
       
       <div className="bg-slate-50 rounded-lg p-3 mb-4 grid grid-cols-2 gap-4">
         <div>
-          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Start Miti</span>
-          <span className="text-sm font-medium text-slate-700">{item.startMiti || "-"}</span>
+          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Code</span>
+          <span className="text-sm font-medium text-slate-700">{item.code || "-"}</span>
         </div>
         <div>
-          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-1">End Miti</span>
-          <span className="text-sm font-medium text-slate-700">{item.endMiti || "-"}</span>
+          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Parent Office</span>
+          <span className="text-sm font-medium text-slate-700">{Offices.find(o => o.id === item.parentId)?.name || item.parentId || "-"}</span>
         </div>
       </div>
 
       <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-        <Button size="sm" variant="ghost" className="text-green-600 hover:bg-green-50 h-9 w-9 p-0" onClick={() => confirmActive(item)} title="Activate">
-          <CirclePower size={18} />
-        </Button>
         <Button size="sm" variant="ghost" className="text-slate-600 hover:bg-slate-100 h-9 w-9 p-0" onClick={() => handleEdit(item.id!)} title="Edit">
           <Pencil size={18} />
         </Button>
@@ -284,7 +224,7 @@ export default function FiscalyearList() {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Fiscal Years</h2>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Offices</h2>
           
         </div>
       </div>
@@ -313,7 +253,7 @@ export default function FiscalyearList() {
               <Input
                 ref={searchInputRef}
                 type="search"
-                placeholder="Search fiscal years..."
+                placeholder="Search Offices..."
                 className="pl-9 w-full bg-slate-50 border-2 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -344,7 +284,7 @@ export default function FiscalyearList() {
         </div>
 
         <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0" onClick={handleAddNew}>
-          <span className="mr-2 text-lg leading-none">+</span> Add FY
+          <span className="mr-2 text-lg leading-none">+</span> Add Office
         </Button>
       </div>
         <Table>
@@ -353,19 +293,19 @@ export default function FiscalyearList() {
               {columnVisibility.sn && (
                 <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">S.N.</TableHead>
               )}
-              {columnVisibility.fiscalYear && (
-                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("fiscalYear")}>
-                  Fiscal Year {getSortIndicator("fiscalYear")}
+              {columnVisibility.name  && (
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("name")}>
+                  Office {getSortIndicator("name")}
                 </TableHead>
               )}
-              {columnVisibility.startMiti && (
-                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("startMiti")}>
-                  Start Miti {getSortIndicator("startMiti")}
+              {columnVisibility.code && (
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("code")}>
+                  Code {getSortIndicator("code")}
                 </TableHead>
               )}
-              {columnVisibility.endMiti && (
-                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("endMiti")}>
-                  End Miti {getSortIndicator("endMiti")}
+              {columnVisibility.parentId && (
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("parentId")}>
+                  Parent Office {getSortIndicator("parentId")}
                 </TableHead>
               )}
              
@@ -375,40 +315,32 @@ export default function FiscalyearList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedFiscalYears.length > 0 ? (
-              paginatedFiscalYears.map((item, index) => (
+            {paginatedOffices.length > 0 ? (
+              paginatedOffices.map((item, index) => (
                 <TableRow key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                   {columnVisibility.sn && (
                     <TableCell className="text-center text-sm text-slate-500 font-medium py-4">
                       {(currentPage - 1) * entriesPerPage + index + 1}
                     </TableCell>
                   )}
-                  {columnVisibility.fiscalYear && (
+                  {columnVisibility.name && (
                     <TableCell className="py-4">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-900">{item.fiscalYear}</span>
-                        <StatusBadge status={item.status} isActive={!!item.isActive} />
+                        <span className="font-semibold text-slate-900">{item.name}</span>
                       </div>
                     </TableCell>
                   )}
-                  {columnVisibility.startMiti && (
-                    <TableCell className="text-sm text-slate-600 py-4">{item.startMiti ?? "-"}</TableCell>
+                  {columnVisibility.code && (
+                    <TableCell className="text-sm text-slate-600 py-4">{item.code ?? "-"}</TableCell>
                   )}
-                  {columnVisibility.endMiti && (
-                    <TableCell className="text-sm text-slate-600 py-4">{item.endMiti ?? "-"}</TableCell>
+                  {columnVisibility.parentId && (
+                    <TableCell className="text-sm text-slate-600 py-4">
+                      {Offices.find(o => o.id === item.parentId)?.name || item.parentId || "-"}
+                    </TableCell>
                   )}
                   {columnVisibility.actions && (
                     <TableCell className="py-4">
                       <div className="flex items-center justify-center gap-1.5">
-                        {item.isActive ? (
-                          <div className="h-8 w-8 flex items-center justify-center text-green-600" title="Active">
-                            <CheckCircle2 size={16} strokeWidth={2.5} />
-                          </div>
-                        ) : (
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-700" onClick={() => confirmActive(item)} title="Activate">
-                            <CirclePower size={16} strokeWidth={2.5} />
-                          </Button>
-                        )}
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => handleEdit(item.id!)} title="Edit">
                           <Pencil size={16} strokeWidth={2} />
                         </Button>
@@ -425,7 +357,7 @@ export default function FiscalyearList() {
                 <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length} className="h-64 text-center">
                   <div className="flex flex-col items-center justify-center text-slate-400">
                     <FileX className="w-12 h-12 mb-3 opacity-50" />
-                    <p className="text-sm font-medium">No fiscal years found.</p>
+                    <p className="text-sm font-medium">No Offices found.</p>
                     <p className="text-xs mt-1">Try adjusting your search or filters.</p>
                   </div>
                 </TableCell>
@@ -437,9 +369,9 @@ export default function FiscalyearList() {
 
       {/* Mobile Cards */}
       <div className="md:hidden space-y-4">
-        {paginatedFiscalYears.length > 0 ? (
-          paginatedFiscalYears.map((item) => (
-            <MobileFiscalyearCard key={item.id} item={item} />
+        {paginatedOffices.length > 0 ? (
+          paginatedOffices.map((item) => (
+            <MobileOfficeCard key={item.id} item={item} />
           ))
         ) : (
           <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
@@ -453,10 +385,10 @@ export default function FiscalyearList() {
       <div className="hidden sm:flex items-center justify-between px-2 pt-4">
         <div className="text-sm text-slate-500">
           Showing <span className="font-medium text-slate-900">
-            {filteredFiscalYears.length === 0 ? 0 : (currentPage - 1) * entriesPerPage + 1}
+            {filteredOffices.length === 0 ? 0 : (currentPage - 1) * entriesPerPage + 1}
           </span> to <span className="font-medium text-slate-900">
-            {Math.min(currentPage * entriesPerPage, filteredFiscalYears.length)}
-          </span> of <span className="font-medium text-slate-900">{filteredFiscalYears.length}</span> results
+            {Math.min(currentPage * entriesPerPage, filteredOffices.length)}
+          </span> of <span className="font-medium text-slate-900">{filteredOffices.length}</span> results
         </div>
 
         <div className="flex items-center space-x-6 lg:space-x-8">
@@ -500,9 +432,9 @@ export default function FiscalyearList() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-slate-900">Delete Fiscal Year</DialogTitle>
+            <DialogTitle className="text-slate-900">Delete Office</DialogTitle>
             <DialogDescription className="text-slate-500 pt-2">
-              Are you sure you want to delete <strong className="text-slate-800">{fyToDelete?.fiscalYear}</strong>? This action cannot be undone.
+              Are you sure you want to delete <strong className="text-slate-800">{fyToDelete?.id}</strong>? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -512,27 +444,11 @@ export default function FiscalyearList() {
         </DialogContent>
       </Dialog>
 
-      {/* Active Confirmation Dialog */}
-      <Dialog open={activeDialogOpen} onOpenChange={setActiveDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-slate-900">Activate Fiscal Year</DialogTitle>
-            <DialogDescription className="text-slate-500 pt-2">
-              Are you sure you want to set <strong className="text-slate-800">{fyToActive?.fiscalYear}</strong> as the current active fiscal year?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setActiveDialogOpen(false)}>Cancel</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleActive}>Activate</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Edit Modal */}
       {editingFy && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
-            <FiscalyearForm mode="edit" initialData={editingFy} onSuccess={() => setEditingFy(null)} onCancel={() => setEditingFy(null)} />
+            <OfficeForm mode="edit" initialData={editingFy} onSuccess={() => setEditingFy(null)} onCancel={() => setEditingFy(null)} />
           </div>
         </div>
       )}
@@ -541,7 +457,7 @@ export default function FiscalyearList() {
       {isAddingNew && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
-            <FiscalyearForm mode="add" onSuccess={() => setIsAddingNew(false)} onCancel={() => setIsAddingNew(false)} />
+            <OfficeForm mode="add" onSuccess={() => setIsAddingNew(false)} onCancel={() => setIsAddingNew(false)} />
           </div>
         </div>
       )}

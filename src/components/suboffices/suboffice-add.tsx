@@ -1,5 +1,5 @@
 import React from 'react';
-import SubofficeForm from './suboffice-form';
+import SubofficeForm from './office-form';
 
 
 const AddSuboffice: React.FC = () => {
