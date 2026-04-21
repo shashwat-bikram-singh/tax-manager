@@ -22,6 +22,7 @@ import DocumentList from "./components/document/document";
 import OfficeForm from "./components/suboffices/office-form";
 import TaxPayerList from "./components/tax-payer/tax-payer";
 import TaxPayerForm from "./components/tax-payer/tax-payment-form";
+import { MeasurementConverter } from "./components/Converter/converter";
 
 
 // Super admin private route
@@ -87,6 +88,7 @@ function App() {
         <Route path="revenue-report" element={<RevenueReport />} />
         <Route path="office-form" element={<OfficeForm mode="add" />} />
         <Route path="documentForm/add" element={<DocumentForm mode="add" onSuccess={() => navigate("/documentForm")} />} />
+        <Route path="converter" element={<MeasurementConverter />} />
         <Route path="tax-compliance" element={<TaxPayerList />} />
         <Route path="tax-payer/add" element={<TaxPayerForm mode="add" onSuccess={() => navigate("/tax-compliance")} />} />
         <Route path="tax-payer/edit/:id" element={<TaxPayerForm mode="edit" />} />

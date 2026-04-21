@@ -8,6 +8,7 @@ import { useMutate } from '@/hooks/useMutate';
 import { useFiscalYear } from '@/context/FiscalYearContext';
 import type { FiscalYear } from '@/type/fiscalyear';
 import { Calendar } from 'lucide-react';
+import NotificationPanel from './NotificationPanel';
 import {
   Select,
   SelectContent,
@@ -19,13 +20,13 @@ import {
 const MainLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  
+
   // Get fiscal year context
   const context = useFiscalYear();
   const fiscalYears = context?.fiscalYears || [];
   const activeFy = context?.selectedFiscalYear;
   const setSelectedFiscalYear = context?.setSelectedFiscalYear;
-  
+
   const { update } = useMutate<FiscalYear>("/api/changefiscalyear", "fiscalyear");
 
   // Filter valid fiscal years (id > 0)
@@ -87,7 +88,7 @@ const MainLayout: React.FC = () => {
           />
 
           {/* Page Content */}
-          <div className="p-8 max-w-7xl mx-auto space-y-8">
+          <div className="p-4 max-w-7xl mx-auto space-y-8">
             <Outlet />
           </div>
         </main>
@@ -122,7 +123,7 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           <span className="material-symbols-outlined">menu</span>
         </Button>
         <h2 className="font-headline font-bold tracking-tight text-xl">Tax Compliance Tracker</h2>
-        
+
         {/* Fiscal Year Dropdown */}
         <Select
           value={activeFy?.id?.toString() || ""}
@@ -142,10 +143,7 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
 
       </div>
       <div className="flex items-center gap-4">
-        <div className="relative">
-          <span className="material-symbols-outlined p-2 text-outline hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">notifications</span>
-          <span className="absolute top-2 right-2 w-2 h-2 bg-secondary rounded-full border-2 border-surface"></span>
-        </div>
+        <NotificationPanel />
         <span className="material-symbols-outlined p-2 text-outline hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">settings</span>
         <div className="h-8 w-8 rounded-full overflow-hidden border border-outline-variant">
           <img

@@ -75,7 +75,6 @@ export default function PropertyList() {
   }
 
   const properties = getProperties(propertyData);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -85,8 +84,9 @@ export default function PropertyList() {
     sn: true,
     name: true,
     propertyType: true,
+    province: true,
     landArea: true,
-    buildingArea:true,
+    buildingArea: true,
     legalStatus: true,
     usageName: true,
     ownershipType: true,
@@ -112,10 +112,10 @@ export default function PropertyList() {
     return (
       searchTerm === "" ||
       (item.propertyType && item.propertyType.toLowerCase().includes(searchLower)) ||
-      (item.name && item.name .toLowerCase().includes(searchLower)) ||
-      (item.legalStatus && item.legalStatus .toLowerCase().includes(searchLower)) ||
-      (item.ownershipType && item.ownershipType .toLowerCase().includes(searchLower)) ||
-      (item.usageName && item.usageName.toLowerCase().includes(searchLower)) 
+      (item.name && item.name.toLowerCase().includes(searchLower)) ||
+      (item.legalStatus && item.legalStatus.toLowerCase().includes(searchLower)) ||
+      (item.ownershipType && item.ownershipType.toLowerCase().includes(searchLower)) ||
+      (item.usageName && item.usageName.toLowerCase().includes(searchLower))
     );
   });
 
@@ -159,65 +159,65 @@ export default function PropertyList() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Property Inventory</h2>
-          
+
         </div>
       </div>
 
       {/* Controls Bar */}
-    
+
 
       {/* Table */}
       <div className="hidden md:block rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="text-slate-500 border-slate-200 hover:bg-slate-50 p-2 h-9 w-9 shrink-0"
-            onClick={() => setSearchOpen(!searchOpen)}
-          >
-            <Search className="h-4 w-4" />
-          </Button>
-          
-          {searchOpen && (
-            <div className="relative w-full sm:w-80 group">
-              <Input
-                ref={searchInputRef}
-                type="search"
-                placeholder="Search fiscal years..."
-                className="pl-9 w-full bg-slate-50 border-2 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              />
-            </div>
-          )}
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 shrink-0">
-                <Settings2 />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {Object.entries(columnVisibility).map(([key, visible]) => (
-                <DropdownMenuCheckboxItem
-                  key={key}
-                  checked={visible}
-                  onCheckedChange={() => setColumnVisibility({ ...columnVisibility, [key]: !visible })}
-                >
-                  {key.charAt(0).toUpperCase() + key.slice(1)}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-slate-500 border-slate-200 hover:bg-slate-50 p-2 h-9 w-9 shrink-0"
+              onClick={() => setSearchOpen(!searchOpen)}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
 
-        <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0" onClick={handleAddNew}>
-          <span className="mr-2 text-lg leading-none">+</span> Add Property
-        </Button>
-      </div>
+            {searchOpen && (
+              <div className="relative w-full sm:w-80 group">
+                <Input
+                  ref={searchInputRef}
+                  type="search"
+                  placeholder="Search fiscal years..."
+                  className="pl-9 w-full bg-slate-50 border-2 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                />
+              </div>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 shrink-0">
+                  <Settings2 />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {Object.entries(columnVisibility).map(([key, visible]) => (
+                  <DropdownMenuCheckboxItem
+                    key={key}
+                    checked={visible}
+                    onCheckedChange={() => setColumnVisibility({ ...columnVisibility, [key]: !visible })}
+                  >
+                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0" onClick={handleAddNew}>
+            <span className="mr-2 text-lg leading-none">+</span> Add Property
+          </Button>
+        </div>
         <Table>
           <TableHeader className="bg-slate-50 border-b border-slate-200">
             <TableRow className="hover:bg-slate-50/50">
@@ -229,6 +229,9 @@ export default function PropertyList() {
               )}
               {columnVisibility.propertyType && (
                 <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Property Type</TableHead>
+              )}
+              {columnVisibility.province && (
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Province</TableHead>
               )}
               {(columnVisibility.landArea || columnVisibility.buildingArea) && (
                 <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Area (sq.m)</TableHead>
@@ -262,6 +265,9 @@ export default function PropertyList() {
                   {columnVisibility.propertyType && (
                     <TableCell className="text-sm text-slate-600 py-4">{item.propertyType ?? "-"}</TableCell>
                   )}
+                  {columnVisibility.province && (
+                    <TableCell className="text-sm text-slate-600 py-4">{item.province ?? "-"}</TableCell>
+                  )}
                   {(columnVisibility.landArea || columnVisibility.buildingArea) && (
                     <TableCell className="text-sm text-slate-600 py-4">{getAreaDisplay(item)}</TableCell>
                   )}
@@ -279,7 +285,7 @@ export default function PropertyList() {
                       <div className="flex items-center justify-center gap-1.5">
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => handleUpload(item.id)} title="Upload">
                           <Upload size={16} strokeWidth={2} />
-                         </Button>
+                        </Button>
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => handleEdit(item.id)} title="Edit">
                           <Pencil size={16} strokeWidth={2} />
                         </Button>

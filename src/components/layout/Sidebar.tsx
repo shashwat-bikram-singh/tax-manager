@@ -2,15 +2,16 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
-import { 
-  LayoutDashboard, 
-  Building, 
-  FolderOpen, 
-  Scale, 
-  BarChart3, 
-  Calendar, 
+import {
+  LayoutDashboard,
+  Building,
+  FolderOpen,
+  Scale,
+  BarChart3,
+  Calendar,
   LogOut,
-  Users
+  Users,
+  Calculator
 } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
 interface SidebarProps {
@@ -20,9 +21,9 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
   const { logout } = useAuthStore();
   const navigate = useNavigate();
-   const {token} = useAuthStore();
-    const decoded: any = jwtDecode(token!);
-    const Role = decoded.Role;
+  const { token } = useAuthStore();
+  const decoded: any = jwtDecode(token!);
+  const Role = decoded.Role;
 
   const handleLogout = () => {
     logout();
@@ -35,14 +36,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     domain: Building,
     folder_shared: FolderOpen,
     gavel: Scale,
-    analytics: BarChart3,
+    converter: Calculator,
     CalendarDays: Calendar,
     logout: LogOut,
     person: Users,
   };
 
   return (
-    <aside 
+    <aside
       className={cn(
         "h-full flex flex-col bg-slate-50 border-r border-slate-200 transition-all duration-300 relative z-20",
         isOpen ? "w-60" : "w-20"
@@ -63,11 +64,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
         </div>
         {/* Close button for mobile view */}
         {!isOpen && (
-           <div className="w-10 h-10 flex items-center justify-center text-slate-400">
-             {/* Placeholder or minimal icon if needed */}
-           </div>
+          <div className="w-10 h-10 flex items-center justify-center text-slate-400">
+            {/* Placeholder or minimal icon if needed */}
+          </div>
         )}
-      </div>  
+      </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
@@ -100,9 +101,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           iconMap={iconMap}
         />
         <NavItem
-          to="/analytics"
-          icon="analytics"
-          label="Analytics"
+          to="/converter"
+          icon="converter"
+          label="Area Converter"
           isOpen={isOpen}
           iconMap={iconMap}
         />
@@ -174,19 +175,19 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isOpen, iconMap }) =
       end
       className={({ isActive }) => cn(
         "flex items-center gap-3 px-3 py-2.5 transition-all rounded-lg text-sm font-medium",
-        isActive 
-          ? "bg-white text-blue-600 shadow-sm border border-slate-100" 
+        isActive
+          ? "bg-white text-blue-600 shadow-sm border border-slate-100"
           : "text-slate-600 hover:bg-white hover:text-slate-900",
         !isOpen && "justify-center px-0 py-2.5"
       )}
       title={!isOpen ? label : undefined}
     >
       {IconComponent && (
-        <IconComponent 
+        <IconComponent
           className={cn(
             "w-5 h-5 shrink-0",
             // Optional: Make icon slightly larger or colored when active
-          )} 
+          )}
         />
       )}
       {isOpen && <span className="truncate">{label}</span>}

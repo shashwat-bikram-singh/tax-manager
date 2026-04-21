@@ -55,8 +55,8 @@ import OfficeForm from "./office-form";
 export default function OfficeList() {
   const { items: fyData, isLoadingItems } = useFetchAll<Office>("/api/office", ["office"]);
   const { delete: deleteFy } = useMutate<Office>("/api/office", "office");
-  
-  
+
+
 
 
   function getOffices(data: any): Office[] {
@@ -76,7 +76,7 @@ export default function OfficeList() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   const [sortConfig, setSortConfig] = useState<{
     key: keyof Office;
     direction: "ascending" | "descending";
@@ -84,7 +84,7 @@ export default function OfficeList() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fyToDelete, setFyToDelete] = useState<Office | null>(null);
-  
+
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >({
@@ -92,6 +92,7 @@ export default function OfficeList() {
     name: true,
     code: true,
     parentId: true,
+    measurementUnit: true,
     actions: true,
   });
 
@@ -121,7 +122,7 @@ export default function OfficeList() {
         return sortConfig.direction === "ascending" ? aValue - bValue : bValue - aValue;
       }
       if (typeof aValue === "boolean" && typeof bValue === "boolean") {
-         return sortConfig.direction === "ascending" 
+        return sortConfig.direction === "ascending"
           ? (aValue === bValue ? 0 : aValue ? 1 : -1)
           : (aValue === bValue ? 0 : aValue ? -1 : 1);
       }
@@ -196,7 +197,7 @@ export default function OfficeList() {
           </div>
         </div>
       </div>
-      
+
       <div className="bg-slate-50 rounded-lg p-3 mb-4 grid grid-cols-2 gap-4">
         <div>
           <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Code</span>
@@ -225,75 +226,70 @@ export default function OfficeList() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Offices</h2>
-          
+
         </div>
       </div>
 
-{/* Controls Bar */}
-     
-    
+      {/* Controls Bar */}
 
-       
-
-      
       <div className="hidden md:block rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="text-slate-500 border-slate-200 hover:bg-slate-50 p-2 h-9 w-9 shrink-0"
-            onClick={() => setSearchOpen(!searchOpen)}
-          >
-            <Search className="h-4 w-4" />
-          </Button>
-          
-          {searchOpen && (
-            <div className="relative w-full sm:w-80 group">
-              <Input
-                ref={searchInputRef}
-                type="search"
-                placeholder="Search Offices..."
-                className="pl-9 w-full bg-slate-50 border-2 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              />
-            </div>
-          )}
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 shrink-0">
-                <Settings2 />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {Object.entries(columnVisibility).map(([key, visible]) => (
-                <DropdownMenuCheckboxItem
-                  key={key}
-                  checked={visible}
-                  onCheckedChange={() => setColumnVisibility({ ...columnVisibility, [key]: !visible })}
-                >
-                  {key.charAt(0).toUpperCase() + key.slice(1)}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-slate-500 border-slate-200 hover:bg-slate-50 p-2 h-9 w-9 shrink-0"
+              onClick={() => setSearchOpen(!searchOpen)}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
 
-        <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0" onClick={handleAddNew}>
-          <span className="mr-2 text-lg leading-none">+</span> Add Office
-        </Button>
-      </div>
+            {searchOpen && (
+              <div className="relative w-full sm:w-80 group">
+                <Input
+                  ref={searchInputRef}
+                  type="search"
+                  placeholder="Search Offices..."
+                  className="pl-9 w-full bg-slate-50 border-2 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                />
+              </div>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 shrink-0">
+                  <Settings2 />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {Object.entries(columnVisibility).map(([key, visible]) => (
+                  <DropdownMenuCheckboxItem
+                    key={key}
+                    checked={visible}
+                    onCheckedChange={() => setColumnVisibility({ ...columnVisibility, [key]: !visible })}
+                  >
+                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0" onClick={handleAddNew}>
+            <span className="mr-2 text-lg leading-none">+</span> Add Office
+          </Button>
+        </div>
         <Table>
           <TableHeader className="bg-slate-50 border-b border-slate-200">
             <TableRow className="hover:bg-slate-50/50">
               {columnVisibility.sn && (
                 <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">S.N.</TableHead>
               )}
-              {columnVisibility.name  && (
+              {columnVisibility.name && (
                 <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("name")}>
                   Office {getSortIndicator("name")}
                 </TableHead>
@@ -308,7 +304,13 @@ export default function OfficeList() {
                   Parent Office {getSortIndicator("parentId")}
                 </TableHead>
               )}
-             
+
+              {columnVisibility.measurementUnit && (
+                <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("parentId")}>
+                  Measurement Unit {getSortIndicator("parentId")}
+                </TableHead>
+              )}
+
               {columnVisibility.actions && (
                 <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 w-24">Actions</TableHead>
               )}
@@ -336,6 +338,13 @@ export default function OfficeList() {
                   {columnVisibility.parentId && (
                     <TableCell className="text-sm text-slate-600 py-4">
                       {Offices.find(o => o.id === item.parentId)?.name || item.parentId || "-"}
+                    </TableCell>
+                  )}
+                  {columnVisibility.measurementUnit && (
+                    <TableCell className="text-sm text-slate-600 py-4">
+
+                      <span className="text-slate-900">{item.measurementUnit}</span>
+
                     </TableCell>
                   )}
                   {columnVisibility.actions && (
@@ -445,22 +454,26 @@ export default function OfficeList() {
       </Dialog>
 
       {/* Edit Modal */}
-      {editingFy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
-            <OfficeForm mode="edit" initialData={editingFy} onSuccess={() => setEditingFy(null)} onCancel={() => setEditingFy(null)} />
+      {
+        editingFy && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
+              <OfficeForm mode="edit" initialData={editingFy} onSuccess={() => setEditingFy(null)} onCancel={() => setEditingFy(null)} />
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Add Modal */}
-      {isAddingNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
-            <OfficeForm mode="add" onSuccess={() => setIsAddingNew(false)} onCancel={() => setIsAddingNew(false)} />
+      {
+        isAddingNew && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
+              <OfficeForm mode="add" onSuccess={() => setIsAddingNew(false)} onCancel={() => setIsAddingNew(false)} />
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }

@@ -24,6 +24,11 @@ export interface OwnershipType {
     name: string;
 }
 
+export interface GeographicRegion {
+    id: number;
+    name: string;
+}
+
 export interface Province {
     id: number,
     name: string,
@@ -66,6 +71,7 @@ export interface PropertyDetail {
     legalStatusId: number;
     usageRightsId: number;
     ownershipTypeId: number;
+    geographicRegionId: number;
     ownershipTransferMiti: string;
 
 }

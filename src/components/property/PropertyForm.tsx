@@ -27,7 +27,7 @@ import { X, ShieldCheck } from "lucide-react";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import { useMutate } from "@/hooks/useMutate";
 import axiosInstance from "@/config/axios";
-import type { District, LegalStatus, Localbody, OwnershipType, PropertyType, UsageRights, UsageType, PropertyDetail } from "@/type/property";
+import type { District, LegalStatus, Localbody, OwnershipType, PropertyType, UsageRights, UsageType, PropertyDetail, GeographicRegion } from "@/type/property";
 import NepaliDatePicker from "@/components/ui/NepaliDatePicker";
 
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
@@ -52,6 +52,7 @@ const propertySchema = z.object({
   legalStatus: z.string().optional().nullable(),
   usageRights: z.string().optional().nullable(),
   usageTypes: z.string().optional().nullable(),
+  geographicRegion: z.string().optional().nullable(),
   encroachmentRisk: z.string().optional().nullable(),
   noOfFloor: z.coerce.number().optional().nullable(),
   ownershipTransferMiti: z.string().optional().nullable(),
@@ -89,8 +90,42 @@ function calcHilly(ropani = 0, aana = 0, paisa = 0, daam = 0) {
   return (ropani * HILLY_ROPANI_TO_SQM) + (aana * HILLY_AANA_TO_SQM) + (paisa * HILLY_PAISA_TO_SQM) + (daam * HILLY_DAAM_TO_SQM);
 }
 
+function convertSqmToTerai(sqm: number) {
+  let remaining = sqm;
+
+  const bigha = Math.floor(remaining / TERAI_BIGHA_TO_SQM);
+  remaining -= bigha * TERAI_BIGHA_TO_SQM;
+
+  const kattha = Math.floor(remaining / TERAI_KATTHA_TO_SQM);
+  remaining -= kattha * TERAI_KATTHA_TO_SQM;
+
+  const dhur = remaining / TERAI_DHUR_TO_SQM;
+
+  return { bigha, kattha, dhur };
+}
+
+
+function convertSqmToHilly(sqm: number) {
+  let remaining = sqm;
+
+  const ropani = Math.floor(remaining / HILLY_ROPANI_TO_SQM);
+  remaining -= ropani * HILLY_ROPANI_TO_SQM;
+
+  const aana = Math.floor(remaining / HILLY_AANA_TO_SQM);
+  remaining -= aana * HILLY_AANA_TO_SQM;
+
+  const paisa = Math.floor(remaining / HILLY_PAISA_TO_SQM);
+  remaining -= paisa * HILLY_PAISA_TO_SQM;
+
+  const daam = remaining / HILLY_DAAM_TO_SQM;
+
+  return { ropani, aana, paisa, daam };
+}
+
+
+
 // ─── Badge Component ──────────────────────────────────────────────────────────
-function StatusBadge({ status }: { status?: string }) {
+export function StatusBadge({ status }: { status?: string }) {
   if (status === "verified") {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
@@ -113,90 +148,180 @@ function StatusBadge({ status }: { status?: string }) {
   );
 }
 
+
+
 // ─── Measurement Converter Card ───────────────────────────────────────────────
-// function MeasurementConverter() {
-//   const [measureType, setMeasureType] = useState<"terai" | "hilly">("terai");
-//   const [terai, setTerai] = useState({ bigha: "", kattha: "", dhur: "" });
-//   const [hilly, setHilly] = useState({ ropani: "", aana: "", paisa: "", daam: "" });
+export function MeasurementConverter() {
+  const [measureType, setMeasureType] = useState<"terai" | "hilly">("terai");
+  const [terai, setTerai] = useState({ bigha: "", kattha: "", dhur: "" });
+  const [hilly, setHilly] = useState({ ropani: "", aana: "", paisa: "", daam: "" });
+  const [sqmInput, setSqmInput] = useState("");
+  const reverseTerai = convertSqmToTerai(Number(sqmInput) || 0);
+  const reverseHilly = convertSqmToHilly(Number(sqmInput) || 0);
+  const [mode, setMode] = useState<"forward" | "reverse">("forward");
 
-//   const sqm = measureType === "terai"
-//     ? calcTerai(Number(terai.bigha), Number(terai.kattha), Number(terai.dhur))
-//     : calcHilly(Number(hilly.ropani), Number(hilly.aana), Number(hilly.paisa), Number(hilly.daam));
+  const sqm = measureType === "terai"
+    ? calcTerai(Number(terai.bigha), Number(terai.kattha), Number(terai.dhur))
+    : calcHilly(Number(hilly.ropani), Number(hilly.aana), Number(hilly.paisa), Number(hilly.daam));
 
-//   const sqft = sqm * SQM_TO_SQFT;
+  const sqft = sqm * SQM_TO_SQFT;
 
-//   return (
-//     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-//       <div className="flex items-center justify-between">
-//         <h3 className="text-sm font-semibold text-gray-900 tracking-tight">Measurement Converter</h3>
-//         <div className="flex gap-1 bg-gray-100 p-1 rounded-lg text-xs font-medium">
-//           <button
-//             type="button"
-//             onClick={() => setMeasureType("terai")}
-//             className={`px-3 py-1 rounded-md transition-all ${measureType === "terai" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-//           >Terai (B-K-D)</button>
-//           <button
-//             type="button"
-//             onClick={() => setMeasureType("hilly")}
-//             className={`px-3 py-1 rounded-md transition-all ${measureType === "hilly" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-//           >Hilly (R-A-P-D)</button>
-//         </div>
-//       </div>
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+          <span className="material-symbols-outlined text-white text-base">straighten</span>
+        </div>
+        <h3 className="text-sm font-bold text-gray-900 tracking-tight">Measurement Converter</h3>
+      </div>
 
-//       {measureType === "terai" ? (
-//         <div className="grid grid-cols-3 gap-3">
-//           {(["bigha", "kattha", "dhur"] as const).map((unit) => (
-//             <div key={unit}>
-//               <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{unit}</label>
-//               <input
-//                 type="number"
-//                 min="0"
-//                 value={terai[unit]}
-//                 onChange={(e) => setTerai((p) => ({ ...p, [unit]: e.target.value }))}
-//                 className="w-full text-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-//                 placeholder="0"
-//               />
-//             </div>
-//           ))}
-//         </div>
-//       ) : (
-//         <div className="grid grid-cols-4 gap-2">
-//           {(["ropani", "aana", "paisa", "daam"] as const).map((unit) => (
-//             <div key={unit}>
-//               <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{unit.slice(0, 1).toUpperCase()}</label>
-//               <input
-//                 type="number"
-//                 min="0"
-//                 value={hilly[unit]}
-//                 onChange={(e) => setHilly((p) => ({ ...p, [unit]: e.target.value }))}
-//                 className="w-full text-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-//                 placeholder="0"
-//               />
-//             </div>
-//           ))}
-//         </div>
-//       )}
+      {/* Region Toggle */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg text-xs font-medium">
+        <button
+          type="button"
+          onClick={() => setMeasureType("terai")}
+          className={`flex-1 py-1.5 rounded-md transition-all ${measureType === "terai" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+        >Terai (B·K·D)</button>
+        <button
+          type="button"
+          onClick={() => setMeasureType("hilly")}
+          className={`flex-1 py-1.5 rounded-md transition-all ${measureType === "hilly" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+        >Hilly (R·A·P·D)</button>
+      </div>
 
-//       {/* Conversion note */}
-//       <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-//         <p className="text-xs text-amber-800">
-//           <span className="font-semibold">Conversion Note:</span> In the {measureType === "terai" ? "Terai" : "Hilly"} region, 1 {measureType === "terai" ? `Bigha is equivalent to ${TERAI_BIGHA_TO_SQM.toLocaleString()} square meters` : `Ropani is equivalent to ${HILLY_ROPANI_TO_SQM.toLocaleString()} square meters`}. Values above are calculated based on the 1964 standard.
-//         </p>
-//       </div>
+      {/* Mode Toggle */}
+      <div className="flex gap-1 bg-indigo-50 border border-indigo-100 p-1 rounded-lg text-xs font-medium">
+        <button
+          type="button"
+          onClick={() => setMode("forward")}
+          className={`flex-1 py-1.5 rounded-md transition-all ${mode === "forward" ? "bg-indigo-600 text-white shadow-sm" : "text-indigo-500 hover:text-indigo-700"
+            }`}
+        >
+          Standard → m²
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("reverse")}
+          className={`flex-1 py-1.5 rounded-md transition-all ${mode === "reverse" ? "bg-indigo-600 text-white shadow-sm" : "text-indigo-500 hover:text-indigo-700"
+            }`}
+        >
+          m² → Standard
+        </button>
+      </div>
 
-//       {/* Standardized Area */}
-//       <div className="bg-[#0f2646] rounded-2xl p-5 text-white">
-//         <p className="text-[10px] uppercase tracking-widest text-blue-200 font-semibold mb-2">Standardized Area</p>
-//         <p className="text-4xl font-black tracking-tight">{sqm.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-//         <p className="text-blue-300 text-sm mt-0.5">Square Meters (m²)</p>
-//         <div className="mt-4 pt-4 border-t border-white/10">
-//           <p className="text-2xl font-bold">{sqft.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-//           <p className="text-blue-300 text-sm mt-0.5">Square Feet (sq. ft.)</p>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
+      {/* Forward mode: Standard inputs */}
+      {mode === "forward" && (
+        <>
+          {measureType === "terai" ? (
+            <div className="grid grid-cols-3 gap-2">
+              {(["bigha", "kattha", "dhur"] as const).map((unit) => (
+                <div key={unit}>
+                  <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{unit}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={terai[unit]}
+                    onChange={(e) => setTerai((p) => ({ ...p, [unit]: e.target.value }))}
+                    className="w-full text-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    placeholder="0"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-1.5">
+              {(["ropani", "aana", "paisa", "daam"] as const).map((unit) => (
+                <div key={unit}>
+                  <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{unit.charAt(0).toUpperCase() + unit.slice(1)}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={hilly[unit]}
+                    onChange={(e) => setHilly((p) => ({ ...p, [unit]: e.target.value }))}
+                    className="w-full text-center bg-gray-50 border border-gray-200 rounded-lg px-1 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    placeholder="0"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Standardized Area Result */}
+          <div className="bg-[#0f2646] rounded-xl p-4 text-white">
+            <p className="text-[10px] uppercase tracking-widest text-blue-200 font-semibold mb-1">Standardized Area</p>
+            <p className="text-3xl font-black tracking-tight">{sqm.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-blue-300 text-xs mt-0.5">Square Meters (m²)</p>
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <p className="text-xl font-bold">{sqft.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-blue-300 text-xs mt-0.5">Square Feet (sq ft)</p>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Reverse mode: SQM input */}
+      {mode === "reverse" && (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Enter Square Meters</label>
+            <input
+              type="number"
+              placeholder="e.g. 500"
+              value={sqmInput}
+              onChange={(e) => setSqmInput(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+            <p className="text-[10px] uppercase tracking-widest text-indigo-400 font-semibold mb-2">
+              {measureType === "terai" ? "Terai Equivalent" : "Hilly Equivalent"}
+            </p>
+            {measureType === "terai" ? (
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-white rounded-lg p-2 border border-indigo-100">
+                  <p className="text-lg font-black text-indigo-700">{reverseTerai.bigha}</p>
+                  <p className="text-[10px] text-gray-400 font-semibold uppercase">Bigha</p>
+                </div>
+                <div className="bg-white rounded-lg p-2 border border-indigo-100">
+                  <p className="text-lg font-black text-indigo-700">{reverseTerai.kattha}</p>
+                  <p className="text-[10px] text-gray-400 font-semibold uppercase">Kattha</p>
+                </div>
+                <div className="bg-white rounded-lg p-2 border border-indigo-100">
+                  <p className="text-lg font-black text-indigo-700">{reverseTerai.dhur.toFixed(2)}</p>
+                  <p className="text-[10px] text-gray-400 font-semibold uppercase">Dhur</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-1.5 text-center">
+                {[
+                  { label: "Ropani", val: reverseHilly.ropani },
+                  { label: "Aana", val: reverseHilly.aana },
+                  { label: "Paisa", val: reverseHilly.paisa },
+                  { label: "Daam", val: reverseHilly.daam.toFixed(2) },
+                ].map((item) => (
+                  <div key={item.label} className="bg-white rounded-lg p-2 border border-indigo-100">
+                    <p className="text-sm font-black text-indigo-700">{item.val}</p>
+                    <p className="text-[9px] text-gray-400 font-semibold uppercase">{item.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Conversion note */}
+      <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+        <p className="text-[11px] text-amber-800 leading-snug">
+          <span className="font-bold">Note:</span>{" "}
+          1 {measureType === "terai" ? `Bigha = ${TERAI_BIGHA_TO_SQM.toLocaleString()} m²` : `Ropani = ${HILLY_ROPANI_TO_SQM.toLocaleString()} m²`} (1964 standard)
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // ─── GIS Map Card ─────────────────────────────────────────────────────────────
 // function GisMapCard({ lat, lng }: { lat?: number | null; lng?: number | null }) {
@@ -228,9 +353,13 @@ function StatusBadge({ status }: { status?: string }) {
 // }
 
 // ─── Main Form ────────────────────────────────────────────────────────────────
+
 export default function PropertyForm({ mode, initialData: propInitialData, onSuccess, onCancel }: PropertyFormProps) {
   const { id } = useParams();
   const [loading, setLoading] = useState(false);
+
+
+  const navigate = useNavigate();
 
   // Always fetch fresh data for this specific property ID (never serve stale cache)
   const { data: fetchedItem, isLoading: isFetchingProperty } = useQuery({
@@ -266,6 +395,10 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
   const { items: rawusageTypeData } = useFetchAll<UsageType>("/api/usagetype", ["usagetype"]);
   const usageTypeData = rawusageTypeData?.data
 
+
+  const { items: rawgeographicRegionData } = useFetchAll<GeographicRegion>("/api/geogrpahic-region", ["geographicregion"]);
+  const geographicRegionData = rawgeographicRegionData?.data
+
   const { items: rawownershipTypeData } = useFetchAll<OwnershipType>("/api/ownershiptype", ["ownershiptype"]);
   const ownershipTypeData = rawownershipTypeData?.data
 
@@ -287,6 +420,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
       ownershipType: initialData?.ownershipTypeId?.toString() ?? "",
       usageRights: (initialData as any)?.usageRightId?.toString() ?? "",
       usageTypes: (initialData as any)?.usageId?.toString() ?? "",
+      geographicRegion: (initialData as any)?.geographicRegion?.toString() ?? "",
       noOfFloor: (initialData as any)?.noOfFloors ?? 0,
       legalStatus: "",
       encroachmentRisk: "",
@@ -329,6 +463,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
       legalstatus: d.legalStatusId?.toString() ?? "",
       areaInSqMeters: d.landArea ?? 0,
       ownershipType: d.ownershipTypeId?.toString() ?? "",
+      geographicRegion: d.geographicRegion?.toString() ?? "",
       usageRights: d.usageRightId?.toString() ?? "",
       usageTypes: d.usageId?.toString() ?? "",
       noOfFloor: d.noOfFloors ?? 0,
@@ -362,6 +497,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
         legalStatusId: Number(values.legalstatus) || 0,
         usageRightsId: Number(values.usageRights) || 0,
         ownershipTypeId: Number(values.ownershipType) || 0,
+        geographicRegionId: Number(values.geographicRegion) || 0,
         ownershipTransferMiti: values.ownershipTransferMiti || "",
       };
 
@@ -397,7 +533,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/40 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/40 p-6 space-y-6">
       {/* ── Page Header ── */}
 
       <p className="text-xs uppercase tracking-widest text-gray-400 font-semibold mb-3">
@@ -422,219 +558,170 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
           </div>
 
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-20">
-              <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
-                {/* Header Section of the unified card */}
-                <div className="bg-slate-50/50 p-6 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
-                      <span className="material-symbols-outlined text-white text-xl">description</span>
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">Property Information</h2>
+          {/* Two-column layout: form + converter sidebar */}
+          <div className="gap-6 items-start">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-20">
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
+                  {/* Header Section of the unified card */}
+                  <div className="bg-slate-50/50 p-6 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
+                        <span className="material-symbols-outlined text-white text-xl">description</span>
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-gray-900">Property Information</h2>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="p-8 space-y-12">
-                  {/* SECTION: General & Campus Association */}
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
-                      <h3 className="text-base font-bold text-gray-800 tracking-tight">General  Details</h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="propertytype"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Property Type</FormLabel>
-                            <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
-                              <FormControl>
-                                <SelectTrigger className="bg-gray-50 w-auto border-gray-200 h-12 rounded-xl focus:ring-blue-500">
-                                  <SelectValue placeholder={isLoadingItems ? "Loading property types..." : "Select property type"} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {PropertyData?.map((type: any) => (
-                                  <SelectItem key={type.id} value={type.id.toString()}>
-                                    {type.propertyType}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-
-                      <FormField
-                        control={form.control}
-                        name="province"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Province</FormLabel>
-                            <Select
-                              onValueChange={(v) => {
-                                field.onChange(v || null);
-                                form.setValue("district", null);
-                                form.setValue("localbody", null);
-                              }}
-                              value={field.value ?? undefined}
-                              disabled={disabled || isLoadingProvince}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                                  <SelectValue placeholder={isLoadingProvince ? "Loading provinces..." : "Select province"} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {provinceData?.map((prov: any) => (
-                                  <SelectItem key={prov.id} value={prov.id.toString()}>
-                                    {prov.name || prov.province}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="district"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">District</FormLabel>
-                            <Select
-                              onValueChange={(v) => {
-                                field.onChange(v || null);
-                                form.setValue("localbody", null);
-                              }}
-                              value={field.value ?? undefined}
-                              disabled={disabled || !selectedProvinceId || isLoadingDistrict}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                                  <SelectValue
-                                    placeholder={!selectedProvinceId ? "Select province first" : isLoadingDistrict ? "Loading districts..." : "Select district"}
-                                  />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {districtData?.map((dist: any) => (
-                                  <SelectItem key={dist.id} value={dist.id.toString()}>
-                                    {dist.name || dist.district}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="localbody"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Local body</FormLabel>
-                            <Select
-                              onValueChange={(v) => field.onChange(v || null)}
-                              value={field.value ?? undefined}
-                              disabled={disabled || !selectedDistrictId || isLoadingLocalbody}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                                  <SelectValue
-                                    placeholder={
-                                      !selectedDistrictId
-                                        ? "Select district first"
-                                        : isLoadingLocalbody
-                                          ? "Loading local bodies..."
-                                          : "Select local body"
-                                    }
-                                  />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {localbodyData?.map((lb: any) => (
-                                  <SelectItem key={lb.id} value={lb.id.toString()}>
-                                    {lb.name || lb.localbody}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="wardNo"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ward No</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                value={field.value ?? ""}
-                                onChange={(e) => field.onChange(e.target.value || null)}
-                                placeholder="e.g. 12"
-                                disabled={disabled}
-                                className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Conditionally rendered based on Property Type being 'Building' */}
-                      {PropertyData?.find((p: PropertyType) => p.id.toString() === form.watch("propertytype"))?.propertyType?.toLowerCase() === "building" && (
+                  <div className="p-6 space-y-12">
+                    {/* SECTION: General & Campus Association */}
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
+                        <h3 className="text-base font-bold text-gray-800 tracking-tight">General  Details</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <FormField
                           control={form.control}
-                          name="noOfFloor"
+                          name="propertytype"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">No of Floors</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  type="number"
-                                  min="0"
-                                  value={field.value ?? ""}
-                                  onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
-                                  placeholder="e.g. 3"
-                                  disabled={disabled}
-                                  className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
-                                />
-                              </FormControl>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Property Type</FormLabel>
+                              <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
+                                <FormControl>
+                                  <SelectTrigger className="bg-gray-50 w-auto border-gray-200 h-12 rounded-xl focus:ring-blue-500">
+                                    <SelectValue placeholder={isLoadingItems ? "Loading property types..." : "Select property type"} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {PropertyData?.map((type: any) => (
+                                    <SelectItem key={type.id} value={type.id.toString()}>
+                                      {type.propertyType}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                      )}
 
-                      {/* Conditionally rendered based on Property Type being 'Land' */}
-                      {PropertyData?.find((p: PropertyType) => p.id.toString() === form.watch("propertytype"))?.propertyType?.toLowerCase() === "land" && (
+
                         <FormField
                           control={form.control}
-                          name="kittaNumber"
+                          name="province"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Kitta No</FormLabel>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Province</FormLabel>
+                              <Select
+                                onValueChange={(v) => {
+                                  field.onChange(v || null);
+                                  form.setValue("district", null);
+                                  form.setValue("localbody", null);
+                                }}
+                                value={field.value ?? undefined}
+                                disabled={disabled || isLoadingProvince}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                    <SelectValue placeholder={isLoadingProvince ? "Loading provinces..." : "Select province"} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {provinceData?.map((prov: any) => (
+                                    <SelectItem key={prov.id} value={prov.id.toString()}>
+                                      {prov.name || prov.province}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="district"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">District</FormLabel>
+                              <Select
+                                onValueChange={(v) => {
+                                  field.onChange(v || null);
+                                  form.setValue("localbody", null);
+                                }}
+                                value={field.value ?? undefined}
+                                disabled={disabled || !selectedProvinceId || isLoadingDistrict}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                    <SelectValue
+                                      placeholder={!selectedProvinceId ? "Select province first" : isLoadingDistrict ? "Loading districts..." : "Select district"}
+                                    />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {districtData?.map((dist: any) => (
+                                    <SelectItem key={dist.id} value={dist.id.toString()}>
+                                      {dist.name || dist.district}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+
+                        <FormField
+                          control={form.control}
+                          name="localbody"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Local body</FormLabel>
+                              <Select
+                                onValueChange={(v) => field.onChange(v || null)}
+                                value={field.value ?? undefined}
+                                disabled={disabled || !selectedDistrictId || isLoadingLocalbody}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                    <SelectValue
+                                      placeholder={!selectedDistrictId ? "Select district first" : isLoadingLocalbody
+                                        ? "Loading local bodies..."
+                                        : "Select local body"
+                                      }
+                                    />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {localbodyData?.map((lb: any) => (
+                                    <SelectItem key={lb.id} value={lb.id.toString()}>
+                                      {lb.name || lb.localbody}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="wardNo"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ward No</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
                                   value={field.value ?? ""}
                                   onChange={(e) => field.onChange(e.target.value || null)}
-                                  placeholder="e.g. 4529-B"
+                                  placeholder="e.g. 12"
                                   disabled={disabled}
                                   className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
                                 />
@@ -643,155 +730,42 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                             </FormItem>
                           )}
                         />
-                      )}
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Name</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                value={field.value ?? ""}
-                                onChange={(e) => field.onChange(e.target.value || null)}
-                                disabled={disabled}
-                                className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Description</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                value={field.value ?? ""}
-                                onChange={(e) => field.onChange(e.target.value || null)}
-                                disabled={disabled}
-                                className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+
+                        <FormField
+                          control={form.control}
+                          name="geographicRegion"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Geographic Region</FormLabel>
+                              <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
+                                <FormControl>
+                                  <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                    <SelectValue placeholder={isLoadingItems ? "Loading geographic region..." : "Select geographic region"} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {geographicRegionData?.map((type: any) => (
+                                    <SelectItem key={type.id} value={type.id.toString()}>
+                                      {type.name || type.geographicRegion}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
 
-                      <FormField
-                        control={form.control}
-                        name="constructionYear"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Construction Year</FormLabel>
-                            <FormControl>
-                              <NepaliDatePicker
-                                id="constructionYear"
-                                name="constructionYear"
-                                value={field.value ?? ""}
-                                onSelect={(value: any) => {
-                                  field.onChange(value.value);
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="ownershipTransferMiti"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ownership Transfer Miti</FormLabel>
-                            <FormControl>
-                              <NepaliDatePicker
-                                id="ownershipTransferMiti"
-                                name="ownershipTransferMiti"
-                                value={field.value ?? ""}
-                                onSelect={(value: any) => {
-                                  field.onChange(value.value);
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="currentUsage"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Current Usage Rights</FormLabel>
-                            <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
-                              <FormControl>
-                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                                  <SelectValue placeholder={isLoadingItems ? "Loading usage rights..." : "Select usage"} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {usageRightsData?.map((type: any) => (
-                                  <SelectItem key={type.id} value={type.id.toString()}>
-                                    {type.name || type.usageRight}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="legalstatus"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Legal Status Type</FormLabel>
-                            <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
-                              <FormControl>
-                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl focus:ring-blue-500">
-                                  <SelectValue placeholder={isLoadingItems ? "Loading legal status..." : "Select legal status"} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {legalstatusData?.map((type: any) => (
-                                  <SelectItem key={type.id} value={type.id.toString()}>
-                                    {type.name || type.legalStatus}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
 
-                  {/* SECTION: Physical Measurements & Location */}
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
-                      <h3 className="text-base font-bold text-gray-800 tracking-tight">Physical Measurements & Location</h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                      {/* Land Measurement Sub-grid */}
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-3 gap-4">
-
+                        {/* Conditionally rendered based on Property Type being 'Building' */}
+                        {PropertyData?.find((p: PropertyType) => p.id.toString() === form.watch("propertytype"))?.propertyType?.toLowerCase() === "building" && (
                           <FormField
                             control={form.control}
-                            name="areaInSqMeters"
+                            name="noOfFloor"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-[9px] uppercase tracking-tighter text-gray-400 font-semibold">Area(Sq.m)</FormLabel>
+                                <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">No of Floors</FormLabel>
                                 <FormControl>
                                   <Input
                                     {...field}
@@ -799,89 +773,162 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                     min="0"
                                     value={field.value ?? ""}
                                     onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
-                                    placeholder="0"
+                                    placeholder="e.g. 3"
                                     disabled={disabled}
-                                    className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
+                                    className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
                                   />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
+                        )}
 
+                        {/* Conditionally rendered based on Property Type being 'Land' */}
+                        {PropertyData?.find((p: PropertyType) => p.id.toString() === form.watch("propertytype"))?.propertyType?.toLowerCase() === "land" && (
                           <FormField
                             control={form.control}
-                            name="groundCode"
+                            name="kittaNumber"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ground Coordinate</FormLabel>
+                                <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Kitta No</FormLabel>
                                 <FormControl>
                                   <Input
                                     {...field}
                                     value={field.value ?? ""}
                                     onChange={(e) => field.onChange(e.target.value || null)}
-                                    placeholder="e.g. GC-2024-001"
+                                    placeholder="e.g. 4529-B"
                                     disabled={disabled}
-                                    className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                                    className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
                                   />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
-                          <FormField
-                            control={form.control}
-                            name="valuation"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Valuation</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    {...field}
-                                    value={field.value ?? ""}
-                                    onChange={(e) => field.onChange(e.target.value || null)}
-                                    placeholder="e.g. GC-2024-001"
-                                    disabled={disabled}
-                                    className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                      </div>
-
-                      {/* GIS Coordinates Sub-grid */}
-
-                    </div>
-                  </div>
-
-                  {/* SECTION: Legal & Usage Rights */}
-                  <div className="space-y-6 pt-6 border-t border-gray-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-1.5 h-6 bg-purple-600 rounded-full" />
-                      <h3 className="text-base font-bold text-gray-800 tracking-tight">Legal & Usage Rights</h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                      <div className="md:col-span-2">
+                        )}
                         <FormField
                           control={form.control}
-                          name="ownershipType"
+                          name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ownership Type</FormLabel>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Name</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  onChange={(e) => field.onChange(e.target.value || null)}
+                                  disabled={disabled}
+                                  className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Description</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  onChange={(e) => field.onChange(e.target.value || null)}
+                                  disabled={disabled}
+                                  className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+
+                        <FormField
+                          control={form.control}
+                          name="constructionYear"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Construction Year</FormLabel>
+                              <FormControl>
+                                <NepaliDatePicker
+                                  id="constructionYear"
+                                  name="constructionYear"
+                                  value={field.value ?? ""}
+                                  onSelect={(value: any) => {
+                                    const year = value.value.split("-")[0];
+                                    field.onChange(year || "");
+                                  }}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="ownershipTransferMiti"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ownership Transfer Miti</FormLabel>
+                              <FormControl>
+                                <NepaliDatePicker
+                                  id="ownershipTransferMiti"
+                                  name="ownershipTransferMiti"
+                                  value={field.value ?? ""}
+                                  onSelect={(value: any) => {
+                                    field.onChange(value.value);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="currentUsage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Current Usage Rights</FormLabel>
                               <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
                                 <FormControl>
                                   <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                                    <SelectValue placeholder={isLoadingItems ? "Loading ownership..." : "Select ownership type"} />
+                                    <SelectValue placeholder={isLoadingItems ? "Loading usage rights..." : "Select usage"} />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {ownershipTypeData?.map((type: any) => (
+                                  {usageRightsData?.map((type: any) => (
                                     <SelectItem key={type.id} value={type.id.toString()}>
-                                      {type.name || type.ownershipType}
+                                      {type.name || type.usageRight}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="legalstatus"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Legal Status Type</FormLabel>
+                              <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
+                                <FormControl>
+                                  <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl focus:ring-blue-500">
+                                    <SelectValue placeholder={isLoadingItems ? "Loading legal status..." : "Select legal status"} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {legalstatusData?.map((type: any) => (
+                                    <SelectItem key={type.id} value={type.id.toString()}>
+                                      {type.name || type.legalStatus}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -891,82 +938,206 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                           )}
                         />
                       </div>
+                    </div>
 
-                      <FormField
-                        control={form.control}
-                        name="usageRights"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Usage Rights</FormLabel>
-                            <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
-                              <FormControl>
-                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                                  <SelectValue placeholder={isLoadingItems ? "Loading usage rights..." : "Select rights"} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {usageRightsData?.map((item: any) => (
-                                  <SelectItem key={item.id} value={item.id.toString()}>
-                                    {item.name || item.usageRight}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="usageTypes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Usage Type</FormLabel>
-                            <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
-                              <FormControl>
-                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                                  <SelectValue placeholder={isLoadingItems ? "Loading usage types..." : "Select type"} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {usageTypeData?.map((item: any) => (
-                                  <SelectItem key={item.id} value={item.id.toString()}>
-                                    {item.name || item.usageType}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    {/* SECTION: Physical Measurements & Location */}
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
+                        <h3 className="text-base font-bold text-gray-800 tracking-tight">Physical Measurements & Location</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                        {/* Land Measurement Sub-grid */}
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-3 gap-4">
+
+                            <FormField
+                              control={form.control}
+                              name="areaInSqMeters"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-[9px] uppercase tracking-tighter text-gray-400 font-semibold">Area(Sq.m)</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      type="number"
+                                      min="0"
+                                      value={field.value ?? ""}
+                                      onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                                      placeholder="0"
+                                      disabled={disabled}
+                                      className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="groundCode"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ground Coordinate</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      value={field.value ?? ""}
+                                      onChange={(e) => field.onChange(e.target.value || null)}
+                                      placeholder="e.g. GC-2024-001"
+                                      disabled={disabled}
+                                      className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="valuation"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Valuation</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      value={field.value ?? ""}
+                                      onChange={(e) => field.onChange(e.target.value || null)}
+                                      placeholder="e.g. GC-2024-001"
+                                      disabled={disabled}
+                                      className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                        </div>
+
+                        {/* GIS Coordinates Sub-grid */}
+
+                      </div>
+                    </div>
+
+                    {/* SECTION: Legal & Usage Rights */}
+                    <div className="space-y-6 pt-6 border-t border-gray-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-1.5 h-6 bg-purple-600 rounded-full" />
+                        <h3 className="text-base font-bold text-gray-800 tracking-tight">Legal & Usage Rights</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="md:col-span-2">
+                          <FormField
+                            control={form.control}
+                            name="ownershipType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ownership Type</FormLabel>
+                                <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
+                                  <FormControl>
+                                    <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                      <SelectValue placeholder={isLoadingItems ? "Loading ownership..." : "Select ownership type"} />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {ownershipTypeData?.map((type: any) => (
+                                      <SelectItem key={type.id} value={type.id.toString()}>
+                                        {type.name || type.ownershipType}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="usageRights"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Usage Rights</FormLabel>
+                              <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
+                                <FormControl>
+                                  <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                    <SelectValue placeholder={isLoadingItems ? "Loading usage rights..." : "Select rights"} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {usageRightsData?.map((item: any) => (
+                                    <SelectItem key={item.id} value={item.id.toString()}>
+                                      {item.name || item.usageRight}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="usageTypes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Usage Type</FormLabel>
+                              <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
+                                <FormControl>
+                                  <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                    <SelectValue placeholder={isLoadingItems ? "Loading usage types..." : "Select type"} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {usageTypeData?.map((item: any) => (
+                                    <SelectItem key={item.id} value={item.id.toString()}>
+                                      {item.name || item.usageType}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Footer Section of the unified card */}
-                <div className="p-6 bg-slate-50/50 border-t border-gray-100 flex justify-end gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onCancel}
-                    className="h-12 px-6 rounded-xl border-gray-200 text-gray-600 hover:bg-gray-100"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="h-12 px-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 transition-all active:scale-95"
-                  >
-                    {loading ? "Saving..." : (mode === "edit" ? "Update Property" : "Save Property")}
-                  </Button>
+                  {/* Footer Section of the unified card */}
+                  <div className="p-6 bg-slate-50/50 border-t border-gray-100 flex justify-end gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={onCancel}
+                      className="h-12 px-6 rounded-xl border-gray-200 text-gray-600 hover:bg-gray-100"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={loading}
+                      className="h-12 px-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 transition-all active:scale-95"
+                    >
+                      {loading ? "Saving..." : (mode === "edit" ? "Update Property" : "Save Property")}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </form>
-          </Form>
+              </form>
+            </Form>
+
+            {/* Sticky Measurement Converter sidebar */}
+            <div className="sticky top-6">
+              <MeasurementConverter />
+            </div>
+          </div>
         </>
       )}
-    </div >
+    </div>
   );
 }
