@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { get, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
@@ -24,24 +24,17 @@ import { toast } from "sonner";
 import { Eye, EyeOff, X } from "lucide-react";
 import { useMutate } from "@/hooks/useMutate";
 import type { User } from "@/type/user";
-import type { Suboffice } from "@/type/suboffice";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import type { Role_Type } from "@/type/role";
-
-type Module = {
-  id: number;
-  name: string;
-};
-
+import type { Office } from "@/type/office";
+import { parse } from "date-fns";
 // -------------------- SCHEMA --------------------
 const baseSchema = z.object({
   name: z.string().min(1, "Name is required"),
   username: z.string().min(1, "Username is required"),
   email: z.string().email("Invalid email"),
-  roleId: z.string().min(1, "Role is required"),
-  subOfficeId: z.string().min(1, "Suboffice is required"),
-  moduleId: z.coerce.number().min(0, "Module is required"),
-  subModuleId: z.coerce.number().min(0, "Sub Module is required"),
+  role: z.string().min(1, "Role is required"),
+  office: z.string().min(1, "office is required")
 });
 
 const addUserSchema = baseSchema.extend({
@@ -75,6 +68,9 @@ type UserFormProps = {
 };
 
 // -------------------- COMPONENT --------------------
+// ... (imports remain the same)
+
+// -------------------- COMPONENT --------------------
 export default function UserForm({ mode, initialData, onSuccess, onCancel }: UserFormProps) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -82,9 +78,25 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { items: roleData, isLoadingItems: isLoadingRole } = useFetchAll<Role_Type>("/api/role", ["role"]);
-  const { items: subOfficeData, isLoadingItems: isLoadingSubOffice } = useFetchAll<Suboffice>("/api/suboffice", ["sub-Office"]);
-  const { items: moduleItems, isLoadingItems: isLoadingModule } = useFetchAll<Module>("/api/module", ["module"]);
   const { create, update } = useMutate<User>("/api/user", "user");
+  const { items: officeData, isLoadingItems: isLoadingOffice } = useFetchAll<Office>("/api/office", ["office"]);
+
+  // ... (getOffices and getRoles functions remain the same)
+  function getOffices(officeData: any) {
+    if (!officeData) return [];
+    if (Array.isArray(officeData)) return officeData;
+    const dataCandidate = (officeData as any).data || (officeData as any).Data;
+    if (Array.isArray(dataCandidate)) return dataCandidate;
+
+    const items: Office[] = [];
+    let i = 0;
+    while ((officeData as any)[i] !== undefined) {
+      items.push((officeData as any)[i]);
+      i++;
+    }
+    return items;
+  }
+  const offices = getOffices(officeData);
 
   function getRoles(roleData: any) {
     if (!roleData) return [];
@@ -103,40 +115,6 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
 
   const roles = getRoles(roleData);
 
-  function getSubOffices(subOfficeData: any) {
-    if (!subOfficeData) return [];
-    if (Array.isArray(subOfficeData)) return subOfficeData;
-    const dataCandidate = (subOfficeData as any).data || (subOfficeData as any).Data;
-    if (Array.isArray(dataCandidate)) return dataCandidate;
-
-    const items: Suboffice[] = [];
-    let i = 0;
-    while ((subOfficeData as any)[i] !== undefined) {
-      items.push((subOfficeData as any)[i]);
-      i++;
-    }
-    return items;
-  }
-
-  const subOffices = getSubOffices(subOfficeData);
-
-  function getModules(moduleData: any) {
-    if (!moduleData) return [];
-    if (Array.isArray(moduleData)) return moduleData;
-    const dataCandidate = (moduleData as any).data || (moduleData as any).Data;
-    if (Array.isArray(dataCandidate)) return dataCandidate;
-
-    const items: Module[] = [];
-    let i = 0;
-    while ((moduleData as any)[i] !== undefined) {
-      items.push((moduleData as any)[i]);
-      i++;
-    }
-    return items;
-  }
-
-  const modules = getModules(moduleItems);
-
   // -------------------- FORM --------------------
   const schema = mode === "add" ? addUserSchema : editUserSchema;
 
@@ -144,38 +122,15 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
     resolver: zodResolver(schema) as any,
     defaultValues: {
       name: initialData?.name ?? "",
-      roleId: initialData?.roleId?.toString() ?? "",
-      subOfficeId: initialData?.subOfficeId?.toString() ?? "",
+      // FIX 1: Ensure these match the schema keys (role, office) and are strings
+      role: initialData?.roleId?.toString() ?? "", 
       email: initialData?.email ?? "",
       username: initialData?.username ?? "",
-      password: initialData?.password ?? "",
-      confirmPassword: initialData?.password ?? "",
-      moduleId: initialData?.moduleId ?? 0,
-      subModuleId: initialData?.subModuleId ?? 0,
+      password: "",
+      confirmPassword: "",
+      office: initialData?.officeId?.toString() ?? "", 
     },
   });
-
-  const selectedModuleId = form.watch("moduleId");
-  const { items: subModuleItems, isLoadingItems: isLoadingSubModule } = useFetchAll<any>(
-    selectedModuleId ? `/api/submodule?moduleId=${selectedModuleId}` : "",
-    ["submodule", selectedModuleId]
-  );
-
-  function getSubModules(subModuleData: any) {
-    if (!subModuleData) return [];
-    if (Array.isArray(subModuleData)) return subModuleData;
-    const dataCandidate = (subModuleData as any).data || (subModuleData as any).Data;
-    if (Array.isArray(dataCandidate)) return dataCandidate;
-    const items: any[] = [];
-    let i = 0;
-    while ((subModuleData as any)[i] !== undefined) {
-      items.push((subModuleData as any)[i]);
-      i++;
-    }
-    return items;
-  }
-
-  const subModules = getSubModules(subModuleItems);
 
   const onSubmit = async (values: UserFormValues) => {
     setLoading(true);
@@ -183,18 +138,16 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
     try {
       const payload: any = {
         name: values.name,
-        roleId: values.roleId,
-        subOfficeId: values.subOfficeId,
+        roleId: parseInt(values.role),
+        officeId: parseInt(values.office),
         email: values.email,
         username: values.username,
         password: values.password,
         confirmPassword: values.confirmPassword,
-        moduleId: values.moduleId,
-        subModuleId: values.subModuleId,
       };
 
       if (mode === "edit" && initialData?.id) {
-        payload.id = initialData.id.toString();
+        payload.id = initialData.id;
       }
 
       const mutation = mode === "edit" ? update : create;
@@ -289,7 +242,8 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
 
                 <FormField
                   control={form.control}
-                  name="roleId"
+                  // FIX 2: Changed name="roleId" to name="role"
+                  name="role"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
@@ -298,7 +252,7 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
                       </FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value || undefined}
+                        value={field.value}
                         disabled={loading || isLoadingRole}
                       >
                         <FormControl>
@@ -309,7 +263,7 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
                         <SelectContent>
                           {roles.map((r: Role_Type) => (
                             <SelectItem key={r.id} value={r.id.toString()}>
-                              {r.displayName}
+                              {r.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -320,121 +274,48 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
                 />
               </div>
 
+              {/* Office Field */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
                 <FormField
                   control={form.control}
-                  name="subOfficeId"
+                  // FIX 3: Changed name="officeId" to name="office"
+                  name="office"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                        Suboffice
-                        <span className="text-red-500">*</span>
+                        Office
                       </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || undefined}
-                        disabled={loading || isLoadingSubOffice}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full border border-gray-300 rounded-lg h-[50px] px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                            <SelectValue placeholder={isLoadingSubOffice ? "Loading..." : "Select suboffice"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {subOffices.map((s: Suboffice) => (
-                            <SelectItem key={s.id} value={s.id.toString()}>
-                              {s.name} {s.title ? `- ${s.title}` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-red-600 text-sm mt-1" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="moduleId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                        Module
-                        <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <Select
-                        onValueChange={(val) => {
-                          field.onChange(Number(val));
-                          form.setValue("subModuleId", 0);
-                        }}
-                        value={field.value !== undefined ? field.value.toString() : undefined}
-                        disabled={loading || isLoadingModule}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full border border-gray-300 rounded-lg h-[50px] px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                            <SelectValue placeholder={isLoadingModule ? "Loading..." : "Select module"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {modules.map((m: Module) => (
-                            <SelectItem key={m.id} value={m.id.toString()}>
-                              {m.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage className="text-red-600 text-sm mt-1" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="subModuleId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                        Sub Module
-                      </FormLabel>
-                      <Select
-                        onValueChange={(val) => field.onChange(Number(val))}
-                        value={field.value && field.value !== 0 ? field.value.toString() : undefined}
-                        disabled={!selectedModuleId || selectedModuleId === 0 || isLoadingSubModule}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full border border-gray-300 rounded-lg h-[50px] px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                            <SelectValue
-                              placeholder={
-                                !selectedModuleId || selectedModuleId === 0
-                                  ? "Select a module first"
-                                  : isLoadingSubModule
-                                    ? "Loading..."
-                                    : subModules.length === 0
-                                      ? "No sub modules available"
-                                      : "Select sub module"
-                              }
-                            />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="0">None / Clear</SelectItem>
-                          {subModules.map((s: any) => (
-                            <SelectItem key={s.id} value={s.id.toString()}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={loading || isLoadingOffice}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full border border-gray-300 rounded-lg h-[50px] px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
+                              <SelectValue placeholder={isLoadingOffice ? "Loading..." : "Select Office"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {offices.map((r: Office) => (
+                              <SelectItem key={r.id} value={r.id.toString()}>
+                                {r.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
                       <FormMessage className="text-red-600 text-sm mt-1" />
                     </FormItem>
                   )}
                 />
               </div>
 
-              {/* ✅ FIXED: Removed the stray </div> that was breaking the DOM here */}
+              {/* Username and Email */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
                 <FormField
                   control={form.control}
+                  // FIX 4: Changed name="name" to name="username"
                   name="username"
                   render={({ field }) => (
                     <FormItem>
@@ -454,7 +335,7 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="email"
@@ -466,6 +347,7 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
                       <FormControl>
                         <Input
                           {...field}
+
                           placeholder="Enter email"
                           className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                           disabled={loading}
@@ -526,7 +408,7 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
                               {...field}
                               type={showConfirmPassword ? "text" : "password"}
                               placeholder="Enter confirm password"
-                              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                              className="w-full border border-gray-300 rounded-lg px-4 py-3 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                               disabled={loading}
                             />
                             <button

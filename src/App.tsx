@@ -3,13 +3,14 @@ import MainLayout from "./components/layout/Mainlayout"
 import NotFound from "./pages/NotFound"
 import Dashboard from "./components/dashboard/Dashboard"
 import Login from "./pages/login/Login";
-import SubofficeList from "./components/suboffices/suboffice";
+import SubofficeList from "./components/suboffices/office";
 import UserList from "./components/user/user";
 import ProtectedRoute from "./ProtectedRoute";
 import FiscalyearList from "./components/fiscalyear/fiscalyear";
 import FiscalyearForm from "./components/fiscalyear/fiscalyear-form";
 import PropertyList from "./components/property/property";
 import PropertyForm from "./components/property/PropertyForm";
+import EditProperty from "./components/property/property-edit";
 import { useEffect, useState, type ReactNode } from "react";
 import SuperAdminLayout from "./superadmin-Layout/setup-layout";
 import SuperAdminDashboard from "./superadmin-Layout/super-admin-dashboard";
@@ -18,6 +19,9 @@ import UserReport from "./components/report/report";
 import RevenueReport from "./components/report/revenue-report";
 import DocumentForm from "./components/document/documentForm";
 import DocumentList from "./components/document/document";
+import OfficeForm from "./components/suboffices/office-form";
+import TaxPayerList from "./components/tax-payer/tax-payer";
+import TaxPayerForm from "./components/tax-payer/tax-payment-form";
 
 
 // Super admin private route
@@ -63,18 +67,22 @@ function App() {
         </ProtectedRoute>
       } >
         <Route index element={<Dashboard />} />
-        <Route path="suboffice" element={<SubofficeList />} />
+        <Route path="office" element={<SubofficeList />} />
         <Route path="user" element={<UserList />} />
         <Route path="fiscalyear" element={<FiscalyearList />} />
         <Route path="fiscalyear/add" element={<FiscalyearForm mode="add" />} />
         <Route path="fiscalyear/edit/:id" element={<FiscalyearForm mode="edit" />} />
         <Route path="property" element={<PropertyList />} />
         <Route path="property/add" element={<PropertyForm mode="add" onSuccess={() => navigate("/property")} />} />
-        <Route path="property/edit/:id" element={<PropertyForm mode="edit" onSuccess={() => navigate("/property")} />} />
+        <Route path="property/edit/:id" element={<EditProperty />} />
         <Route path="document-vault" element={<DocumentList />} />
         <Route path="user-report" element={<UserReport />} />
         <Route path="revenue-report" element={<RevenueReport />} />
-        <Route path="documentForm/add" element={<DocumentForm mode="add" onSuccess={()=> navigate("/documentForm")}/>}/>
+        <Route path="office-form" element={<OfficeForm mode="add" />} />
+        <Route path="documentForm/add" element={<DocumentForm mode="add" onSuccess={() => navigate("/documentForm")} />} />
+        <Route path="tax-compliance" element={<TaxPayerList />} />
+        <Route path="tax-payer/add" element={<TaxPayerForm mode="add" onSuccess={() => navigate("/tax-compliance")} />} />
+        <Route path="tax-payer/edit/:id" element={<TaxPayerForm mode="edit" />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
