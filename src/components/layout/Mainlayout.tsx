@@ -1,31 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Sidebar from './Sidebar';
 import MobileSidebar from './MobileSidebar';
-import { useFetchAll } from '@/hooks/useFetchAll';
+import { useMutate } from '@/hooks/useMutate';
+import { useFiscalYear } from '@/context/FiscalYearContext';
 import type { FiscalYear } from '@/type/fiscalyear';
-// import UserDropdown from './UserDropdown';
+import { Calendar } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const MainLayout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const { items: fyData } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
+  
+  // Get fiscal year context
+  const context = useFiscalYear();
+  const fiscalYears = context?.fiscalYears || [];
+  const activeFy = context?.selectedFiscalYear;
+  const setSelectedFiscalYear = context?.setSelectedFiscalYear;
+  
+  const { update } = useMutate<FiscalYear>("/api/changefiscalyear", "fiscalyear");
 
-  function getfiscalYears(data: any): FiscalYear[] {
-    if (!data) return [];
-    if (Array.isArray(data)) return data;
-    const nestedData = data.data || data.Data;
-    if (Array.isArray(nestedData)) return nestedData;
-    return [];
-  }
-
-  const fiscalYears = getfiscalYears(fyData);
-  const activeFy = fiscalYears.find(fy => fy.isActive);
+  // Filter valid fiscal years (id > 0)
+  const validFiscalYears = fiscalYears.filter(fy => fy.id && fy.id > 0);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleFiscalYearChange = (fyId: string) => {
+    const selectedFy = fiscalYears.find(fy => fy.id === Number(fyId));
+    if (selectedFy && selectedFy.id && setSelectedFiscalYear) {
+      update.mutate({
+        id: selectedFy.id,
+        fiscalYear: selectedFy.fiscalYear
+      } as unknown as FiscalYear);
+      setSelectedFiscalYear(selectedFy.id);
+    }
   };
 
   return (
@@ -63,7 +81,9 @@ const MainLayout: React.FC = () => {
           <DesktopHeader
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={toggleSidebar}
-            activeFy={activeFy?.fiscalYear}
+            activeFy={activeFy}
+            fiscalYears={validFiscalYears}
+            onFiscalYearChange={handleFiscalYearChange}
           />
 
           {/* Page Content */}
@@ -79,12 +99,16 @@ const MainLayout: React.FC = () => {
 interface DesktopHeaderProps {
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
-  activeFy?: string;
+  activeFy?: FiscalYear;
+  fiscalYears: FiscalYear[];
+  onFiscalYearChange: (fyId: string) => void;
 }
 
 const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   onToggleSidebar,
   activeFy,
+  fiscalYears,
+  onFiscalYearChange,
 }) => {
   return (
     <header className="hidden lg:flex h-16 items-center justify-between px-8 sticky top-0 z-40 bg-surface text-primary">
@@ -98,11 +122,24 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           <span className="material-symbols-outlined">menu</span>
         </Button>
         <h2 className="font-headline font-bold tracking-tight text-xl">Tax Compliance Tracker</h2>
-        <div className="relative group">
-          <div className="flex items-center gap-2 bg-surface-container-low px-4 py-1 rounded-full text-xs font-semibold text-primary border border-primary/10">
-            <span>{activeFy ? `F/Y ${activeFy}` : 'No Active FY'}</span>
-          </div>
-        </div>
+        
+        {/* Fiscal Year Dropdown */}
+        <Select
+          value={activeFy?.id?.toString() || ""}
+          onValueChange={onFiscalYearChange}
+        >
+          <SelectTrigger className="w-[200px] h-10 bg-primary/5 border border-primary/20 hover:bg-primary/10 rounded-lg">
+            <SelectValue placeholder="Select Fiscal Year" />
+          </SelectTrigger>
+          <SelectContent>
+            {fiscalYears.map((fy) => (
+              <SelectItem key={fy.id} value={fy.id?.toString() || ""}>
+                {fy.fiscalYear} {fy.isActive ? "(Active)" : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
       </div>
       <div className="flex items-center gap-4">
         <div className="relative">

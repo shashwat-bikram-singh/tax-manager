@@ -17,34 +17,33 @@ import { toast } from "sonner";
 import { X, Save } from "lucide-react";
 import { useMutate } from "@/hooks/useMutate";
 import { useFetchAll } from "@/hooks/useFetchAll";
-import type { FiscalYear } from "@/type/fiscalyear";
-import NepaliDatePicker from "../ui/NepaliDatePicker";
+import type { Office } from "@/type/office";
 
 
 // -------------------- SCHEMA --------------------
-const fiscalyearSchema = z.object({
+const OfficeSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  startMiti: z.string().min(1, "Start Miti is required"),
-  endMiti: z.string().min(1, "End Miti is required"),
+  code: z.string().min(1, "Code is required"),
+  parentId: z.number().optional().nullable(),
 });
 
-type FiscalyearFormValues = z.infer<typeof fiscalyearSchema>;
+type OfficeFormValues = z.infer<typeof OfficeSchema>;
 
-type FiscalyearFormProps = {
+type OfficeFormProps = {
   mode: "add" | "edit";
-  initialData?: FiscalYear;
+  initialData?: Office;
   onSuccess?: () => void;
   onCancel?: () => void;
 };
 
 // -------------------- COMPONENT --------------------
-export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel }: FiscalyearFormProps) {
+export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: OfficeFormProps) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const { create, update } = useMutate<FiscalYear>("/api/fiscalyear", "fiscalyear");
-  const { items: fyData } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
+  const { create, update } = useMutate<Office>("/api/office", "office");
+  const { items: fyData } = useFetchAll<Office>("/api/office", ["office"]);
 
-  function getfiscalYears(data: any): FiscalYear[] {
+  function getOffices(data: any): Office[] {
     if (!data) return [];
     if (Array.isArray(data)) return data;
     const nestedData = data.data || data.Data;
@@ -52,31 +51,32 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
     return [];
   }
 
-  const fiscalYears = getfiscalYears(fyData);
+  const Offices = getOffices(fyData);
 
+  // Refined styling for inputs - sleek, modern, consistent height
   const inputClass = "w-full bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all duration-200 placeholder:text-gray-400 shadow-sm";
 
   // -------------------- FORM --------------------
-  const form = useForm<FiscalyearFormValues>({
-    resolver: zodResolver(fiscalyearSchema) as any,
+  const form = useForm<OfficeFormValues>({
+    resolver: zodResolver(OfficeSchema) as any,
     defaultValues: {
-      name: initialData?.fiscalYear || "",
-      startMiti: initialData?.startMiti ?? "",
-      endMiti: initialData?.endMiti ?? "",
+      name: initialData?.name || "",
+      code: initialData?.code || "",
+      parentId: initialData?.parentId || null,
     },
   });
 
-  const onSubmit = async (values: FiscalyearFormValues) => {
+  const onSubmit = async (values: OfficeFormValues) => {
     setLoading(true);
 
     try {
-      const existingFy = fiscalYears.find(fy => 
-        fy.fiscalYear.toLowerCase() === values.name.toLowerCase() && 
+      const existingFy = Offices.find(fy => 
+        fy.name.toLowerCase() === values.name.toLowerCase() && 
         fy.id !== initialData?.id
       );
 
       if (existingFy) {
-        toast.error(`Fiscal Year "${values.name}" already exists`, {
+        toast.error(`Office "${values.name}" already exists`, {
           style: { background: "#c6212d", color: "white" },
         });
         setLoading(false);
@@ -84,9 +84,9 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
       }
 
       const payload: any = {
-        fiscalYear: values.name,
-        startMiti: values.startMiti,
-        endMiti: values.endMiti,
+        name: values.name,
+        code: values.code,
+        parentId: values.parentId || null,
       };
 
       if (mode === "edit" && initialData?.id) {
@@ -98,17 +98,17 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
 
       toast.success(
         mode === "edit"
-          ? "Fiscal Year updated successfully"
-          : "Fiscal Year added successfully",
+          ? "Office updated successfully ✅"
+          : "Office added successfully ✅",
         { style: { background: "#10b981", color: "white" } }
       );
 
-      onSuccess ? onSuccess() : navigate("/fiscalyear");
+      onSuccess ? onSuccess() : navigate("/office");
     } catch (err: any) {
       toast.error(
         Array.isArray(err?.response?.data?.errors)
           ? err.response.data.errors.join(", ")
-          : err?.response?.data?.errors || "Failed to save fiscal year",
+          : err?.response?.data?.errors || "Failed to save Office",
         { style: { background: "#c6212d", color: "white" } }
       );
     } finally {
@@ -126,10 +126,12 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
         <div className="bg-white border-b border-gray-100 p-8 pb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-start gap-4">
+            
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-                  {mode === "add" ? "Add New Fiscal Year" : "Edit Fiscal Year"}
+                  {mode === "add" ? "Add New Office" : "Edit Office"}
                 </h1>
+                
               </div>
             </div>
 
@@ -152,24 +154,47 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
               <div className="space-y-6">
                 <div className="flex items-center gap-2">
                   <div className="h-px bg-gray-200 flex-grow"></div>
+                  
                   <div className="h-px bg-gray-200 flex-grow"></div>
                 </div>
 
-                {/* Row 1: Name */}
-                <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+                {/* Row 1: Name & Code */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 flex items-center justify-between">
-                          Fiscal Year Name
+                        <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
+                          Office Name
                           <span className="text-red-500 text-xs">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
                             {...field}
-                            placeholder="e.g. 2080/81"
+                            placeholder="e.g. Kathmandu Main Branch"
+                            className={inputClass}
+                            disabled={loading}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="code"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
+                           Code
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="e.g. KTM-001"
                             className={inputClass}
                             disabled={loading}
                           />
@@ -180,50 +205,39 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                   />
                 </div>
 
-                {/* Row 2: Start Miti & End Miti */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Row 2: Parent Office */}
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
                   <FormField
                     control={form.control}
-                    name="startMiti"
+                    name="parentId"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 flex items-center justify-between">
-                          Start Miti
-                          <span className="text-red-500 text-xs">*</span>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Parent Office
                         </FormLabel>
                         <FormControl>
-                          <NepaliDatePicker
-                            id="start-miti"
-                            name="start-miti"
-                            value={field.value}
-                            onSelect={(value: any) => {
-                              field.onChange(value.value);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="endMiti"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="text-sm font-medium text-gray-700 flex items-center justify-between">
-                          End Miti
-                          <span className="text-red-500 text-xs">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <NepaliDatePicker
-                            id="end-miti"
-                            name="end-miti"
-                            value={field.value}
-                            onSelect={(value: any) => {
-                              field.onChange(value.value);
-                            }}
-                          />
+                          <div className="relative">
+                            <select
+                              {...field}
+                              className={inputClass + " appearance-none cursor-pointer"}
+                              disabled={loading}
+                              value={field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                            >
+                              <option value="">No Parent</option>
+                              {Offices.filter(o => o.id !== initialData?.id).map((office) => (
+                                <option key={office.id} value={office.id}>
+                                  {office.name}
+                                </option>
+                              ))}
+                            </select>
+                            {/* Custom Dropdown Arrow */}
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                              <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
+                                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                              </svg>
+                            </div>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -233,7 +247,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
+              <div className="flex justify-end pt-6 border-t border-gray-100 gap-3">
                 <Button
                   type="button"
                   variant="outline"
@@ -256,7 +270,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      {mode === "edit" ? "Update Fiscal Year" : "Save Fiscal Year"}
+                      {mode === "edit" ? "Update Office" : "Save Office"}
                     </>
                   )}
                 </Button>
@@ -265,6 +279,6 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
           </Form>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

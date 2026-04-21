@@ -5,7 +5,7 @@ import { useFetchAll } from "@/hooks/useFetchAll";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { Suboffice } from "@/type/suboffice";
-import SubofficeForm from "./suboffice-form";
+import SubofficeForm from "./office-form";
 
 const EditSuboffice: React.FC = () => {
   const { id } = useParams<{ id: string }>();

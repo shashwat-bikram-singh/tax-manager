@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -43,6 +43,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Key,
+  Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -57,9 +58,6 @@ export default function UserList() {
   const { delete: deleteUser } = useMutate<User>("/api/user", "user");
   const [selectedUserId, setSelectedUserId] = useState<number | null>();
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
-  const { items: subOfficeData } = useFetchAll<any>("/api/suboffice", ["suboffice"]);
-  const { items: moduleData } = useFetchAll<any>("/api/module", ["module"]);
-  const { items: subModuleData } = useFetchAll<any>("/api/submodule", ["submodule"]);
 
 
   const extractData = (data: any) => {
@@ -78,20 +76,14 @@ export default function UserList() {
   };
 
   const rawUsers = extractData(userData);
-  const subOffices = extractData(subOfficeData);
-  const modules = extractData(moduleData);
-  const subModules = extractData(subModuleData);
 
-  const users = rawUsers.map((user) => ({
-    ...user,
-    subOffice: subOffices.find((so: any) => so.id === user.subOfficeId)?.name || user.subOffice,
-    module: modules.find((m: any) => m.id === user.moduleId)?.name || user.module,
-    subModule: subModules.find((s: any) => s.id === user.subModuleId)?.name || user.subModule,
-  }));
+  const users = rawUsers;
 
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{
@@ -100,16 +92,13 @@ export default function UserList() {
   } | null>(null);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [subofficeToDelete, setSubofficeToDelete] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >({
     sn: true,
     name: true,
     role: true,
-    subOffice: true,
-    module: true,
-    subModule: true,
     username: true,
     email: true,
     actions: true,
@@ -165,8 +154,9 @@ export default function UserList() {
   const filteredUsers = sortedUsers.filter((item) => {
     const matchesSearch =
       searchTerm === "" ||
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.address && item.address.toLowerCase().includes(searchTerm.toLowerCase()));
+      (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.email && item.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.username && item.username.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesSearch;
   });
 
@@ -207,117 +197,131 @@ export default function UserList() {
 
   // Handle delete
   const confirmDelete = (item: User) => {
-    setSubofficeToDelete(item);
+    setUserToDelete(item);
     setDeleteDialogOpen(true);
   };
 
   const handleDelete = async () => {
-    if (subofficeToDelete) {
+    if (userToDelete) {
       try {
-        await deleteUser.mutateAsync(subofficeToDelete.id);
-        toast.success("User deleted successfully ✅", {
+        await deleteUser.mutateAsync(userToDelete.id);
+        toast.success("User deleted successfully", {
           style: { background: "#10b981", color: "white" },
         });
         setDeleteDialogOpen(false);
-        setSubofficeToDelete(null);
+        setUserToDelete(null);
       } catch (err) {
-        toast.error("Failed to delete suboffice", {
+        toast.error("Failed to delete user", {
           style: { background: "#c6212d", color: "white" },
         });
       }
     }
   };
 
-  if (isLoadingItems) return <div className="p-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
-  if (fetchError) return <div className="p-4 text-red-500 bg-red-50 rounded-lg">Failed to load suboffices: {fetchError.message}</div>;
+  if (isLoadingItems) return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+  );
+
+  if (fetchError) return (
+    <div className="p-4 text-red-500 bg-red-50 rounded-lg m-4">
+      Failed to load users: {fetchError.message}
+    </div>
+  );
 
   // Mobile responsive card view
-  const MobileSubofficeCard = ({ item }: { item: User }) => (
-    <div className="bg-white rounded-lg border p-4 mb-4 shadow-sm">
+  const MobileUserCard = ({ item }: { item: User }) => (
+    <div className="bg-white rounded-lg border border-slate-200 p-4 mb-4 shadow-sm">
       <div className="flex justify-between items-start mb-3">
         <div>
-          <h3 className="font-semibold text-lg">{item.name}</h3>
-          <p className="text-sm text-gray-500">{item.email}</p>
+          <h3 className="font-semibold text-lg text-slate-900">{item.name}</h3>
+          <p className="text-sm text-slate-500">{item.email}</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2 text-sm mb-4">
         <div>
-          <span className="text-gray-400">Role:</span> {item.role || "-"}
+          <span className="text-slate-400">Role:</span> <span className="text-slate-700">{item.role || "-"}</span>
         </div>
         <div>
-          <span className="text-gray-400">Username:</span> {item.username || "-"}
+          <span className="text-slate-400">Username:</span> <span className="text-slate-700">{item.username || "-"}</span>
         </div>
       </div>
-      <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
+      <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
         <Button
           size="sm"
-          variant="outline"
-          className="h-8 w-8 p-0"
+          variant="ghost"
+          className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
           onClick={() => handleEdit(item.id)}
         >
-          <Pencil size={16} />
+          <Pencil size={16} strokeWidth={2} />
         </Button>
         <Button
           size="sm"
-          variant="outline"
-          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+          variant="ghost"
+          className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
           onClick={() => confirmDelete(item)}
         >
-          <Trash size={16} />
+          <Trash size={16} strokeWidth={2} />
         </Button>
       </div>
     </div>
   );
 
   return (
-    <div className="p-4 md:p-6 bg-white rounded-lg shadow-sm">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h2 className="text-2xl font-semibold text-gray-800">User List</h2>
-        <Button
-          className="bg-blue-600 hover:bg-blue-700"
-          onClick={handleAddNew}
-        >
-          Add User
-        </Button>
+    <div className="-mt-5 md:p-1 max-w-9xl mx-auto space-y-4">
+      {/* Debug: Show user count */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="text-sm text-slate-500">Total users: {users.length}</div>
+      )}
+
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Users</h2>
+        </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
-        <div className="relative w-full lg:w-80">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-          <Input
-            type="search"
-            placeholder="Search users..."
-            className="pl-8 w-full"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </div>
+      {/* Controls Bar */}
+      <div className="hidden md:block rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-slate-500 border-slate-200 hover:bg-slate-50 p-2 h-9 w-9 shrink-0"
+              onClick={() => setSearchOpen(!searchOpen)}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-          <div className="hidden sm:flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+            {searchOpen && (
+              <div className="relative w-full sm:w-80 group">
+                <Input
+                  ref={searchInputRef}
+                  type="search"
+                  placeholder="Search users..."
+                  className="pl-9 w-full bg-slate-50 border-2 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                />
+              </div>
+            )}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto">
-                  Columns <ChevronDown className="ml-2 h-4 w-4" />
+                <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 shrink-0">
+                  <Settings2 />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {Object.entries(columnVisibility).map(([key, visible]) => (
                   <DropdownMenuCheckboxItem
                     key={key}
                     checked={visible}
-                    onCheckedChange={() =>
-                      setColumnVisibility({
-                        ...columnVisibility,
-                        [key]: !visible,
-                      })
-                    }
+                    onCheckedChange={() => setColumnVisibility({ ...columnVisibility, [key]: !visible })}
                   >
                     {key.charAt(0).toUpperCase() + key.slice(1)}
                   </DropdownMenuCheckboxItem>
@@ -325,305 +329,258 @@ export default function UserList() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0" onClick={handleAddNew}>
+            <span className="mr-2 text-lg leading-none">+</span> Add User
+          </Button>
         </div>
-      </div>
 
-      {/* Desktop Table (hidden on mobile) */}
-      <div className="hidden md:block rounded-md border mb-6">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columnVisibility.sn && (
-                <TableHead className="w-8">S.N.</TableHead>
-              )}
-              {columnVisibility.name && (
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => requestSort("name")}
-                >
-                  Name {getSortIndicator("name")}
-                </TableHead>
-              )}
-              {columnVisibility.subOffice && (
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => requestSort("subOffice")}
-                >
-                  Suboffice {getSortIndicator("subOffice")}
-                </TableHead>
-              )}
-              {columnVisibility.module && (
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => requestSort("module")}
-                >
-                  Module {getSortIndicator("module")}
-                </TableHead>
-              )}
-              {columnVisibility.subModule && (
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => requestSort("subModule")}
-                >
-                  Sub Module {getSortIndicator("subModule")}
-                </TableHead>
-              )}
-              {columnVisibility.role && (
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => requestSort("role")}
-                >
-                  Role {getSortIndicator("role")}
-                </TableHead>
-              )}
-              {columnVisibility.username && (
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => requestSort("username")}
-                >
-                  Username {getSortIndicator("username")}
-                </TableHead>
-              )}
-              {columnVisibility.email && (
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => requestSort("email")}
-                >
-                  Email {getSortIndicator("email")}
-                </TableHead>
-              )}
-              {columnVisibility.actions && (
-                <TableHead className="text-center">Actions</TableHead>
-              )}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedUsers.length > 0 ? (
-              paginatedUsers.map((item, index) => (
-                <TableRow key={item.id}>
-                  {columnVisibility.sn && (
-                    <TableCell>
-                      {(currentPage - 1) * entriesPerPage + index + 1}
-                    </TableCell>
-                  )}
-                  {columnVisibility.name && (
-                    <TableCell >{item.name}</TableCell>
-                  )}
-                  {columnVisibility.subOffice && (
-                    <TableCell> {item.subOffice || "-"}</TableCell>
-                  )}
-                  {columnVisibility.module && (
-                    <TableCell> {item.module || "-"}</TableCell>
-                  )}
-                  {columnVisibility.subModule && (
-                    <TableCell> {item.subModule || "-"}</TableCell>
-                  )}
-                  {columnVisibility.role && (
-                    <TableCell> {item.role || "-"}</TableCell>
-                  )}
-                  {columnVisibility.username && (
-                    <TableCell>{item.username || "-"}</TableCell>
-                  )}
-                  {columnVisibility.email && (
-                    <TableCell>{item.email}</TableCell>
-                  )}
-                  {columnVisibility.actions && (
-                    <TableCell className="flex gap-2 justify-center">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0"
-                        title="Change Password"
-                        onClick={() => {
-                          setSelectedUserId(item.id);
-                          setOpenPasswordDialog(true);
-                        }}
-                      >
-                        <Key size={16} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0"
-                        onClick={() => handleEdit(item.id)}
-                      >
-                        <Pencil size={16} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                        onClick={() => confirmDelete(item)}
-                      >
-                        <Trash size={16} />
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={
-                    Object.values(columnVisibility).filter(Boolean).length
-                  }
-                  className="h-24 text-center"
-                >
-                  No suboffices found.
-                </TableCell>
+        {/* Desktop Table (hidden on mobile) */}
+        <div className="hidden md:block rounded-md border mb-6">
+          <Table>
+            <TableHeader className="bg-slate-50 border-b border-slate-200">
+              <TableRow className="hover:bg-slate-50/50">
+                {columnVisibility.sn && (
+                  <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">S.N.</TableHead>
+                )}
+                {columnVisibility.name && (
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Name</TableHead>
+                )}
+                {columnVisibility.role && (
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Role</TableHead>
+                )}
+                {columnVisibility.username && (
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Username</TableHead>
+                )}
+                {columnVisibility.email && (
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Email</TableHead>
+                )}
+                {columnVisibility.actions && (
+                  <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 w-24">Actions</TableHead>
+                )}
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {paginatedUsers.length > 0 ? (
+                paginatedUsers.map((item, index) => (
+                  <TableRow key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    {columnVisibility.sn && (
+                      <TableCell className="text-center text-sm text-slate-500 font-medium py-4">
+                        {(currentPage - 1) * entriesPerPage + index + 1}
+                      </TableCell>
+                    )}
+                    {columnVisibility.name && (
+                      <TableCell className="text-sm text-slate-900 font-medium py-4">{item.name}</TableCell>
+                    )}
+                    {columnVisibility.role && (
+                      <TableCell className="text-sm text-slate-600 py-4">{item.role || "-"}</TableCell>
+                    )}
+                    {columnVisibility.username && (
+                      <TableCell className="text-sm text-slate-600 py-4">{item.username || "-"}</TableCell>
+                    )}
+                    {columnVisibility.email && (
+                      <TableCell className="text-sm text-slate-600 py-4">{item.email || "-"}</TableCell>
+                    )}
+                    {columnVisibility.actions && (
+                      <TableCell className="py-4">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                            title="Change Password"
+                            onClick={() => {
+                              setSelectedUserId(item.id);
+                              setOpenPasswordDialog(true);
+                            }}
+                          >
+                            <Key size={16} strokeWidth={2} />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                            onClick={() => handleEdit(item.id)}
+                          >
+                            <Pencil size={16} strokeWidth={2} />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
+                            onClick={() => confirmDelete(item)}
+                          >
+                            <Trash size={16} strokeWidth={2} />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={
+                      Object.values(columnVisibility).filter(Boolean).length
+                    }
+                    className="h-24 text-center"
+                  >
+                    No users found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-      {/* Mobile Cards (visible only on mobile) */}
-      <div className="md:hidden">
-        {paginatedUsers.length > 0 ? (
-          paginatedUsers.map((item) => (
-            <MobileSubofficeCard key={item.id} item={item} />
-          ))
-        ) : (
-          <div className="text-center py-8 bg-gray-50 rounded-lg">
-            <p className="text-gray-500">No suboffices found.</p>
+        {/* Mobile Cards (visible only on mobile) */}
+        <div className="md:hidden">
+          {paginatedUsers.length > 0 ? (
+            paginatedUsers.map((item) => (
+              <MobileUserCard key={item.id} item={item} />
+            ))
+          ) : (
+            <div className="text-center py-8 bg-gray-50 rounded-lg">
+              <p className="text-gray-500">No users found.</p>
+            </div>
+          )}
+        </div>
+        {/* Pagination */}
+        <div className="hidden sm:flex items-center justify-between px-2 mt-4 flex-col sm:flex-row gap-4">
+          <div className="flex items-center text-sm text-muted-foreground">
+            Showing{" "}
+            {filteredUsers.length === 0
+              ? 0
+              : (currentPage - 1) * entriesPerPage + 1}{" "}
+            to {Math.min(currentPage * entriesPerPage, filteredUsers.length)} of{" "}
+            {filteredUsers.length} entries
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2">
+              <p className="text-sm font-medium">Show</p>
+              <Select
+                value={entriesPerPage.toString()}
+                onValueChange={(value) => {
+                  setEntriesPerPage(Number(value));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue placeholder={entriesPerPage} />
+                </SelectTrigger>
+                <SelectContent side="top">
+                  {[10, 20, 30, 40, 50].map((pageSize) => (
+                    <SelectItem key={pageSize} value={pageSize.toString()}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm font-medium">entries</p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => goToPage(1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <span className="text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <Button
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages || totalPages === 0}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => goToPage(totalPages)}
+                disabled={currentPage === totalPages || totalPages === 0}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Deletion</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete the user{" "}
+                {userToDelete?.name}? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDelete}>
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {editingUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <Card className="w-full max-w-3xl max-h-[90vh] p-2 shadow-lg overflow-hidden">
+              <div className="overflow-y-auto max-h-[calc(90vh-1rem)]">
+                <UserForm
+                  mode="edit"
+                  initialData={editingUser}
+                  onSuccess={() => setEditingUser(null)}
+                  onCancel={() => setEditingUser(null)}
+                />
+              </div>
+            </Card>
           </div>
         )}
-      </div>
-      {/* Pagination */}
-      <div className="hidden sm:flex items-center justify-between px-2 mt-4 flex-col sm:flex-row gap-4">
-        <div className="flex items-center text-sm text-muted-foreground">
-          Showing{" "}
-          {filteredUsers.length === 0
-            ? 0
-            : (currentPage - 1) * entriesPerPage + 1}{" "}
-          to {Math.min(currentPage * entriesPerPage, filteredUsers.length)} of{" "}
-          {filteredUsers.length} entries
-        </div>
 
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium">Show</p>
-            <Select
-              value={entriesPerPage.toString()}
-              onValueChange={(value) => {
-                setEntriesPerPage(Number(value));
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue placeholder={entriesPerPage} />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={pageSize.toString()}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-sm font-medium">entries</p>
+        {isAddingNew && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <Card className="w-full max-w-3xl max-h-[90vh] p-2 shadow-lg overflow-hidden">
+              <div className="overflow-y-auto max-h-[calc(90vh-1rem)]">
+                <UserForm
+                  mode="add"
+                  onSuccess={() => setIsAddingNew(false)}
+                  onCancel={() => setIsAddingNew(false)}
+                />
+              </div>
+            </Card>
           </div>
+        )}
 
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => goToPage(1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <span className="text-sm">
-              Page {currentPage} of {totalPages}
-            </span>
-
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages || totalPages === 0}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => goToPage(totalPages)}
-              disabled={currentPage === totalPages || totalPages === 0}
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <ChangePasswordDialog
+          open={openPasswordDialog}
+          onOpenChange={setOpenPasswordDialog}
+          userId={selectedUserId}
+        />
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the suboffice{" "}
-              {subofficeToDelete?.name}? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <Card className="w-full max-w-3xl max-h-[90vh] p-2 shadow-lg overflow-hidden">
-            <div className="overflow-y-auto max-h-[calc(90vh-1rem)]">
-              <UserForm
-                mode="edit"
-                initialData={editingUser}
-                onSuccess={() => setEditingUser(null)}
-                onCancel={() => setEditingUser(null)}
-              />
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {isAddingNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <Card className="w-full max-w-3xl max-h-[90vh] p-2 shadow-lg overflow-hidden">
-            <div className="overflow-y-auto max-h-[calc(90vh-1rem)]">
-              <UserForm
-                mode="add"
-                onSuccess={() => setIsAddingNew(false)}
-                onCancel={() => setIsAddingNew(false)}
-              />
-            </div>
-          </Card>
-        </div>
-      )}
-
-      <ChangePasswordDialog
-        open={openPasswordDialog}
-        onOpenChange={setOpenPasswordDialog}
-        userId={selectedUserId}
-      />
     </div>
   );
 }
