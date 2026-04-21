@@ -81,8 +81,8 @@ function App() {
         <Route path="office-form" element={<OfficeForm mode="add" />} />
         <Route path="documentForm/add" element={<DocumentForm mode="add" onSuccess={() => navigate("/documentForm")} />} />
         <Route path="tax-compliance" element={<TaxPayerList />} />
-        <Route path="tax-payer/add" element={<TaxPayerForm mode="add" onSuccess={() => navigate("/tax-compliance")} />} />
-        <Route path="tax-payer/edit/:id" element={<TaxPayerForm mode="edit" />} />
+        <Route path="tax-payer/add" element={<TaxPayerForm mode="add" onSuccess={() => navigate("/tax-compliance")} onCancel={() => navigate("/tax-compliance")} />} />
+        <Route path="tax-payer/edit/:id" element={<TaxPayerForm mode="edit" onCancel={() => navigate("/tax-compliance")} />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
