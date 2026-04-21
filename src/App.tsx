@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom"
+import { Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom"
 import MainLayout from "./components/layout/Mainlayout"
 import NotFound from "./pages/NotFound"
 import Dashboard from "./components/dashboard/Dashboard"
@@ -37,6 +37,13 @@ const SuperAdminRoute = ({ children }: { children: ReactNode }) => {
   return isSuperAdmin ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
+// Forces full remount of PropertyForm when the :id param changes
+function PropertyEditWrapper() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  return <PropertyForm key={id} mode="edit" onSuccess={() => navigate("/property")} />;
+}
+
 function App() {
   const navigate = useNavigate();
 
@@ -70,7 +77,7 @@ function App() {
         <Route path="fiscalyear/edit/:id" element={<FiscalyearForm mode="edit" />} />
         <Route path="property" element={<PropertyList />} />
         <Route path="property/add" element={<PropertyForm mode="add" onSuccess={() => navigate("/property")} />} />
-        <Route path="property/edit/:id" element={<PropertyForm mode="edit" onSuccess={() => navigate("/property")} />} />
+        <Route path="property/edit/:id" element={<PropertyEditWrapper />} />
         <Route path="document-vault" element={<DocumentForm mode="add" />} />
         <Route path="user-report" element={<UserReport />} />
         <Route path="revenue-report" element={<RevenueReport />} />

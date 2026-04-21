@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,6 +25,7 @@ import { toast } from "sonner";
 import { X, ShieldCheck } from "lucide-react";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import { useMutate } from "@/hooks/useMutate";
+import axiosInstance from "@/config/axios";
 import type { District, LegalStatus, Localbody, OwnershipType, PropertyType, UsageRights, UsageType, PropertyDetail } from "@/type/property";
 import NepaliDatePicker from "@/components/ui/NepaliDatePicker";
 
@@ -224,8 +227,28 @@ function StatusBadge({ status }: { status?: string }) {
 // }
 
 // ─── Main Form ────────────────────────────────────────────────────────────────
-export default function PropertyForm({ mode, initialData, onSuccess, onCancel }: PropertyFormProps) {
+export default function PropertyForm({ mode, initialData: propInitialData, onSuccess, onCancel }: PropertyFormProps) {
+  const { id } = useParams();
   const [loading, setLoading] = useState(false);
+
+  // Always fetch fresh data for this specific property ID (never serve stale cache)
+  const { data: fetchedItem, isLoading: isFetchingProperty } = useQuery({
+    queryKey: ["property-detail", id],
+    queryFn: async () => {
+      const res = await axiosInstance.get(
+        `${import.meta.env.VITE_API_BASE_URL}/api/property?id=${id}`
+      );
+      return res.data;
+    },
+    enabled: mode === "edit" && !!id,
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+
+  const fetchedData = (fetchedItem as any)?.data || fetchedItem;
+  const propertyData = Array.isArray(fetchedData) ? fetchedData[0] : fetchedData;
+  // Use propInitialData if provided, otherwise fallback to fetched data in edit mode
+  const initialData = propInitialData || (mode === "edit" ? propertyData : undefined);
 
   const { create, update } = useMutate<PropertyDetail>("/api/property", "property");
 
@@ -254,24 +277,23 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
       district: initialData?.districtId?.toString() ?? "",
       localbody: initialData?.localBodyId?.toString() ?? "",
       description: initialData?.description ?? "",
-      kittaNumber: initialData?.kittaNumber ?? null,
+      kittaNumber: (initialData as any)?.kittaNumber ?? null,
       wardNo: initialData?.wardNo?.toString() ?? "",
-      groundCode: initialData?.geoCoordinates ?? "",
-      constructionYear: initialData?.constructionYear ?? "",
+      groundCode: (initialData as any)?.landGeoCoordinate ?? "",
+      constructionYear: (initialData as any)?.constructionYear ?? "",
       legalstatus: initialData?.legalStatusId?.toString() ?? "",
-      areaInSqMeters: initialData?.areaInSqMeters ?? 0,
+      areaInSqMeters: (initialData as any)?.landArea ?? 0,
       ownershipType: initialData?.ownershipTypeId?.toString() ?? "",
-      usageRights: initialData?.usageRightsId?.toString() ?? "",
-      usageTypes: initialData?.usageId?.toString() ?? "",
-      noOfFloor: initialData?.noOfFloor ?? 0,
+      usageRights: (initialData as any)?.usageRightId?.toString() ?? "",
+      usageTypes: (initialData as any)?.usageId?.toString() ?? "",
+      noOfFloor: (initialData as any)?.noOfFloors ?? 0,
       legalStatus: "",
       encroachmentRisk: "",
       currentUsage: "",
-      valuation: "",
-      ownershipTransferMiti: initialData?.ownershipTransferMiti ?? "",
+      valuation: (initialData as any)?.valuation?.toString() ?? "",
+      ownershipTransferMiti: (initialData as any)?.ownershipTransferDate ?? "",
     },
   });
-
 
   const { items: rawProvinceData, isLoadingItems: isLoadingProvince } = useFetchAll("/api/province", ["province"]);
   const provinceData = rawProvinceData?.data;
@@ -290,32 +312,32 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
   );
   const localbodyData = rawLocalbodyData?.data;
   useEffect(() => {
-    if (initialData) {
-      form.reset({
-        propertytype: initialData.propertyTypeId?.toString() ?? "",
-        name: initialData.name ?? "",
-        province: initialData.provinceId?.toString() ?? "",
-        district: initialData.districtId?.toString() ?? "",
-        localbody: initialData.localBodyId?.toString() ?? "",
-        description: initialData.description ?? "",
-        kittaNumber: initialData.kittaNumber ?? null,
-        wardNo: initialData.wardNo?.toString() ?? "",
-        groundCode: initialData.geoCoordinates ?? "",
-        constructionYear: initialData.constructionYear ?? "",
-        legalstatus: initialData.legalStatusId?.toString() ?? "",
-        areaInSqMeters: initialData.areaInSqMeters ?? 0,
-        ownershipType: initialData.ownershipTypeId?.toString() ?? "",
-        usageRights: initialData.usageRightsId?.toString() ?? "",
-        usageTypes: initialData.usageId?.toString() ?? "",
-        noOfFloor: initialData.noOfFloor ?? 0,
-        legalStatus: "",
-        encroachmentRisk: "",
-        currentUsage: "",
-        valuation: "",
-        ownershipTransferMiti: initialData?.ownershipTransferMiti ?? "",
-      });
-    }
-  }, [initialData, form]);
+    if (!initialData) return;
+    const d = initialData as any;
+    form.reset({
+      propertytype: d.propertyTypeId?.toString() ?? "",
+      name: d.name ?? "",
+      province: d.provinceId?.toString() ?? "",
+      district: d.districtId?.toString() ?? "",
+      localbody: d.localBodyId?.toString() ?? "",
+      description: d.description ?? "",
+      kittaNumber: d.kittaNumber ?? null,
+      wardNo: d.wardNo?.toString() ?? "",
+      groundCode: d.landGeoCoordinate ?? "",
+      constructionYear: d.constructionYear ?? "",
+      legalstatus: d.legalStatusId?.toString() ?? "",
+      areaInSqMeters: d.landArea ?? 0,
+      ownershipType: d.ownershipTypeId?.toString() ?? "",
+      usageRights: d.usageRightId?.toString() ?? "",
+      usageTypes: d.usageId?.toString() ?? "",
+      noOfFloor: d.noOfFloors ?? 0,
+      legalStatus: "",
+      encroachmentRisk: "",
+      currentUsage: "",
+      valuation: d.valuation?.toString() ?? "",
+      ownershipTransferMiti: d.ownershipTransferDate ?? "",
+    });
+  }, [initialData]);
 
   const onSubmit = async (values: PropertyFormValues) => {
     setLoading(true);
@@ -376,399 +398,101 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
         Inventory &rsaquo; Property Detail
       </p>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          {onCancel && (
-            <Button type="button" variant="ghost" size="icon" onClick={onCancel} className="text-gray-400 hover:text-gray-600">
-              <X className="w-4 h-4" />
-            </Button>
-          )}
+      {mode === "edit" && isFetchingProperty ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-slate-500 font-medium">Loading property data...</span>
         </div>
-      </div>
-
-
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-20">
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
-            {/* Header Section of the unified card */}
-            <div className="bg-slate-50/50 p-6 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
-                  <span className="material-symbols-outlined text-white text-xl">description</span>
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">Property Information</h2>
-                </div>
-              </div>
+      ) : (
+        <>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              {onCancel && (
+                <Button type="button" variant="ghost" size="icon" onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
             </div>
+          </div>
 
-            <div className="p-8 space-y-12">
-              {/* SECTION: General & Campus Association */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
-                  <h3 className="text-base font-bold text-gray-800 tracking-tight">General  Details</h3>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-20">
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
+                {/* Header Section of the unified card */}
+                <div className="bg-slate-50/50 p-6 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
+                      <span className="material-symbols-outlined text-white text-xl">description</span>
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">Property Information</h2>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="propertytype"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Property Type</FormLabel>
-                        <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
-                          <FormControl>
-                            <SelectTrigger className="bg-gray-50 w-auto border-gray-200 h-12 rounded-xl focus:ring-blue-500">
-                              <SelectValue placeholder={isLoadingItems ? "Loading property types..." : "Select property type"} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {PropertyData?.map((type: any) => (
-                              <SelectItem key={type.id} value={type.id.toString()}>
-                                {type.propertyType}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
+                <div className="p-8 space-y-12">
+                  {/* SECTION: General & Campus Association */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
+                      <h3 className="text-base font-bold text-gray-800 tracking-tight">General  Details</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="propertytype"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Property Type</FormLabel>
+                            <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
+                              <FormControl>
+                                <SelectTrigger className="bg-gray-50 w-auto border-gray-200 h-12 rounded-xl focus:ring-blue-500">
+                                  <SelectValue placeholder={isLoadingItems ? "Loading property types..." : "Select property type"} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {PropertyData?.map((type: any) => (
+                                  <SelectItem key={type.id} value={type.id.toString()}>
+                                    {type.propertyType}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                  <FormField
-                    control={form.control}
-                    name="province"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Province</FormLabel>
-                        <Select
-                          onValueChange={(v) => {
-                            field.onChange(v || null);
-                            form.setValue("district", null);
-                            form.setValue("localbody", null);
-                          }}
-                          value={field.value ?? undefined}
-                          disabled={disabled || isLoadingProvince}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                              <SelectValue placeholder={isLoadingProvince ? "Loading provinces..." : "Select province"} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {provinceData?.map((prov: any) => (
-                              <SelectItem key={prov.id} value={prov.id.toString()}>
-                                {prov.name || prov.province}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="district"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">District</FormLabel>
-                        <Select
-                          onValueChange={(v) => {
-                            field.onChange(v || null);
-                            form.setValue("localbody", null);
-                          }}
-                          value={field.value ?? undefined}
-                          disabled={disabled || !selectedProvinceId || isLoadingDistrict}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                              <SelectValue
-                                placeholder={!selectedProvinceId ? "Select province first" : isLoadingDistrict ? "Loading districts..." : "Select district"}
-                              />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {districtData?.map((dist: any) => (
-                              <SelectItem key={dist.id} value={dist.id.toString()}>
-                                {dist.name || dist.district}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="localbody"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Local body</FormLabel>
-                        <Select
-                          onValueChange={(v) => field.onChange(v || null)}
-                          value={field.value ?? undefined}
-                          disabled={disabled || !selectedDistrictId || isLoadingLocalbody}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                              <SelectValue
-                                placeholder={
-                                  !selectedDistrictId
-                                    ? "Select district first"
-                                    : isLoadingLocalbody
-                                      ? "Loading local bodies..."
-                                      : "Select local body"
-                                }
-                              />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {localbodyData?.map((lb: any) => (
-                              <SelectItem key={lb.id} value={lb.id.toString()}>
-                                {lb.name || lb.localbody}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="wardNo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ward No</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value || null)}
-                            placeholder="e.g. 12"
-                            disabled={disabled}
-                            className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Conditionally rendered based on Property Type being 'Building' */}
-                  {PropertyData?.find((p: PropertyType) => p.id.toString() === form.watch("propertytype"))?.propertyType?.toLowerCase() === "building" && (
-                    <FormField
-                      control={form.control}
-                      name="noOfFloor"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">No of Floors</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              type="number"
-                              min="0"
-                              value={field.value ?? ""}
-                              onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
-                              placeholder="e.g. 3"
-                              disabled={disabled}
-                              className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  {/* Conditionally rendered based on Property Type being 'Land' */}
-                  {PropertyData?.find((p: PropertyType) => p.id.toString() === form.watch("propertytype"))?.propertyType?.toLowerCase() === "land" && (
-                    <FormField
-                      control={form.control}
-                      name="kittaNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Kitta No</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              value={field.value ?? ""}
-                              onChange={(e) => field.onChange(e.target.value || null)}
-                              placeholder="e.g. 4529-B"
-                              disabled={disabled}
-                              className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value || null)}
-                            disabled={disabled}
-                            className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Description</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            value={field.value ?? ""}
-                            onChange={(e) => field.onChange(e.target.value || null)}
-                            disabled={disabled}
-                            className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-
-                  <FormField
-                    control={form.control}
-                    name="constructionYear"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Construction Year</FormLabel>
-                        <FormControl>
-                          <NepaliDatePicker
-                            id="constructionYear"
-                            name="constructionYear"
-                            value={field.value ?? ""}
-                            onSelect={(value: any) => {
-                              field.onChange(value.value);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="ownershipTransferMiti"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ownership Transfer Miti</FormLabel>
-                        <FormControl>
-                          <NepaliDatePicker
-                            id="ownershipTransferMiti"
-                            name="ownershipTransferMiti"
-                            value={field.value ?? ""}
-                            onSelect={(value: any) => {
-                              field.onChange(value.value);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="currentUsage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Current Usage Rights</FormLabel>
-                        <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
-                          <FormControl>
-                            <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                              <SelectValue placeholder={isLoadingItems ? "Loading usage rights..." : "Select usage"} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {usageRightsData?.map((type: any) => (
-                              <SelectItem key={type.id} value={type.id.toString()}>
-                                {type.name || type.usageRight}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="legalstatus"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Legal Status Type</FormLabel>
-                        <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
-                          <FormControl>
-                            <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl focus:ring-blue-500">
-                              <SelectValue placeholder={isLoadingItems ? "Loading legal status..." : "Select legal status"} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {legalstatusData?.map((type: any) => (
-                              <SelectItem key={type.id} value={type.id.toString()}>
-                                {type.name || type.legalStatus}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              {/* SECTION: Physical Measurements & Location */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
-                  <h3 className="text-base font-bold text-gray-800 tracking-tight">Physical Measurements & Location</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                  {/* Land Measurement Sub-grid */}
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
 
                       <FormField
                         control={form.control}
-                        name="areaInSqMeters"
+                        name="province"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[9px] uppercase tracking-tighter text-gray-400 font-semibold">Total Area</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="number"
-                                min="0"
-                                value={field.value ?? ""}
-                                onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
-                                placeholder="0"
-                                disabled={disabled}
-                                className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
-                              />
-                            </FormControl>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Province</FormLabel>
+                            <Select
+                              onValueChange={(v) => {
+                                field.onChange(v || null);
+                                form.setValue("district", null);
+                                form.setValue("localbody", null);
+                              }}
+                              value={field.value ?? undefined}
+                              disabled={disabled || isLoadingProvince}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                  <SelectValue placeholder={isLoadingProvince ? "Loading provinces..." : "Select province"} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {provinceData?.map((prov: any) => (
+                                  <SelectItem key={prov.id} value={prov.id.toString()}>
+                                    {prov.name || prov.province}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -776,16 +500,155 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
 
                       <FormField
                         control={form.control}
-                        name="groundCode"
+                        name="district"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ground Coordinate</FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">District</FormLabel>
+                            <Select
+                              onValueChange={(v) => {
+                                field.onChange(v || null);
+                                form.setValue("localbody", null);
+                              }}
+                              value={field.value ?? undefined}
+                              disabled={disabled || !selectedProvinceId || isLoadingDistrict}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                  <SelectValue
+                                    placeholder={!selectedProvinceId ? "Select province first" : isLoadingDistrict ? "Loading districts..." : "Select district"}
+                                  />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {districtData?.map((dist: any) => (
+                                  <SelectItem key={dist.id} value={dist.id.toString()}>
+                                    {dist.name || dist.district}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="localbody"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Local body</FormLabel>
+                            <Select
+                              onValueChange={(v) => field.onChange(v || null)}
+                              value={field.value ?? undefined}
+                              disabled={disabled || !selectedDistrictId || isLoadingLocalbody}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                  <SelectValue
+                                    placeholder={
+                                      !selectedDistrictId
+                                        ? "Select district first"
+                                        : isLoadingLocalbody
+                                          ? "Loading local bodies..."
+                                          : "Select local body"
+                                    }
+                                  />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {localbodyData?.map((lb: any) => (
+                                  <SelectItem key={lb.id} value={lb.id.toString()}>
+                                    {lb.name || lb.localbody}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="wardNo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ward No</FormLabel>
                             <FormControl>
                               <Input
                                 {...field}
                                 value={field.value ?? ""}
                                 onChange={(e) => field.onChange(e.target.value || null)}
-                                placeholder="e.g. GC-2024-001"
+                                placeholder="e.g. 12"
+                                disabled={disabled}
+                                className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Conditionally rendered based on Property Type being 'Building' */}
+                      {PropertyData?.find((p: PropertyType) => p.id.toString() === form.watch("propertytype"))?.propertyType?.toLowerCase() === "building" && (
+                        <FormField
+                          control={form.control}
+                          name="noOfFloor"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">No of Floors</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="number"
+                                  min="0"
+                                  value={field.value ?? ""}
+                                  onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                                  placeholder="e.g. 3"
+                                  disabled={disabled}
+                                  className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {/* Conditionally rendered based on Property Type being 'Land' */}
+                      {PropertyData?.find((p: PropertyType) => p.id.toString() === form.watch("propertytype"))?.propertyType?.toLowerCase() === "land" && (
+                        <FormField
+                          control={form.control}
+                          name="kittaNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Kitta No</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  onChange={(e) => field.onChange(e.target.value || null)}
+                                  placeholder="e.g. 4529-B"
+                                  disabled={disabled}
+                                  className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value || null)}
                                 disabled={disabled}
                                 className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
                               />
@@ -796,140 +659,308 @@ export default function PropertyForm({ mode, initialData, onSuccess, onCancel }:
                       />
                       <FormField
                         control={form.control}
-                        name="valuation"
+                        name="description"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Valuation</FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Description</FormLabel>
                             <FormControl>
                               <Input
                                 {...field}
                                 value={field.value ?? ""}
                                 onChange={(e) => field.onChange(e.target.value || null)}
-                                placeholder="e.g. GC-2024-001"
                                 disabled={disabled}
                                 className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
                               />
                             </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+
+                      <FormField
+                        control={form.control}
+                        name="constructionYear"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Construction Year</FormLabel>
+                            <FormControl>
+                              <NepaliDatePicker
+                                id="constructionYear"
+                                name="constructionYear"
+                                value={field.value ?? ""}
+                                onSelect={(value: any) => {
+                                  field.onChange(value.value);
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="ownershipTransferMiti"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ownership Transfer Miti</FormLabel>
+                            <FormControl>
+                              <NepaliDatePicker
+                                id="ownershipTransferMiti"
+                                name="ownershipTransferMiti"
+                                value={field.value ?? ""}
+                                onSelect={(value: any) => {
+                                  field.onChange(value.value);
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="currentUsage"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Current Usage Rights</FormLabel>
+                            <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
+                              <FormControl>
+                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                  <SelectValue placeholder={isLoadingItems ? "Loading usage rights..." : "Select usage"} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {usageRightsData?.map((type: any) => (
+                                  <SelectItem key={type.id} value={type.id.toString()}>
+                                    {type.name || type.usageRight}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="legalstatus"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Legal Status Type</FormLabel>
+                            <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
+                              <FormControl>
+                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl focus:ring-blue-500">
+                                  <SelectValue placeholder={isLoadingItems ? "Loading legal status..." : "Select legal status"} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {legalstatusData?.map((type: any) => (
+                                  <SelectItem key={type.id} value={type.id.toString()}>
+                                    {type.name || type.legalStatus}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
-
                   </div>
 
-                  {/* GIS Coordinates Sub-grid */}
+                  {/* SECTION: Physical Measurements & Location */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
+                      <h3 className="text-base font-bold text-gray-800 tracking-tight">Physical Measurements & Location</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                      {/* Land Measurement Sub-grid */}
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-3 gap-4">
 
-                </div>
-              </div>
+                          <FormField
+                            control={form.control}
+                            name="areaInSqMeters"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-[9px] uppercase tracking-tighter text-gray-400 font-semibold">Area(Sq.m)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    type="number"
+                                    min="0"
+                                    value={field.value ?? ""}
+                                    onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                                    placeholder="0"
+                                    disabled={disabled}
+                                    className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-              {/* SECTION: Legal & Usage Rights */}
-              <div className="space-y-6 pt-6 border-t border-gray-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1.5 h-6 bg-purple-600 rounded-full" />
-                  <h3 className="text-base font-bold text-gray-800 tracking-tight">Legal & Usage Rights</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="md:col-span-2">
-                    <FormField
-                      control={form.control}
-                      name="ownershipType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ownership Type</FormLabel>
-                          <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
-                            <FormControl>
-                              <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                                <SelectValue placeholder={isLoadingItems ? "Loading ownership..." : "Select ownership type"} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {ownershipTypeData?.map((type: any) => (
-                                <SelectItem key={type.id} value={type.id.toString()}>
-                                  {type.name || type.ownershipType}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                          <FormField
+                            control={form.control}
+                            name="groundCode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ground Coordinate</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    onChange={(e) => field.onChange(e.target.value || null)}
+                                    placeholder="e.g. GC-2024-001"
+                                    disabled={disabled}
+                                    className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="valuation"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Valuation</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    onChange={(e) => field.onChange(e.target.value || null)}
+                                    placeholder="e.g. GC-2024-001"
+                                    disabled={disabled}
+                                    className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                      </div>
+
+                      {/* GIS Coordinates Sub-grid */}
+
+                    </div>
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="usageRights"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Usage Rights</FormLabel>
-                        <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
-                          <FormControl>
-                            <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                              <SelectValue placeholder={isLoadingItems ? "Loading usage rights..." : "Select rights"} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {usageRightsData?.map((item: any) => (
-                              <SelectItem key={item.id} value={item.id.toString()}>
-                                {item.name || item.usageRight}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="usageTypes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Usage Type</FormLabel>
-                        <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
-                          <FormControl>
-                            <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
-                              <SelectValue placeholder={isLoadingItems ? "Loading usage types..." : "Select type"} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {usageTypeData?.map((item: any) => (
-                              <SelectItem key={item.id} value={item.id.toString()}>
-                                {item.name || item.usageType}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* SECTION: Legal & Usage Rights */}
+                  <div className="space-y-6 pt-6 border-t border-gray-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1.5 h-6 bg-purple-600 rounded-full" />
+                      <h3 className="text-base font-bold text-gray-800 tracking-tight">Legal & Usage Rights</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <div className="md:col-span-2">
+                        <FormField
+                          control={form.control}
+                          name="ownershipType"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ownership Type</FormLabel>
+                              <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
+                                <FormControl>
+                                  <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                    <SelectValue placeholder={isLoadingItems ? "Loading ownership..." : "Select ownership type"} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {ownershipTypeData?.map((type: any) => (
+                                    <SelectItem key={type.id} value={type.id.toString()}>
+                                      {type.name || type.ownershipType}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="usageRights"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Usage Rights</FormLabel>
+                            <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
+                              <FormControl>
+                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                  <SelectValue placeholder={isLoadingItems ? "Loading usage rights..." : "Select rights"} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {usageRightsData?.map((item: any) => (
+                                  <SelectItem key={item.id} value={item.id.toString()}>
+                                    {item.name || item.usageRight}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="usageTypes"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Usage Type</FormLabel>
+                            <Select onValueChange={(v) => field.onChange(v || null)} value={field.value ?? undefined} disabled={disabled || isLoadingItems}>
+                              <FormControl>
+                                <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-12 rounded-xl">
+                                  <SelectValue placeholder={isLoadingItems ? "Loading usage types..." : "Select type"} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {usageTypeData?.map((item: any) => (
+                                  <SelectItem key={item.id} value={item.id.toString()}>
+                                    {item.name || item.usageType}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Section of the unified card */}
+                <div className="p-6 bg-slate-50/50 border-t border-gray-100 flex justify-end gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onCancel}
+                    className="h-12 px-6 rounded-xl border-gray-200 text-gray-600 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="h-12 px-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 transition-all active:scale-95"
+                  >
+                    {loading ? "Saving..." : (mode === "edit" ? "Update Property" : "Save Property")}
+                  </Button>
                 </div>
               </div>
-            </div>
-
-            {/* Footer Section of the unified card */}
-            <div className="p-6 bg-slate-50/50 border-t border-gray-100 flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                className="h-12 px-6 rounded-xl border-gray-200 text-gray-600 hover:bg-gray-100"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="h-12 px-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 transition-all active:scale-95"
-              >
-                {loading ? "Saving..." : (mode === "edit" ? "Update Property" : "Save Property")}
-              </Button>
-            </div>
-          </div>
-        </form>
-      </Form>
+            </form>
+          </Form>
+        </>
+      )}
     </div >
   );
 }
