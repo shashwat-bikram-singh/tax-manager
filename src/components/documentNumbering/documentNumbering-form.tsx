@@ -55,6 +55,11 @@ export default function DocumentNumberingForm({ mode, initialData, onSuccess, on
   const { items: moduleItems, isLoadingItems: loadingModules } = useFetchAll<Module>("/api/module", ["dnf-module"]);
   const moduleData = moduleItems?.data || [];
 
+  const handleCancel = () => {
+    if (onCancel) onCancel();
+    else navigate("/documentNumber");
+  };
+
   const form = useForm<DocumentNumFormValues>({
     resolver: zodResolver(documentNumberSchema) as any,
     defaultValues: {
@@ -152,7 +157,7 @@ export default function DocumentNumberingForm({ mode, initialData, onSuccess, on
             type="button"
             variant="ghost"
             size="icon"
-            onClick={onCancel}
+            onClick={handleCancel}
             className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-all duration-200"
           >
             <X className="h-5 w-5 text-gray-600" />

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { get, useForm } from "react-hook-form";
+import { useState, useEffect, useRef } from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
@@ -11,30 +11,23 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Eye, EyeOff, X } from "lucide-react";
+import { Eye, EyeOff, X, ChevronDown } from "lucide-react";
 import { useMutate } from "@/hooks/useMutate";
 import type { User } from "@/type/user";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import type { Role_Type } from "@/type/role";
 import type { Office } from "@/type/office";
-import { parse } from "date-fns";
+
 // -------------------- SCHEMA --------------------
 const baseSchema = z.object({
   name: z.string().min(1, "Name is required"),
   username: z.string().min(1, "Username is required"),
   email: z.string().email("Invalid email"),
   role: z.string().min(1, "Role is required"),
-  office: z.string().min(1, "office is required")
+  office: z.string().min(1, "Office is required"),
 });
 
 const addUserSchema = baseSchema.extend({
@@ -67,10 +60,128 @@ type UserFormProps = {
   onCancel?: () => void;
 };
 
-// -------------------- COMPONENT --------------------
-// ... (imports remain the same)
+// -------------------- SEARCHABLE SELECT COMPONENT --------------------
+interface SearchableSelectProps {
+  options: any[];
+  value: string | undefined;
+  onChange: (value: string) => void;
+  getLabel: (item: any) => string;
+  placeholder: string;
+  disabled?: boolean;
+  isLoading?: boolean;
+}
 
-// -------------------- COMPONENT --------------------
+const SearchableSelect = ({
+  options = [],
+  value,
+  onChange,
+  getLabel,
+  placeholder,
+  disabled = false,
+  isLoading = false,
+}: SearchableSelectProps) => {
+  const [inputValue, setInputValue] = useState("");
+  const [showOptions, setShowOptions] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sync input with form value (e.g. when editing loads data)
+  useEffect(() => {
+    if (value) {
+      const selectedOption = options.find((item) => item.id == value);
+      if (selectedOption) {
+        setInputValue(getLabel(selectedOption));
+      }
+    } else {
+      setInputValue("");
+    }
+  }, [value, options]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    setShowOptions(val.length > 0);
+    if (val.length === 0) onChange("");
+  };
+
+  const handleSelect = (item: any) => {
+    setInputValue(getLabel(item));
+    onChange(item.id.toString());
+    setShowOptions(false);
+  };
+
+  const filteredOptions = options.filter((item) =>
+    getLabel(item).toLowerCase().includes(inputValue.toLowerCase())
+  );
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      {/* Input Field matching existing Form Styles */}
+      <div className="relative">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={() => setShowOptions(!disabled)}
+          placeholder={placeholder}
+          disabled={disabled || isLoading}
+          className="w-full h-[50px] px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        />
+        {/* Chevron Icon */}
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+          <ChevronDown size={18} />
+        </div>
+        {/* Clear Button */}
+        {value && inputValue && !disabled && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setInputValue("");
+              onChange("");
+            }}
+            className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown Options */}
+      {showOptions && !disabled && (
+        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+          {isLoading ? (
+            <li className="p-4 text-center text-sm text-gray-500">Loading...</li>
+          ) : filteredOptions.length > 0 ? (
+            filteredOptions.map((item, index) => (
+              <li
+                key={index}
+                onClick={() => handleSelect(item)}
+                className="px-4 py-2.5 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors border-b border-gray-50 last:border-0"
+              >
+                {getLabel(item)}
+              </li>
+            ))
+          ) : (
+            <li className="p-4 text-center text-sm text-gray-400 italic">No matches found</li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+// -------------------- MAIN COMPONENT --------------------
 export default function UserForm({ mode, initialData, onSuccess, onCancel }: UserFormProps) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -81,7 +192,11 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
   const { create, update } = useMutate<User>("/api/user", "user");
   const { items: officeData, isLoadingItems: isLoadingOffice } = useFetchAll<Office>("/api/office", ["office"]);
 
-  // ... (getOffices and getRoles functions remain the same)
+  const handleCancel = () => {
+    if (onCancel) onCancel();
+    else navigate("/user");
+  };
+
   function getOffices(officeData: any) {
     if (!officeData) return [];
     if (Array.isArray(officeData)) return officeData;
@@ -115,20 +230,18 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
 
   const roles = getRoles(roleData);
 
-  // -------------------- FORM --------------------
   const schema = mode === "add" ? addUserSchema : editUserSchema;
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(schema) as any,
     defaultValues: {
       name: initialData?.name ?? "",
-      // FIX 1: Ensure these match the schema keys (role, office) and are strings
-      role: initialData?.roleId?.toString() ?? "", 
+      role: initialData?.roleId?.toString() ?? "",
       email: initialData?.email ?? "",
       username: initialData?.username ?? "",
       password: "",
       confirmPassword: "",
-      office: initialData?.officeId?.toString() ?? "", 
+      office: initialData?.officeId?.toString() ?? "",
     },
   });
 
@@ -173,9 +286,8 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
     }
   };
 
-  // -------------------- UI --------------------
   return (
-    <div className=" p-2 bg-gradient-to-br from-gray-50 to-blue-50/30 ">
+    <div className="p-2 bg-gradient-to-br from-gray-50 to-blue-50/30">
       {/* Header Section */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -196,7 +308,7 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
             type="button"
             variant="ghost"
             size="icon"
-            onClick={onCancel}
+            onClick={handleCancel}
             className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-all duration-200"
           >
             <X className="h-5 w-5 text-gray-600" />
@@ -242,7 +354,6 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
 
                 <FormField
                   control={form.control}
-                  // FIX 2: Changed name="roleId" to name="role"
                   name="role"
                   render={({ field }) => (
                     <FormItem>
@@ -250,24 +361,16 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
                         Role
                         <span className="text-red-500">*</span>
                       </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={loading || isLoadingRole}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full border border-gray-300 rounded-lg h-[50px] px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                            <SelectValue placeholder={isLoadingRole ? "Loading..." : "Select role"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {roles.map((r: Role_Type) => (
-                            <SelectItem key={r.id} value={r.id.toString()}>
-                              {r.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <SearchableSelect
+                          options={roles}
+                          value={field.value}
+                          onChange={field.onChange}
+                          getLabel={(r) => r.name}
+                          placeholder={isLoadingRole ? "Loading..." : "Select role"}
+                          disabled={loading || isLoadingRole}
+                        />
+                      </FormControl>
                       <FormMessage className="text-red-600 text-sm mt-1" />
                     </FormItem>
                   )}
@@ -278,32 +381,21 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
                 <FormField
                   control={form.control}
-                  // FIX 3: Changed name="officeId" to name="office"
                   name="office"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                        Office
+                        Office <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Select
-                          onValueChange={field.onChange}
+                        <SearchableSelect
+                          options={offices}
                           value={field.value}
+                          onChange={field.onChange}
+                          getLabel={(o) => o.name}
+                          placeholder={isLoadingOffice ? "Loading..." : "Select Office"}
                           disabled={loading || isLoadingOffice}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full border border-gray-300 rounded-lg h-[50px] px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200">
-                              <SelectValue placeholder={isLoadingOffice ? "Loading..." : "Select Office"} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {offices.map((r: Office) => (
-                              <SelectItem key={r.id} value={r.id.toString()}>
-                                {r.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        />
                       </FormControl>
                       <FormMessage className="text-red-600 text-sm mt-1" />
                     </FormItem>
@@ -315,7 +407,6 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
                 <FormField
                   control={form.control}
-                  // FIX 4: Changed name="name" to name="username"
                   name="username"
                   render={({ field }) => (
                     <FormItem>
@@ -347,7 +438,6 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
                       <FormControl>
                         <Input
                           {...field}
-
                           placeholder="Enter email"
                           className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                           disabled={loading}
