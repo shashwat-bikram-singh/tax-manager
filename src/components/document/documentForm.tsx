@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -51,7 +52,18 @@ interface DocumentFormProps {
 
 // ─── Main Form ────────────────────────────────────────────────────────────────
 export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const defaultPropertyId = searchParams.get("propertyId") || "";
   const [loading, setLoading] = useState(false);
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    } else {
+      navigate("/property");
+    }
+  };
 
   // We assume the backend expects POST to /api/document for files
   const { create } = useMutate<any>("/api/document", "document");
@@ -75,7 +87,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
     defaultValues: {
       documents: [
         {
-          propertyId: "",
+          propertyId: defaultPropertyId,
           documentType: "",
           fileTagId: "",
           fiscalYearId: "",
@@ -139,17 +151,15 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          {onCancel && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={onCancel}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={handleCancel}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
@@ -172,7 +182,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                 onClick={() =>
                   append({ propertyId: "", documentType: "", fileTagId: "", issueDate: "", fiscalYearId: "", files: undefined })
                 }
-                className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 shadow-sm flex items-center gap-2 h-9 px-4 rounded-xl text-sm transition-all"
+                className="bg-blue-600 text-white hover:bg-indigo-100 border border-indigo-200 shadow-sm flex items-center gap-2 h-9 px-4 rounded-xl text-sm transition-all"
               >
                 <Plus className="w-4 h-4" /> Add Row
               </Button>
@@ -384,7 +394,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
               <Button
                 type="button"
                 variant="outline"
-                onClick={onCancel}
+                onClick={handleCancel}
                 className="h-10 px-4 rounded-xl border-gray-200 text-gray-600 hover:bg-gray-100"
               >
                 Cancel

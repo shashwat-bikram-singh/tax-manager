@@ -50,6 +50,7 @@ interface Property {
   legalStatus?: string;
   usageName?: string;
   ownershipType?: string;
+  province: string
 }
 
 export default function PropertyList() {
@@ -158,7 +159,7 @@ export default function PropertyList() {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Property Inventory</h2>
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight">Property Inventory</h2>
 
         </div>
       </div>

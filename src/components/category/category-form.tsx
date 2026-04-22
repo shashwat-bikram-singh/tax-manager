@@ -54,6 +54,11 @@ export default function categoryForm({ mode, initialData, onSuccess, onCancel }:
   const [loading, setLoading] = useState(false);
   const { create, update } = useMutate<Category>("/api/category", "category");
 
+  const handleCancel = () => {
+    if (onCancel) onCancel();
+    else navigate("/category");
+  };
+
   const form = useForm<categoryFormValues>({
     resolver: zodResolver(categorySchema) as any,
     defaultValues: {
@@ -145,7 +150,7 @@ export default function categoryForm({ mode, initialData, onSuccess, onCancel }:
             type="button"
             variant="ghost"
             size="icon"
-            onClick={onCancel}
+            onClick={handleCancel}
             className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-all duration-200"
           >
             <X className="h-5 w-5 text-gray-600" />

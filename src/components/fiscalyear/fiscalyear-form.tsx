@@ -44,6 +44,11 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
   const { create, update } = useMutate<FiscalYear>("/api/fiscalyear", "fiscalyear");
   const { items: fyData } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
 
+  const handleCancel = () => {
+    if (onCancel) onCancel();
+    else navigate("/fiscalyear");
+  };
+
   function getfiscalYears(data: any): FiscalYear[] {
     if (!data) return [];
     if (Array.isArray(data)) return data;
@@ -137,7 +142,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
               type="button"
               variant="ghost"
               size="icon"
-              onClick={onCancel}
+              onClick={handleCancel}
               className="h-9 w-9 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
             >
               <X className="h-5 w-5" />
@@ -237,7 +242,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onCancel}
+                  onClick={handleCancel}
                   disabled={loading}
                   className="px-6 py-2.5 border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-medium"
                 >

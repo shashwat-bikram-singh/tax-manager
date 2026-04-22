@@ -21,7 +21,7 @@ const MainLayout: React.FC = () => {
   const fiscalYears = useMemo(() => {
     if (!rawFyData) return [];
     if (Array.isArray(rawFyData)) return rawFyData;
-    const nestedData = rawFyData.data || rawFyData.Data;
+    const nestedData = rawFyData.data || rawFyData.data;
     if (Array.isArray(nestedData)) return nestedData;
     return [];
   }, [rawFyData]);
@@ -104,8 +104,8 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   isLoading,
 }) => {
   return (
-    <header className="hidden lg:flex h-16 items-center justify-between px-8 sticky top-0 z-40 bg-surface text-primary">
-      <div className="flex items-center gap-6">
+    <header className="hidden lg:flex h-16 items-center justify-between px-5 sticky top-0 z-40 bg-surface text-primary">
+      <div className="flex items-center ">
         <Button
           variant="ghost"
           size="icon"
@@ -115,31 +115,38 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           <span className="material-symbols-outlined">menu</span>
         </Button>
 
-        <h2 className="font-headline font-bold tracking-tight text-xl">Tax Compliance Tracker</h2>
+
 
         {/* Active Fiscal Year Display based on API Flag */}
-        {isLoading ? (
-          <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg w-[140px] animate-pulse">
-            <Loader2 className="h-4 w-4 text-slate-400 animate-spin" />
-            <span className="text-sm text-slate-400">Loading...</span>
-          </div>
-        ) : activeFy ? (
-          <div className="flex items-center gap-2 h-10 px-3 bg-primary/5 border border-primary/20 rounded-lg">
-            <Calendar className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-primary">
-              FY {activeFy.fiscalYear}
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 h-10 px-3 bg-red-50 border border-red-200 rounded-lg">
-            <Calendar className="h-4 w-4 text-red-500" />
-            <span className="text-sm font-medium text-red-600">
-              No Active FY Found
-            </span>
-          </div>
-        )}
 
       </div>
+      <div className="flex items-center gap-6 mx-auto">
+{isLoading ? (
+  <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 w-[160px] animate-pulse
+    border-[3px] border-transparent
+    [border-image-source:url('data:image/svg+xml,%3Csvg_width=%2220%22_height=%2220%22_viewBox=%220_0_20_20%22_xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath_d=%22M0_10_Q_5_0,_10_10_T_20_10%22_fill=%22none%22_stroke=%22%23cbd5e1%22_stroke-width=%223%22/%3E%3C/svg%3E')]
+    [border-image-slice:30%] [border-image-repeat:round]">
+    <Loader2 className="h-4 w-4 text-slate-400 animate-spin" />
+    <span className="text-sm text-slate-400">Loading...</span>
+  </div>
+) : activeFy ? (
+  <div className="flex items-center gap-2 h-10 px-3 bg-primary/5
+    border-[3px] border-transparent
+    [border-image-source:url('data:image/svg+xml,%3Csvg_width=%2220%22_height=%2220%22_viewBox=%220_0_20_20%22_xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath_d=%22M0_10_Q_5_0,_10_10_T_20_10%22_fill=%22none%22_stroke=%22%233b82f6%22_stroke-width=%223%22/%3E%3C/svg%3E')]
+    [border-image-slice:30%] [border-image-repeat:round]">
+    <Calendar className="h-4 w-4 text-primary" />
+    <span className="text-sm font-medium text-primary">FY {activeFy.fiscalYear}</span>
+  </div>
+) : (
+  <div className="flex items-center gap-2 h-10 px-3 bg-red-50
+    border-[3px] border-transparent
+    [border-image-source:url('data:image/svg+xml,%3Csvg_width=%2220%22_height=%2220%22_viewBox=%220_0_20_20%22_xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath_d=%22M0_10_Q_5_0,_10_10_T_20_10%22_fill=%22none%22_stroke=%22%23ef4444%22_stroke-width=%223%22/%3E%3C/svg%3E')]
+    [border-image-slice:30%] [border-image-repeat:round]">
+    <Calendar className="h-4 w-4 text-red-500" />
+    <span className="text-sm font-medium text-red-600">No Active FY Found</span>
+  </div>
+)}
+</div>
 
       <div className="flex items-center gap-4">
         <NotificationPanel />

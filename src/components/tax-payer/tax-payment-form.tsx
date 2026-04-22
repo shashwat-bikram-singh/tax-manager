@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Upload, X, FileText } from "lucide-react";
+import { Upload, X, FileText, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -15,19 +15,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useMutate } from "@/hooks/useMutate";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import { useFiscalYear } from "@/context/FiscalYearContext";
-import type { Tax } from "@/type/tax"; // Assuming this is your Payment type or similar
+import type { Tax } from "@/type/tax";
 import NepaliDatePicker from "../ui/NepaliDatePicker";
 
 // -------------------- TYPES --------------------
@@ -50,11 +43,133 @@ type TaxPaymentFormValues = z.infer<typeof baseTaxPaymentSchema>;
 
 interface TaxPaymentFormProps {
   mode: "add" | "edit";
-  paymentId?: number; // For modal edit mode
-  initialData?: Partial<Tax>; // Pre-filled data from modal
+  paymentId?: number;
+  initialData?: Partial<Tax>;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
+
+// -------------------- SEARCHABLE SELECT COMPONENT --------------------
+interface SearchableSelectProps {
+  options: any[];
+  value: any;
+  onChange: (value: any) => void;
+  getLabel: (item: any) => string;
+  placeholder: string;
+  disabled?: boolean;
+  isLoading?: boolean;
+  inputClassName?: string;
+}
+
+const SearchableSelect = ({
+  options = [],
+  value,
+  onChange,
+  getLabel,
+  placeholder,
+  disabled = false,
+  isLoading = false,
+  inputClassName = "",
+}: SearchableSelectProps) => {
+  const [inputValue, setInputValue] = useState("");
+  const [showOptions, setShowOptions] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sync input with form value
+  useEffect(() => {
+    if (value) {
+      const selectedOption = options.find((item) => item.id == value);
+      if (selectedOption) {
+        setInputValue(getLabel(selectedOption));
+      }
+    } else {
+      setInputValue("");
+    }
+  }, [value, options]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    setShowOptions(val.length > 0);
+    if (val.length === 0) onChange(null);
+  };
+
+  const handleSelect = (item: any) => {
+    setInputValue(getLabel(item));
+    onChange(item.id);
+    setShowOptions(false);
+  };
+
+  const filteredOptions = options.filter((item) =>
+    getLabel(item).toLowerCase().includes(inputValue.toLowerCase())
+  );
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <div className="relative">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={() => setShowOptions(!disabled)}
+          placeholder={placeholder}
+          disabled={disabled || isLoading}
+          className={inputClassName}
+        />
+        {/* Chevron Icon */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+          <ChevronDown size={16} />
+        </div>
+        {/* Clear Button */}
+        {value && inputValue && !disabled && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setInputValue("");
+              onChange(null);
+            }}
+            className="absolute inset-y-0 right-8 flex items-center text-gray-400 hover:text-gray-600"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown Options */}
+      {showOptions && !disabled && (
+        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+          {isLoading ? (
+            <li className="p-4 text-center text-sm text-gray-500">Loading...</li>
+          ) : filteredOptions.length > 0 ? (
+            filteredOptions.map((item, index) => (
+              <li
+                key={index}
+                onClick={() => handleSelect(item)}
+                className="px-3 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors border-b border-gray-50 last:border-0"
+              >
+                {getLabel(item)}
+              </li>
+            ))
+          ) : (
+            <li className="p-4 text-center text-sm text-gray-400 italic">No matches found</li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
 
 // -------------------- COMPONENT --------------------
 export default function TaxPaymentForm({ 
@@ -71,25 +186,25 @@ export default function TaxPaymentForm({
   const { activeFiscalYearId, fiscalYears } = useFiscalYear();
   const queryClient = useQueryClient();
 
-  // Use prop ID (modal), route ID (page), or undefined (add)
+  const handleCancel = () => {
+    if (onCancel) onCancel();
+    else navigate("/tax-compliance");
+  };
+
   const editId = paymentId || (mode === "edit" ? Number(routeId) : undefined);
 
-  // Fetch Properties
   const { items: propertyData, isLoadingItems: isLoadingProperty } = useFetchAll<Property>("/api/property", ["property"]);
   
-  // Fetch existing payment for Edit Mode
   const editApiUrl = editId ? `/api/payment?id=${editId}` : "";
   const { items: paymentData, isLoadingItems: isLoadingPayment } = useFetchAll<Tax>(
     editApiUrl,
     editId ? ["payment", editId] : ["payment-none"]
   );
 
-  // Normalize Payment Data (API response handling)
   const normalizeTax = (data: any): Tax | null => {
     if (!data) return null;
     let item: any = null;
 
-    // Handle various response structures
     if (Array.isArray(data)) item = data[0];
     else if (Array.isArray(data.data)) item = data.data[0];
     else if (Array.isArray(data.Data)) item = data.Data[0];
@@ -111,7 +226,6 @@ export default function TaxPaymentForm({
     };
   };
 
-  // Determine source of data: InitialData (Modal) or API (Page)
   const existingPayment = initialData ? { ...initialData } as Tax : normalizeTax(paymentData);
 
   const { create, update } = useMutate<Tax>("/api/payment", "payment");
@@ -138,7 +252,9 @@ export default function TaxPaymentForm({
 
   const properties = normalizeData<Property>(propertyData);
 
-  // Populate form when data loads or mode changes
+  // Filter Fiscal Years to ensure valid ID > 0
+  const validFiscalYears = fiscalYears.filter(fy => fy.id && fy.id > 0);
+
   useEffect(() => {
     if (mode === "edit" && existingPayment) {
       form.reset({
@@ -171,24 +287,20 @@ export default function TaxPaymentForm({
     try {
       const formData = new FormData();
       
-      // ID for Edit Mode
       if (mode === "edit" && editId) {
         formData.append("id", editId.toString());
       }
       
-      // Form Fields (standardized names)
       formData.append("propertyId", values.propertyId.toString());
       formData.append("fiscalYearId", values.fiscalYearId.toString());
       formData.append("receiptNo", values.receiptNo);
-      formData.append("amountPaid", values.amountPaid.toString()); // Ensure backend expects amountPaid
+      formData.append("amountPaid", values.amountPaid.toString());
       formData.append("paymentMiti", values.paymentMiti);
 
-      // File (Optional on Edit)
       if (values.file && values.file.length > 0) {
         formData.append("file", values.file[0]);
       }
 
-      // Execute Mutation
       if (mode === "edit") {
         await update.mutateAsync(formData);
         toast.success("Payment updated successfully ✅");
@@ -197,11 +309,9 @@ export default function TaxPaymentForm({
         toast.success("Payment saved successfully ✅");
       }
 
-      // Refresh Data
       queryClient.invalidateQueries({ queryKey: ["payment"] });
       queryClient.invalidateQueries({ queryKey: ["paymentStatus"] });
 
-      // Callback or Navigate
       setFileName("");
       if (onSuccess) onSuccess();
       else navigate("/tax-compliance");
@@ -218,7 +328,6 @@ export default function TaxPaymentForm({
     if (e.target.files && e.target.files.length > 0) {
       setFileName(e.target.files[0].name);
     } else {
-      // If user clears file input (via X button logic if implemented), reset to existing filename
       if (mode === "edit" && existingPayment?.FilePath) {
          setFileName(existingPayment.FilePath.split('/').pop() || "Current file");
       } else {
@@ -226,6 +335,9 @@ export default function TaxPaymentForm({
       }
     }
   };
+
+  // Base class for inputs to match existing style
+  const inputBaseClass = "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg">
@@ -248,7 +360,7 @@ export default function TaxPaymentForm({
           type="button"
           variant="ghost"
           size="icon"
-          onClick={onCancel}
+          onClick={handleCancel}
           className="rounded-full hover:bg-slate-100"
         >
           <X className="h-5 w-5 text-slate-500" />
@@ -267,24 +379,17 @@ export default function TaxPaymentForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Property <span className="text-red-500">*</span></FormLabel>
-                  <Select
-                    onValueChange={(val) => field.onChange(Number(val))}
-                    value={field.value ? field.value.toString() : ""}
-                    disabled={loading || isLoadingProperty}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder={isLoadingProperty ? "Loading..." : "Select Property"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {properties.map((prop) => (
-                        <SelectItem key={prop.id} value={prop.id.toString()}>
-                          {prop.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <SearchableSelect
+                      options={properties}
+                      value={field.value?.toString()}
+                      onChange={(val) => field.onChange(val ? Number(val) : null)}
+                      getLabel={(p) => p.name}
+                      placeholder={isLoadingProperty ? "Loading..." : "Select Property"}
+                      disabled={loading || isLoadingProperty}
+                      inputClassName={inputBaseClass}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -296,24 +401,17 @@ export default function TaxPaymentForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Fiscal Year <span className="text-red-500">*</span></FormLabel>
-                  <Select
-                    onValueChange={(val) => field.onChange(Number(val))}
-                    value={field.value ? field.value.toString() : ""}
-                    disabled={loading}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select Fiscal Year" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {fiscalYears.filter(fy => fy.id && fy.id > 0).map((year) => (
-                        <SelectItem key={year.id} value={year.id?.toString() ?? ""}>
-                          {year.fiscalYear}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <SearchableSelect
+                      options={validFiscalYears}
+                      value={field.value?.toString()}
+                      onChange={(val) => field.onChange(val ? Number(val) : null)}
+                      getLabel={(fy) => fy.fiscalYear}
+                      placeholder="Select Fiscal Year"
+                      disabled={loading}
+                      inputClassName={inputBaseClass}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -434,7 +532,7 @@ export default function TaxPaymentForm({
             <Button
               type="button"
               variant="outline"
-              onClick={onCancel}
+              onClick={handleCancel}
               disabled={loading}
               className="text-slate-600 border-slate-200"
             >
