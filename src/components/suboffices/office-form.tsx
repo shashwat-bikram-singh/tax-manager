@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,18 +14,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { X, Save } from "lucide-react";
+import { X, Save, ChevronDown } from "lucide-react";
 import { useMutate } from "@/hooks/useMutate";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import type { Office } from "@/type/office";
-
 
 // -------------------- SCHEMA --------------------
 const OfficeSchema = z.object({
   name: z.string().min(1, "Name is required"),
   code: z.string().min(1, "Code is required"),
   parentId: z.number().optional().nullable(),
-  measurementUnit: z.string().optional().nullable(),
+  measurementUnit: z.string().min(1, "Measurement Unit is required"),
 });
 
 type OfficeFormValues = z.infer<typeof OfficeSchema>;
@@ -37,12 +36,140 @@ type OfficeFormProps = {
   onCancel?: () => void;
 };
 
+// -------------------- SEARCHABLE SELECT COMPONENT --------------------
+interface SearchableSelectProps {
+  options: any[];
+  value: any; // Can be string or number
+  onChange: (value: any) => void;
+  getLabel: (item: any) => string;
+  placeholder: string;
+  disabled?: boolean;
+  isLoading?: boolean;
+  inputClassName?: string;
+}
+
+const SearchableSelect = ({
+  options = [],
+  value,
+  onChange,
+  getLabel,
+  placeholder,
+  disabled = false,
+  isLoading = false,
+  inputClassName = "",
+}: SearchableSelectProps) => {
+  const [inputValue, setInputValue] = useState("");
+  const [showOptions, setShowOptions] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sync input with form value
+  useEffect(() => {
+    if (value) {
+      const selectedOption = options.find((item) => item.id == value);
+      if (selectedOption) {
+        setInputValue(getLabel(selectedOption));
+      }
+    } else {
+      setInputValue("");
+    }
+  }, [value, options]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    setShowOptions(val.length > 0);
+    if (val.length === 0) onChange(null);
+  };
+
+  const handleSelect = (item: any) => {
+    setInputValue(getLabel(item));
+    onChange(item.id);
+    setShowOptions(false);
+  };
+
+  const filteredOptions = options.filter((item) =>
+    getLabel(item).toLowerCase().includes(inputValue.toLowerCase())
+  );
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      {/* Input Field matching existing Form Styles */}
+      <div className="relative">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={() => setShowOptions(!disabled)}
+          placeholder={placeholder}
+          disabled={disabled || isLoading}
+          className={inputClassName}
+        />
+        {/* Chevron Icon */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+          <ChevronDown size={18} />
+        </div>
+        {/* Clear Button */}
+        {value && inputValue && !disabled && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setInputValue("");
+              onChange(null);
+            }}
+            className="absolute inset-y-0 right-10 flex items-center text-gray-400 hover:text-gray-600"
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown Options */}
+      {showOptions && !disabled && (
+        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+          {isLoading ? (
+            <li className="p-4 text-center text-sm text-gray-500">Loading...</li>
+          ) : filteredOptions.length > 0 ? (
+            filteredOptions.map((item, index) => (
+              <li
+                key={index}
+                onClick={() => handleSelect(item)}
+                className="px-4 py-2.5 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors border-b border-gray-50 last:border-0"
+              >
+                {getLabel(item)}
+              </li>
+            ))
+          ) : (
+            <li className="p-4 text-center text-sm text-gray-400 italic">No matches found</li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 // -------------------- COMPONENT --------------------
 export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: OfficeFormProps) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const { create, update } = useMutate<Office>("/api/office", "office");
   const { items: fyData } = useFetchAll<Office>("/api/office", ["office"]);
+
+  const handleCancel = () => {
+    if (onCancel) onCancel();
+    else navigate("/office");
+  };
 
   function getOffices(data: any): Office[] {
     if (!data) return [];
@@ -54,7 +181,14 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
 
   const Offices = getOffices(fyData);
 
-  // Refined styling for inputs - sleek, modern, consistent height
+  // Options for Measurement Unit (Hardcoded)
+  const measurementOptions = [
+    { id: "Sq.m", name: "Sq.m" },
+    { id: "Terai", name: "Terai(Kattha)" },
+    { id: "Hilly", name: "Hilly(Aana)" },
+  ];
+
+  // Refined styling for inputs
   const inputClass = "w-full bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all duration-200 placeholder:text-gray-400 shadow-sm";
 
   // -------------------- FORM --------------------
@@ -64,7 +198,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
       name: initialData?.name || "",
       code: initialData?.code || "",
       parentId: initialData?.parentId || null,
-      measurementUnit: initialData?.measurementUnit || null,
+      measurementUnit: initialData?.measurementUnit || "",
     },
   });
 
@@ -142,7 +276,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
               type="button"
               variant="ghost"
               size="icon"
-              onClick={onCancel}
+              onClick={handleCancel}
               className="h-9 w-9 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
             >
               <X className="h-5 w-5" />
@@ -219,28 +353,15 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                           Parent Office
                         </FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <select
-                              {...field}
-                              className={inputClass + " appearance-none cursor-pointer"}
-                              disabled={loading}
-                              value={field.value || ""}
-                              onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
-                            >
-                              <option value="">No Parent</option>
-                              {Offices.filter(o => o.id !== initialData?.id).map((office) => (
-                                <option key={office.id} value={office.id}>
-                                  {office.name}
-                                </option>
-                              ))}
-                            </select>
-                            {/* Custom Dropdown Arrow */}
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                              <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
-                                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                              </svg>
-                            </div>
-                          </div>
+                          <SearchableSelect
+                            options={Offices.filter(o => o.id !== initialData?.id)}
+                            value={field.value}
+                            onChange={(val) => field.onChange(val ? Number(val) : null)}
+                            getLabel={(o) => o.name}
+                            placeholder="Select Parent Office"
+                            disabled={loading}
+                            inputClassName={inputClass}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -248,33 +369,32 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                   />
                 </div>
 
-                {/* // create a dropdown using selection hardcoded input filed for the Measurement Unit the units are Sq.m, Terai, Hilly */}
-                <FormField
-                  control={form.control}
-                  name="measurementUnit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700">
-                        Measurement Unit
-                      </FormLabel>
-                      <FormControl>
-                        <select
-                          {...field}
-                          disabled={loading}
-                          value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.value || null)}
-                          className="w-full border rounded px-2 py-2"
-                        >
-                          <option value="">No Measurement Unit</option>
-                          <option value="Sq.m">Sq.m</option>
-                          <option value="Terai">Terai(Bigha,Dhur,Kattha)</option>
-                          <option value="Hilly">Hilly(Ropani,Aana,Paisa,Dam)</option>
-                        </select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Row 3: Measurement Unit */}
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="measurementUnit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Measurement Unit <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <SearchableSelect
+                            options={measurementOptions}
+                            value={field.value}
+                            onChange={field.onChange}
+                            getLabel={(o) => o.name}
+                            placeholder="Select Measurement Unit"
+                            disabled={loading}
+                            inputClassName={inputClass}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               {/* Action Buttons */}
@@ -282,7 +402,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={onCancel}
+                  onClick={handleCancel}
                   disabled={loading}
                   className="px-6 py-2.5 border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-medium"
                 >

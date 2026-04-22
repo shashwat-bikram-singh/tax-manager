@@ -29,7 +29,6 @@ import {
   Download,
   X,
   Plus,
-  Pencil,
   PencilLine,
 } from "lucide-react";
 import { useFetchAll } from "@/hooks/useFetchAll";
@@ -49,6 +48,7 @@ import { useAuthStore } from "@/store/authStore";
 import { jwtDecode } from "jwt-decode";
 import TaxPaymentForm from "./tax-payment-form";
 
+
 export default function PaymentList() {
   const navigate = useNavigate();
   
@@ -61,11 +61,17 @@ export default function PaymentList() {
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [selectedFiscalYearId, setSelectedFiscalYearId] = useState<number | undefined>(undefined);
   
+  // --- Property Payment Popup State ---
+  const [propertyPopupOpen, setPropertyPopupOpen] = useState(false);
+  const [propertyPopupData, setPropertyPopupData] = useState<Payment[]>([]);
+  const [propertyPopupLoading, setPropertyPopupLoading] = useState(false);
+  const [popupPropertyName, setPopupPropertyName] = useState("");
+  
   // --- File View/Modal State ---
   const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // --- Edit Modal State (New) ---
+  // --- Edit Modal State ---
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
 
   // Fetch Fiscal Years Locally
@@ -88,7 +94,7 @@ export default function PaymentList() {
 
   useEffect(() => {
     if (fiscalYears.length > 0 && !selectedFiscalYearId) {
-      const activeFy = fiscalYears.find((fy) => fy.isActive === true || fy.isActive === 1);
+      const activeFy = fiscalYears.find((fy) => fy.isActive === true);
       if (activeFy) {
         setSelectedFiscalYearId(activeFy.id);
       } else {
@@ -102,6 +108,23 @@ export default function PaymentList() {
     selectedFiscalYearId ? `/api/paymentStatus?fiscalYearId=${selectedFiscalYearId}` : "/api/paymentStatus",
     selectedFiscalYearId ? ["paymentStatus", selectedFiscalYearId] : ["paymentStatus"]
   );
+
+  const handlePropertyClick = async (propertyId: number, propertyName: string) => {
+    setPropertyPopupLoading(true);
+    setPropertyPopupOpen(true);
+    setPopupPropertyName(propertyName);
+    try {
+      const response = await axiosInstance.get(`/api/payment?propertyId=${propertyId}`);
+      const data = response.data;
+      const arr = Array.isArray(data) ? data : data.data || [];
+      setPropertyPopupData(getPayment(arr));
+    } catch (error) {
+      console.error("Error fetching property payments:", error);
+      setPropertyPopupData([]);
+    } finally {
+      setPropertyPopupLoading(false);
+    }
+  };
 
   // Helper to normalize Payment data
   function getPayment(data: any): Payment[] {
@@ -155,11 +178,10 @@ export default function PaymentList() {
     sn: true,
     property: true,
     receiptNo: true,
-    amount: true,
+    amountPaid: true,
     paymentMiti: true,
     file: true,
     status: true,
-    action: true,
   });
 
   const handleSearch = (val: string) => {
@@ -176,18 +198,6 @@ export default function PaymentList() {
     const id = Number(val);
     setSelectedFiscalYearId(id);
     setCurrentPage(1); 
-  };
-
-  const handleEdit = (paymentId: number | undefined) => {
-    if (!paymentId) {
-      alert("Cannot edit: Invalid record ID");
-      return;
-    }
-    // Find the item in the normalized list
-    const item = payments.find((p) => p.id === paymentId);
-    if (item) {
-      setEditingPayment(item);
-    }
   };
 
   // --- View File Logic ---
@@ -242,29 +252,29 @@ export default function PaymentList() {
     }
   };
 
-  const closeFileModal = () => {
-    setIsModalOpen(false);
-    setSelectedFileUrl(null);
-  };
+  // const closeFileModal = () => {
+  //   setIsModalOpen(false);
+  //   setSelectedFileUrl(null);
+  // };
 
   // Filter Logic
   const filteredpayments = payments.filter((item) => {
-    const searchLower = searchTerm.toLowerCase();
-    const amountStr = item.amountPaid ? item.amountPaid.toString() : "";
-    
-    const statusMatch =
-      activeTab === "all" ||
-      (activeTab === "paid" && (item.isPaid === 1 || item.isPaid === true)) ||
-      (activeTab === "unpaid" && item.isPaid !== 1 && item.isPaid !== true);
+      const searchLower = searchTerm.toLowerCase();
+      const amountStr = item.amountPaid ? item.amountPaid.toString() : "";
+      
+      const statusMatch =
+        activeTab === "all" ||
+        (activeTab === "paid" && (item.isPaid === 1 || item.isPaid === 1)) ||
+        (activeTab === "unpaid" && item.isPaid !== 1 && item.isPaid !== 1);
 
-    const searchMatch =
-      searchTerm === "" ||
-      (item.property && typeof item.property === 'string' && item.property.toLowerCase().includes(searchLower)) ||
-      (item.receiptNo && item.receiptNo.toLowerCase().includes(searchLower)) ||
-      amountStr.includes(searchLower);
+      const searchMatch =
+        searchTerm === "" ||
+        (item.property && typeof item.property === 'string' && item.property.toLowerCase().includes(searchLower)) ||
+        (item.receiptNo && item.receiptNo.toLowerCase().includes(searchLower)) ||
+        amountStr.includes(searchLower);
 
-    return statusMatch && searchMatch;
-  });
+      return statusMatch && searchMatch;
+    });
 
   const totalPages = Math.ceil(filteredpayments.length / entriesPerPage);
   const startIndex = (currentPage - 1) * entriesPerPage;
@@ -287,8 +297,7 @@ export default function PaymentList() {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Payment History</h2>
-          <p className="text-sm text-slate-500">Manage tax payments and receipts</p>
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight">Payment Status</h2>
         </div>
       </div>
 
@@ -405,22 +414,19 @@ export default function PaymentList() {
               {columnVisibility.receiptNo && (
                 <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Receipt No</TableHead>
               )}
-              {columnVisibility.amount && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Amount</TableHead>
-              )}
+{columnVisibility.amountPaid && (
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Amount Paid</TableHead>
+                )}
               {columnVisibility.paymentMiti && (
                 <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Payment Date</TableHead>
               )}
               {columnVisibility.status && (
                 <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Status</TableHead>
               )}
-               {columnVisibility.file && (
-                 <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Receipt</TableHead>
-               )}
-               {columnVisibility.action && (
-                 <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">Action</TableHead>
-               )}
-            </TableRow>
+{columnVisibility.file && (
+                  <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Receipt</TableHead>
+                )}
+             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedpayments.length > 0 ? (
@@ -432,7 +438,11 @@ export default function PaymentList() {
                     </TableCell>
                   )}
                   {columnVisibility.property && (
-                    <TableCell className="font-semibold text-slate-900 py-2">
+                    <TableCell 
+                      className="font-semibold text-slate-900 py-2 cursor-pointer hover:text-blue-600 hover:underline"
+                      onClick={() => item.propertyId && handlePropertyClick(item.propertyId, item.property)}
+                      title="Click to view payment history"
+                    >
                       {item.property ?? "-"}
                     </TableCell>
                   )}
@@ -441,7 +451,7 @@ export default function PaymentList() {
                       {item.receiptNo ?? "-"}
                     </TableCell>
                   )}
-                  {columnVisibility.amount && (
+                  {columnVisibility.amountPaid && (
                     <TableCell className="text-sm text-slate-600 font-medium py-2">
                       {item.amountPaid ? `Rs. ${Number(item.amountPaid).toLocaleString()}` : "-"}
                     </TableCell>
@@ -453,7 +463,7 @@ export default function PaymentList() {
                   )}
                   {columnVisibility.status && (
                     <TableCell className="text-center text-sm font-semibold py-2">
-                      {item.isPaid === 1 || item.isPaid === true ? (
+                      {item.isPaid === 1 || item.isPaid === 1 ? (
                         <span className="text-green-600">Paid</span>
                       ) : (
                         <span className="text-red-600">Unpaid</span>
@@ -461,38 +471,24 @@ export default function PaymentList() {
                     </TableCell>
                   )}
                   
-                   {columnVisibility.file && (
-                     <TableCell className="text-center text-sm font-semibold py-2">
-                       {item.isPaid === 1 || item.isPaid === true ? (
-                         <Button
-                           size="sm"
-                           variant="ghost"
-                           className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
-                           onClick={() => handleViewFile(item.taxRecordId)}
-                           title="View Receipt"
-                         >
-                           <Eye size={16} strokeWidth={2} />
-                         </Button>
-                       ) : (
-                         <span className="text-slate-400">-</span>
-                       )}
-                     </TableCell>
-                   )}
-                    {columnVisibility.action && (
+{columnVisibility.file && (
                       <TableCell className="text-center text-sm font-semibold py-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-green-600"
-                          onClick={() => handleEdit(item.id)}
-                          disabled={!item.id}
-                          title="Edit Payment"
-                        >
-                        <PencilLine />
-                        </Button>
+                        {item.isPaid === 1 || item.isPaid === 1 ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                            onClick={() => handleViewFile(item.taxRecordId)}
+                            title="View Receipt"
+                          >
+                            <Eye size={16} strokeWidth={2} />
+                          </Button>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
                       </TableCell>
                     )}
-                 </TableRow>
+                  </TableRow>
               ))
             ) : (
               <TableRow>
@@ -591,8 +587,8 @@ export default function PaymentList() {
               {selectedFileUrl.toLowerCase().includes('.pdf') ? (
                 <div className="w-full h-full">
                   <iframe
-                    src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(selectedFileUrl)}`}
-                    className="w-full h-full border-none shadow-inner"
+                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedFileUrl)}&embedded=true`}
+                    className="absolute w-full h-[calc(100%+65px)] -top-[65px] left-0 border-none"
                     title="Secure PDF Viewer"
                   />
                 </div>
@@ -639,7 +635,87 @@ export default function PaymentList() {
         </div>
       )}
 
-      {/* --- EDIT MODAL (Same pattern as FiscalyearList) --- */}
+      {/* --- PROPERTY PAYMENT POPUP --- */}
+      {propertyPopupOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-slate-50">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Payment History</h3>
+                <p className="text-sm text-slate-500">{popupPropertyName}</p>
+              </div>
+              <button 
+                onClick={() => setPropertyPopupOpen(false)}
+                className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-all"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="flex-grow overflow-auto p-4">
+              {propertyPopupLoading ? (
+                <div className="flex justify-center items-center h-40">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : propertyPopupData.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-slate-50/50">
+                      <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Receipt No</TableHead>
+                      <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Amount</TableHead>
+                      <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Payment Date</TableHead>
+                      <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Status</TableHead>
+                      <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase">Receipt</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {propertyPopupData.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.receiptNo ?? "-"}</TableCell>
+                        <TableCell>{item.amountPaid ? `Rs. ${Number(item.amountPaid).toLocaleString()}` : "-"}</TableCell>
+                        <TableCell>{item.paymentMiti ?? "-"}</TableCell>
+                        <TableCell>
+                          <span className="text-green-600 font-bold">Paid</span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                              onClick={() => handleViewFile(item.taxRecordId)}
+                              title="View Receipt"
+                            >
+                              <Eye size={16} strokeWidth={2} />
+                            </Button>
+
+                          
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-40 text-slate-400">
+                  <FileX className="w-10 h-10 mb-2 opacity-50" />
+                  <p className="text-sm font-medium">No payment records found</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="px-6 py-3 border-t border-gray-200 bg-slate-50 flex justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setPropertyPopupOpen(false)}
+                className="px-4 py-2"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- EDIT MODAL --- */}
       {editingPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
