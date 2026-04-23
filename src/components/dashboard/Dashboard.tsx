@@ -1,12 +1,14 @@
 import { useFetchAll } from "@/hooks/useFetchAll";
-import type { DashboardData, ProvinceData, DistrictData, LocalBodyData } from "@/type/dashboard";
+import type { DashboardData, ProvinceData, DistrictData, LocalBodyData, LeaderboardData } from "@/type/dashboard";
 import ReactApexChart from "react-apexcharts";
 import type { ApexOptions } from "apexcharts";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 
 export default function Dashboard() {
   const [viewType, setViewType] = useState('district');
   const { items: dashboardResponse, isLoadingItems: loading, error } = useFetchAll<DashboardData>("/api/dashboard", ["dashboard"]);
+  const { items: leaderboardResponse } = useFetchAll<LeaderboardData>("/api/leaderboard", ["leaderboard"]);
 
   function getDashboardData(res: any): DashboardData | null {
     if (!res) return null;
@@ -17,7 +19,17 @@ export default function Dashboard() {
     return null;
   }
 
+  function getLeaderboardData(res: any): LeaderboardData[] | null {
+    if (!res) return null;
+    if (res.data) {
+      const data = res.data;
+      return Array.isArray(data) ? data : [data];
+    }
+    return null;
+  }
+
   const d = getDashboardData(dashboardResponse);
+  const ld = getLeaderboardData(leaderboardResponse);
 
   const provinceData: ProvinceData[] = d?.provinceData ? JSON.parse(d.provinceData) : [];
   const districtData: DistrictData[] = d?.districtData ? JSON.parse(d.districtData) : [];
@@ -31,7 +43,7 @@ export default function Dashboard() {
   // Province bar chart
   const provinceChartOptions: ApexOptions = {
     chart: { type: "bar", toolbar: { show: false }, background: "transparent" },
-    plotOptions: { bar: { borderRadius: 6, horizontal: false, columnWidth: "45%" } },
+    plotOptions: { bar: { borderRadius: 8, horizontal: false, columnWidth: "20%" } },
     dataLabels: { enabled: true, style: { fontSize: "11px", fontWeight: "700" } },
     xaxis: {
       // categories: provinceData.map((p) => `${p.Name}`),
@@ -47,8 +59,8 @@ export default function Dashboard() {
 
   //province chart
   const districtChartOptions: ApexOptions = {
-   chart: { type: "bar", toolbar: { show: false }, background: "transparent" },
-       plotOptions: { bar: { borderRadius: 6, horizontal: false, columnWidth: "45%" } },
+    chart: { type: "bar", toolbar: { show: false }, background: "transparent" },
+    plotOptions: { bar: { borderRadius: 6, horizontal: false, columnWidth: "40%" } },
     dataLabels: { enabled: true, style: { fontSize: "11px", fontWeight: "700" } },
     xaxis: {
       categories: districtData.map((p) => `${p.Name}`),
@@ -60,14 +72,14 @@ export default function Dashboard() {
     tooltip: { y: { formatter: (v) => `${v} Properties` } },
   };
   const provinceChartSeries = [{ name: "Properties", data: provinceData.map((p) => p.TotalProperty) }];
- 
+
 
   // Paid vs Unpaid radial bar
   const radialOptions: ApexOptions = {
     chart: { type: "radialBar", background: "transparent" },
     plotOptions: {
       radialBar: {
-        hollow: { size: "55%" },
+        hollow: { size: "70%" },
         dataLabels: {
           name: { fontSize: "13px", fontWeight: "700", color: "#374151" },
           value: { fontSize: "22px", fontWeight: "900", color: "#4f46e5", formatter: (v) => `${(v).toFixed(2)}%` },
@@ -155,55 +167,56 @@ export default function Dashboard() {
       </section>
 
       {/* ── Charts Row 1: Province Bar + Payment Radial ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="gap-3">
         {/* Province Bar Chart */}
-       <div className="lg:col-span-2 bg-white rounded-2xl border border-surface-container shadow-sm p-6">
-  <div className="flex items-center justify-between mb-4">
-    <div className="flex items-center gap-2">
-      <span className="material-symbols-outlined text-primary text-lg">bar_chart</span>
-      <h4 className="font-headline font-bold text-primary text-sm">
-        Properties by {viewType === 'district' ? 'District' : 'Province'}
-      </h4>
-    </div>
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-surface-container shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-lg">bar_chart</span>
+              <h4 className="font-headline font-bold text-primary text-sm">
+                Properties by {viewType === 'district' ? 'District' : 'Province'}
+              </h4>
+            </div>
 
-    {/* Radio Buttons for Switching */}
-    <div className="flex bg-surface-container-low p-1 rounded-lg gap-1 border">
-      <button
-        onClick={() => setViewType('district')}
-        className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
-          viewType === 'district' ? 'bg-primary text-white shadow-sm' : 'text-outline hover:bg-surface-container-highest'
-        }`}
-      >
-        District
-      </button>
-      <button
-        onClick={() => setViewType('province')}
-        className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
-          viewType === 'province' ? 'bg-primary text-white shadow-sm' : 'text-outline hover:bg-surface-container-highest'
-        }`}
-      >
-        Province
-      </button>
-    </div>
-  </div>
+            {/* Radio Buttons for Switching */}
+            <div className="flex bg-surface-container-low p-1 rounded-lg gap-1 border">
+              <button
+                onClick={() => setViewType('district')}
+                className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${viewType === 'district' ? 'bg-primary text-white shadow-sm' : 'text-outline hover:bg-surface-container-highest'
+                  }`}
+              >
+                District
+              </button>
+              <button
+                onClick={() => setViewType('province')}
+                className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${viewType === 'province' ? 'bg-primary text-white shadow-sm' : 'text-outline hover:bg-surface-container-highest'
+                  }`}
+              >
+                Province
+              </button>
+            </div>
+          </div>
 
-  {/* Dynamic Chart Display */}
-  {(viewType === 'district' ? districtData : provinceData).length > 0 ? (
-    <ReactApexChart
-      options={viewType === 'district' ? districtChartOptions : provinceChartOptions}
-      series={viewType === 'district' ? districtChartSeries : provinceChartSeries}
-      type="bar"
-      height={220}
-    />
-  ) : (
-    <div className="h-[220px] flex items-center justify-center text-outline text-sm">
-      No {viewType} data available
-    </div>
-  )}
-</div>
+          {/* Dynamic Chart Display */}
+          {(viewType === 'district' ? districtData : provinceData).length > 0 ? (
+            <ReactApexChart
+              options={viewType === 'district' ? districtChartOptions : provinceChartOptions}
+              series={viewType === 'district' ? districtChartSeries : provinceChartSeries}
+              type="bar"
+              height={220}
+            />
+          ) : (
+            <div className="h-[220px] flex items-center justify-center text-outline text-sm">
+              No {viewType} data available
+            </div>
+          )}
+        </div>
 
-        {/* Payment Radial */}
-        <div className="bg-white rounded-2xl border border-surface-container shadow-sm p-6 flex flex-col items-center justify-center">
+      </div>
+
+      {/* ── Charts Row 2: District Donut + Top Performers Leaderboard ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-surface-container shadow-sm p-6">
           <div className="flex items-center gap-2 mb-2 w-full">
             <span className="material-symbols-outlined text-primary text-lg">donut_large</span>
             <h4 className="font-headline font-bold text-primary text-sm">Payment Rate</h4>
@@ -225,12 +238,107 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Top Performers Leaderboard */}
+        <div className="bg-white rounded-2xl border flex flex-col border-gray-200 shadow-md overflow-hidden p-6 relative">
+
+          {/* subtle decorative circle (lighter now) */}
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-gray-100 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="flex items-center justify-between mb-6 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0 border border-yellow-200">
+                <span
+                  className="material-symbols-outlined text-yellow-600 text-xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  trophy
+                </span>
+              </div>
+
+              <div>
+                <h4 className="font-headline font-bold text-gray-800 text-base">
+                  Top Performing Offices
+                </h4>
+                <p className="text-gray-500 text-[10px] uppercase tracking-widest font-semibold mt-0.5">
+                  By Total Properties
+                </p>
+              </div>
+            </div>
+
+            <Link
+              to="/leaderboard"
+              className="text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1"
+            >
+              View All
+              <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </Link>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-3 relative z-10 custom-scrollbar pr-1">
+            {!ld ? (
+              <div className="h-[220px] flex flex-col items-center justify-center text-gray-400 text-sm gap-2">
+                <span className="material-symbols-outlined text-3xl opacity-50">
+                  leaderboard
+                </span>
+                <p>No leaderboard data available</p>
+              </div>
+            ) : (
+              console.log("ld", ld),
+              (Array.isArray(ld) ? ld : [ld]).slice(0, 4).map((item: LeaderboardData) => {
+                console.log("asdasdj", item.rankPosition)
+                const isTop3 = item.rankPosition <= 3;
+                return (
+                  <div
+                    key={item.officeId}
+                    className="flex items-center gap-4 bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200 rounded-xl p-3"
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-black text-sm ${item.rankPosition === 1
+                        ? "bg-yellow-400 text-yellow-900"
+                        : item.rankPosition === 2
+                          ? "bg-gray-300 text-gray-800"
+                          : item.rankPosition === 3
+                            ? "bg-amber-600 text-white"
+                            : "bg-gray-200 text-gray-600 font-bold"
+                        }`}
+                    >
+                      {item.rankPosition}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm truncate leading-snug ${isTop3
+                          ? "font-bold text-gray-900"
+                          : "font-semibold text-gray-700"
+                          }`}
+                      >
+                        {item.officeName}
+                      </p>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <p
+                        className={`font-black text-lg leading-none ${isTop3 ? "text-yellow-600" : "text-gray-800"
+                          }`}
+                      >
+                        {item.totalProperties.toLocaleString()}
+                      </p>
+                      <p className="text-[9px] uppercase tracking-widest text-gray-400 font-semibold mt-1">
+                        Properties
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       </div>
 
       <section className="bg-white rounded-2xl border border-surface-container shadow-sm p-6">
-         {/* Local Body Horizontal Bar */}
-        <div className="bg-white rounded-2xl border border-surface-container shadow-sm p-6 flex flex-col h-[380px]">
-        <div className="bg-white rounded-2xl border border-surface-container shadow-sm p-6 flex flex-col h-[380px]">
+        {/* Local Body Horizontal Bar */}
+        <div className="p-2 flex flex-col h-[380px]">
           {/* Header Section */}
           <div className="flex items-center gap-2 mb-4 shrink-0">
             <span className="material-symbols-outlined text-[#0ea5e9] text-lg">home_work</span>
@@ -275,14 +383,12 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-          </div>
         </div>
       </section>
-
       {/* System Footer */}
       <footer className="pt-4 text-center text-outline text-[10px] font-black uppercase tracking-[0.2em] space-x-8 opacity-40">
-        <span>© 2081 Property Management System</span>
+        <span>© NFINX Property Management System</span>
       </footer>
-    </div>
+    </div >
   );
-}
+} 

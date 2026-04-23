@@ -28,3 +28,11 @@ export interface DashboardData {
   districtData: string; // JSON string
   localBodyData: string; // JSON string
 }
+
+export interface LeaderboardData {
+  officeId: number,
+  officeName: string,
+  totalProperties: number,
+  totalValuation: number,
+  rankPosition: number
+}
