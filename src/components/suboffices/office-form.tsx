@@ -18,6 +18,7 @@ import { X, Save, ChevronDown } from "lucide-react";
 import { useMutate } from "@/hooks/useMutate";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import type { Office } from "@/type/office";
+import { t } from "i18next";
 
 // -------------------- SCHEMA --------------------
 const OfficeSchema = z.object({
@@ -139,7 +140,7 @@ const SearchableSelect = ({
       {showOptions && !disabled && (
         <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
           {isLoading ? (
-            <li className="p-4 text-center text-sm text-gray-500">Loading...</li>
+            <li className="p-4 text-center text-sm text-gray-500">{t("common.loading")}</li>
           ) : filteredOptions.length > 0 ? (
             filteredOptions.map((item, index) => (
               <li
@@ -151,7 +152,7 @@ const SearchableSelect = ({
               </li>
             ))
           ) : (
-            <li className="p-4 text-center text-sm text-gray-400 italic">No matches found</li>
+            <li className="p-4 text-center text-sm text-gray-400 italic">{t("office.noMatchesFound")}</li>
           )}
         </ul>
       )}
@@ -235,8 +236,8 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
 
       toast.success(
         mode === "edit"
-          ? "Office updated successfully ✅"
-          : "Office added successfully ✅",
+          ? `${t("office.editOffice")} ✅`
+          : `${t("office.addOffice")} ✅`,
         { style: { background: "#10b981", color: "white" } }
       );
 
@@ -266,7 +267,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
 
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-                  {mode === "add" ? "Add New Office" : "Edit Office"}
+                  {mode === "add" ? `${t("office.addOffice")} ` : `${t("office.editOffice")}`}
                 </h1>
 
               </div>
@@ -303,7 +304,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                          Office Name
+                          {t("office.officeName")}
                           <span className="text-red-500 text-xs">*</span>
                         </FormLabel>
                         <FormControl>
@@ -325,7 +326,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                          Code
+                          {t("common.code")}
                           <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
@@ -350,7 +351,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel className="text-sm font-medium text-gray-700">
-                          Parent Office
+                          {t("common.parentOffice")}
                         </FormLabel>
                         <FormControl>
                           <SearchableSelect
@@ -358,7 +359,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                             value={field.value}
                             onChange={(val) => field.onChange(val ? Number(val) : null)}
                             getLabel={(o) => o.name}
-                            placeholder="Select Parent Office"
+                            placeholder=""
                             disabled={loading}
                             inputClassName={inputClass}
                           />
@@ -377,7 +378,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium text-gray-700">
-                          Measurement Unit <span className="text-red-500">*</span>
+                          {t("office.measurementUnit")} <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
                           <SearchableSelect
@@ -385,7 +386,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                             value={field.value}
                             onChange={field.onChange}
                             getLabel={(o) => o.name}
-                            placeholder="Select Measurement Unit"
+                            placeholder=""
                             disabled={loading}
                             inputClassName={inputClass}
                           />
@@ -406,7 +407,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                   disabled={loading}
                   className="px-6 py-2.5 border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-medium"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -416,12 +417,12 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                   {loading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Saving...
+                      {t("common.loading")}
                     </>
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      {mode === "edit" ? "Update Office" : "Save Office"}
+                      {mode === "edit" ? t("common.update") : t("common.save")}
                     </>
                   )}
                 </Button>

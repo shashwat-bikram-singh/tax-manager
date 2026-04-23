@@ -20,6 +20,7 @@ import type { User } from "@/type/user";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import type { Role_Type } from "@/type/role";
 import type { Office } from "@/type/office";
+import { t } from "i18next";
 
 // -------------------- SCHEMA --------------------
 const baseSchema = z.object({
@@ -268,8 +269,8 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
 
       toast.success(
         mode === "edit"
-          ? "User updated successfully ✅"
-          : "User added successfully ✅",
+          ? t("user.updatedSuccessfully")
+          : t("user.addedSuccessfully"),
         { style: { background: "#10b981", color: "white" } }
       );
 
@@ -278,7 +279,7 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
       toast.error(
         Array.isArray(err?.response?.data?.errors)
           ? err.response.data.errors.join(", ")
-          : err?.response?.data?.errors || "Failed to save user",
+          : err?.response?.data?.errors || t("user.failedToSaveUser"),
         { style: { background: "#c6212d", color: "white" } }
       );
     } finally {
@@ -294,189 +295,47 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
           <div className="flex items-center gap-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                {mode === "add" ? "Add New User" : "Edit User"}
+                {mode === "add" ? t("user.addNewUser") : t("user.editUser")}
               </h1>
               <p className="text-gray-600 text-sm mt-1">
                 {mode === "add"
-                  ? "Create a new user for your property"
-                  : `Update details for ${initialData?.name}`}
+                  ? t("user.createUser")
+                  : `${t("user.updateDetailsFor")} ${initialData?.name}`}
               </p>
             </div>
           </div>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={handleCancel}
-            className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-full transition-all duration-200"
-          >
-            <X className="h-5 w-5 text-gray-600" />
-          </Button>
         </div>
-      </div>
 
-      {/* Form Section */}
-      <div>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            {/* User Information Card */}
-            <div className="space-y-6">
-              <div className="pb-4 border-b border-gray-100">
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  User Details
-                </h2>
-              </div>
+        {/* Form Section */}
+        <div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              {/* User Information Card */}
+              <div className="space-y-6">
+                <div className="pb-4 border-b border-gray-100">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    {t("user.userDetails")}
+                  </h2>
+                </div>
 
-              {/* User Name and Role Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                        Name
-                        <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter user name"
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                          disabled={loading}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-red-600 text-sm mt-1" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                        Role
-                        <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <SearchableSelect
-                          options={roles}
-                          value={field.value}
-                          onChange={field.onChange}
-                          getLabel={(r) => r.name}
-                          placeholder={isLoadingRole ? "Loading..." : "Select role"}
-                          disabled={loading || isLoadingRole}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-red-600 text-sm mt-1" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Office Field */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
-                <FormField
-                  control={form.control}
-                  name="office"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                        Office <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <SearchableSelect
-                          options={offices}
-                          value={field.value}
-                          onChange={field.onChange}
-                          getLabel={(o) => o.name}
-                          placeholder={isLoadingOffice ? "Loading..." : "Select Office"}
-                          disabled={loading || isLoadingOffice}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-red-600 text-sm mt-1" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Username and Email */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                        Username
-                        <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter username"
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                          disabled={loading}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-red-600 text-sm mt-1" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                        Email
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Enter email"
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                          disabled={loading}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-red-600 text-sm mt-1" />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {mode === "add" && (
+                {/* User Name and Role Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
                   <FormField
                     control={form.control}
-                    name="password"
+                    name="name"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                          Password <span className="text-red-500">*</span>
+                          {t("common.name")}
+                          <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Input
-                              {...field}
-                              type={showPassword ? "text" : "password"}
-                              placeholder="Enter password"
-                              className="w-full border border-gray-300 rounded-lg px-4 py-3 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                              disabled={loading}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword((prev) => !prev)}
-                              className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
-                              tabIndex={-1}
-                            >
-                              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                            </button>
-                          </div>
+                          <Input
+                            {...field}
+                            placeholder=""
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                            disabled={loading}
+                          />
                         </FormControl>
                         <FormMessage className="text-red-600 text-sm mt-1" />
                       </FormItem>
@@ -485,59 +344,189 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
 
                   <FormField
                     control={form.control}
-                    name="confirmPassword"
+                    name="role"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                          Confirm Password
+                          {t("common.role")}
                           <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Input
-                              {...field}
-                              type={showConfirmPassword ? "text" : "password"}
-                              placeholder="Enter confirm password"
-                              className="w-full border border-gray-300 rounded-lg px-4 py-3 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                              disabled={loading}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowConfirmPassword((prev) => !prev)}
-                              className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
-                              tabIndex={-1}
-                            >
-                              {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                            </button>
-                          </div>
+                          <SearchableSelect
+                            options={roles}
+                            value={field.value}
+                            onChange={field.onChange}
+                            getLabel={(r) => r.name}
+                            placeholder={isLoadingRole ? t("common.loading") : ""}
+                            disabled={loading || isLoadingRole}
+                          />
                         </FormControl>
                         <FormMessage className="text-red-600 text-sm mt-1" />
                       </FormItem>
                     )}
                   />
                 </div>
-              )}
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-end pt-6 border-t border-gray-100">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200 flex items-center gap-2 shadow-sm hover:shadow-md"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>{mode === "edit" ? "Update User" : "Save User"}</>
+                {/* Office Field */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+                  <FormField
+                    control={form.control}
+                    name="office"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
+                          {t("common.office")}<span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <SearchableSelect
+                            options={offices}
+                            value={field.value}
+                            onChange={field.onChange}
+                            getLabel={(o) => o.name}
+                            placeholder={isLoadingOffice ? t("common.loading") : ""}
+                            disabled={loading || isLoadingOffice}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-600 text-sm mt-1" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Username and Email */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+                  <FormField
+                    control={form.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
+                          {t("common.username")}<span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder=""
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                            disabled={loading}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-600 text-sm mt-1" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
+                          {t("common.email")}<span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder=""
+                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                            disabled={loading}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-600 text-sm mt-1" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {mode === "add" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
+                            {t("common.password")}<span className="text-red-500">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                {...field}
+                                type={showPassword ? "text" : "password"}
+                                placeholder=""
+                                className="w-full border border-gray-300 rounded-lg px-4 py-3 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                disabled={loading}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword((prev) => !prev)}
+                                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                                tabIndex={-1}
+                              >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                              </button>
+                            </div>
+                          </FormControl>
+                          <FormMessage className="text-red-600 text-sm mt-1" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
+                            {t("common.confirmPassword")}<span className="text-red-500">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                {...field}
+                                type={showConfirmPassword ? "text" : "password"}
+                                placeholder=""
+                                className="w-full border border-gray-300 rounded-lg px-4 py-3 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                disabled={loading}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                                tabIndex={-1}
+                              >
+                                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                              </button>
+                            </div>
+                          </FormControl>
+                          <FormMessage className="text-red-600 text-sm mt-1" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 )}
-              </Button>
-            </div>
-          </form>
-        </Form>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end pt-6 border-t border-gray-100">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200 flex items-center gap-2 shadow-sm hover:shadow-md"
+                >
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>{mode === "edit" ? t("common.update") : t("common.save")}</>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
       </div>
     </div>
   );

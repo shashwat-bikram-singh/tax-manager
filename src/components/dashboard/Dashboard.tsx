@@ -4,9 +4,10 @@ import ReactApexChart from "react-apexcharts";
 import type { ApexOptions } from "apexcharts";
 import { Link } from "react-router-dom";
 import { useState } from "react";
-
+import { useTranslation } from "react-i18next";
 export default function Dashboard() {
   const [viewType, setViewType] = useState('district');
+  const { t } = useTranslation();
   const { items: dashboardResponse, isLoadingItems: loading, error } = useFetchAll<DashboardData>("/api/dashboard", ["dashboard"]);
   const { items: leaderboardResponse } = useFetchAll<LeaderboardData>("/api/leaderboard", ["leaderboard"]);
 
@@ -99,7 +100,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto mb-4"></div>
-          <p className="text-outline font-medium">Loading dashboard...</p>
+          <p className="text-outline font-medium">{t("dashboard.loadingDashboard")}</p>
         </div>
       </div>
     );
@@ -109,7 +110,7 @@ export default function Dashboard() {
     return (
       <div className="p-8 bg-error-container/20 border border-error-container rounded-2xl text-center">
         <span className="material-symbols-outlined text-4xl text-error mb-4">error</span>
-        <h3 className="text-on-error-container font-headline font-bold text-lg">Failed to Load Dashboard</h3>
+        <h3 className="text-on-error-container font-headline font-bold text-lg">{t("dashboard.Failed to Load Dashboard")}</h3>
         <p className="text-on-error-container/70 text-sm mt-2">{error.message}</p>
       </div>
     );
@@ -122,33 +123,33 @@ export default function Dashboard() {
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Properties */}
         <div className="bg-surface-container-low p-6 rounded-2xl space-y-2 border-l-4 border-primary shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Total Properties</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">{t("dashboard.totalProperties")}</p>
           <h3 className="font-headline text-4xl font-black text-primary">{d?.totalProperty ?? 0}</h3>
           <div className="flex items-center gap-3 pt-1 text-[11px] font-bold text-on-surface-variant">
             <span className="flex items-center gap-1">
               <span className="material-symbols-outlined text-sm text-primary">landscape</span>
-              {d?.totalLand ?? 0} Land
+              {d?.totalLand ?? 0} {t("common.land")}
             </span>
             <span className="text-outline">·</span>
             <span className="flex items-center gap-1">
               <span className="material-symbols-outlined text-sm text-secondary">apartment</span>
-              {d?.totalBuilding ?? 0} Building
+              {d?.totalBuilding ?? 0} {t("common.building")}
             </span>
           </div>
         </div>
 
         {/* Total Paid Amount */}
         <div className="bg-surface-container-low p-6 rounded-2xl space-y-2 border-l-4 border-on-primary-fixed-variant shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Total Paid Amount</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">{t("dashboard.totalPaidAmount")}</p>
           <h3 className="font-headline text-3xl font-black text-on-primary-fixed-variant">
             रू {(d?.totalPaidAmount ?? 0).toLocaleString()}
           </h3>
-          <p className="text-[11px] text-outline font-semibold">{d?.totalPaidProperty ?? 0} properties paid</p>
+          <p className="text-[11px] text-outline font-semibold">{d?.totalPaidProperty ?? 0} {t("dashboard.propertiesPaid")}</p>
         </div>
 
         {/* Payment Progress */}
         <div className="bg-surface-container-highest p-6 rounded-2xl space-y-3 border-l-4 border-tertiary shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-[10px] font-black uppercase tracking-widest text-on-tertiary-container">Payment Progress</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-on-tertiary-container">{t("dashboard.paymentProgress")}</p>
           <h3 className="font-headline text-4xl font-black text-on-tertiary-container">{(d?.paymentPercentage ?? 0).toFixed(2)}%</h3>
           <div className="w-full bg-white/50 h-2 rounded-full overflow-hidden">
             <div
@@ -160,9 +161,9 @@ export default function Dashboard() {
 
         {/* Unpaid Properties */}
         <div className="bg-error-container/50 p-6 rounded-2xl space-y-2 border-l-4 border-error shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-[10px] font-black uppercase tracking-widest text-on-error-container">Unpaid Properties</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-on-error-container">{t("dashboard.unpaidProperties")}</p>
           <h3 className="font-headline text-4xl font-black text-on-error-container">{unpaidProperty}</h3>
-          <p className="text-[11px] text-on-error-container/70 font-bold uppercase italic">Pending payment</p>
+          <p className="text-[11px] text-on-error-container/70 font-bold uppercase italic">{t("dashboard.pendingPayment")}</p>
         </div>
       </section>
 
@@ -174,7 +175,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-lg">bar_chart</span>
               <h4 className="font-headline font-bold text-primary text-sm">
-                Properties by {viewType === 'district' ? 'District' : 'Province'}
+                {t("dashboard.propertiesBy")}
               </h4>
             </div>
 
@@ -185,14 +186,14 @@ export default function Dashboard() {
                 className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${viewType === 'district' ? 'bg-primary text-white shadow-sm' : 'text-outline hover:bg-surface-container-highest'
                   }`}
               >
-                District
+                {t("dashboard.district")}
               </button>
               <button
                 onClick={() => setViewType('province')}
                 className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${viewType === 'province' ? 'bg-primary text-white shadow-sm' : 'text-outline hover:bg-surface-container-highest'
                   }`}
               >
-                Province
+                {t("dashboard.province")}
               </button>
             </div>
           </div>
@@ -207,7 +208,7 @@ export default function Dashboard() {
             />
           ) : (
             <div className="h-[220px] flex items-center justify-center text-outline text-sm">
-              No {viewType} data available
+              {t("dashboard.noDataAvailable")}
             </div>
           )}
         </div>
@@ -219,7 +220,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-2xl border border-surface-container shadow-sm p-6">
           <div className="flex items-center gap-2 mb-2 w-full">
             <span className="material-symbols-outlined text-primary text-lg">donut_large</span>
-            <h4 className="font-headline font-bold text-primary text-sm">Payment Rate</h4>
+            <h4 className="font-headline font-bold text-primary text-sm">{t("dashboard.paymentRate")}</h4>
           </div>
           <ReactApexChart
             options={radialOptions}
@@ -230,11 +231,11 @@ export default function Dashboard() {
           <div className="flex gap-6 mt-2 text-[11px] font-bold">
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-              <span className="text-on-surface-variant">Paid: {d?.totalPaidProperty ?? 0}</span>
+              <span className="text-on-surface-variant">{t("dashboard.paid")} : {d?.totalPaidProperty ?? 0}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full bg-error" />
-              <span className="text-on-surface-variant">Unpaid: {unpaidProperty}</span>
+              <span className="text-on-surface-variant">{t("dashboard.unpaid")} : {unpaidProperty}</span>
             </div>
           </div>
         </div>
@@ -258,10 +259,10 @@ export default function Dashboard() {
 
               <div>
                 <h4 className="font-headline font-bold text-gray-800 text-base">
-                  Top Performing Offices
+                  {t("dashboard.topPerformingOffices")}
                 </h4>
                 <p className="text-gray-500 text-[10px] uppercase tracking-widest font-semibold mt-0.5">
-                  By Total Properties
+                  {t("dashboard.byTotalProperties")}
                 </p>
               </div>
             </div>
@@ -270,7 +271,7 @@ export default function Dashboard() {
               to="/leaderboard"
               className="text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1"
             >
-              View All
+              {t("dashboard.viewAll")}
               <span className="material-symbols-outlined text-sm">arrow_forward</span>
             </Link>
           </div>
@@ -279,14 +280,12 @@ export default function Dashboard() {
             {!ld ? (
               <div className="h-[220px] flex flex-col items-center justify-center text-gray-400 text-sm gap-2">
                 <span className="material-symbols-outlined text-3xl opacity-50">
-                  leaderboard
+                  {t("dashboard.leaderboard")}
                 </span>
-                <p>No leaderboard data available</p>
+                <p>{t("dashboard.noLeaderboardData")}</p>
               </div>
             ) : (
-              console.log("ld", ld),
               (Array.isArray(ld) ? ld : [ld]).slice(0, 4).map((item: LeaderboardData) => {
-                console.log("asdasdj", item.rankPosition)
                 const isTop3 = item.rankPosition <= 3;
                 return (
                   <div
@@ -325,7 +324,7 @@ export default function Dashboard() {
                         {item.totalProperties.toLocaleString()}
                       </p>
                       <p className="text-[9px] uppercase tracking-widest text-gray-400 font-semibold mt-1">
-                        Properties
+                        {t("common.properties")}
                       </p>
                     </div>
                   </div>
@@ -342,9 +341,9 @@ export default function Dashboard() {
           {/* Header Section */}
           <div className="flex items-center gap-2 mb-4 shrink-0">
             <span className="material-symbols-outlined text-[#0ea5e9] text-lg">home_work</span>
-            <h4 className="font-headline font-bold text-[#0ea5e9] text-sm">Properties by Local Body</h4>
+            <h4 className="font-headline font-bold text-[#0ea5e9] text-sm">{t("dashboard.propertiesByLocalBody")}</h4>
             <span className="ml-auto bg-tertiary-container text-on-tertiary-container text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-              {localBodyData.length} Bodies
+              {localBodyData.length} {t("common.bodies")}
             </span>
           </div>
 
@@ -356,8 +355,8 @@ export default function Dashboard() {
                   <tr className="border-b border-slate-100">
                     {/* Added S.N. Header */}
                     <th className="py-2 w-10 text-[11px] font-bold text-slate-500 uppercase tracking-wider">S.N.</th>
-                    <th className="py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Local Body</th>
-                    <th className="py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">Properties</th>
+                    <th className="py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">{t("common.localBody")}</th>
+                    <th className="py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">{t("common.properties")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">

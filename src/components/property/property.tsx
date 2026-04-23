@@ -40,6 +40,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTranslation } from "react-i18next";
 
 interface Property {
   id: number;
@@ -55,6 +56,7 @@ interface Property {
 
 export default function PropertyList() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { items: propertyData, isLoadingItems } = useFetchAll<Property>("/api/property", ["property"]);
   const { delete: deleteProperty } = useMutate<Property>("/api/property", "property");
 
@@ -159,7 +161,7 @@ export default function PropertyList() {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight">Property Inventory</h2>
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight"></h2>
 
         </div>
       </div>

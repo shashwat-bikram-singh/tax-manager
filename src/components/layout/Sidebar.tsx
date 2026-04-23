@@ -14,6 +14,7 @@ import {
   Calculator
 } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
+import { t } from 'i18next';
 interface SidebarProps {
   isOpen: boolean;
 }
@@ -58,7 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           </div>
           {isOpen && (
             <div className="overflow-hidden transition-opacity duration-200">
-              <h1 className="font-bold text-slate-900 leading-tight truncate text-lg">TU PMS</h1>
+              <h1 className="font-bold text-slate-900 leading-tight truncate text-lg">{t("app.title")}</h1>
               <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold truncate">Property Authority</p>
             </div>
           )}
@@ -76,35 +77,35 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
         <NavItem
           to="/"
           icon="dashboard"
-          label="Dashboard"
+          label={t("sidebar.dashboard")}
           isOpen={isOpen}
           iconMap={iconMap}
         />
         <NavItem
           to="/property"
           icon="domain"
-          label="Property Inventory"
+          label={t("sidebar.propertyInventory")}
           isOpen={isOpen}
           iconMap={iconMap}
         />
         <NavItem
           to="/document-vault"
           icon="folder_shared"
-          label="Document Vault"
+          label={t("sidebar.documentVault")}
           isOpen={isOpen}
           iconMap={iconMap}
         />
         <NavItem
           to="/tax-compliance"
           icon="gavel"
-          label="Tax Compliance"
+          label={t("sidebar.taxCompliance")}
           isOpen={isOpen}
           iconMap={iconMap}
         />
         <NavItem
           to="/converter"
           icon="converter"
-          label="Area Converter"
+          label={t("sidebar.areaConverter")}
           isOpen={isOpen}
           iconMap={iconMap}
         />
@@ -113,14 +114,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
         {/* Admin Sections */}
         {Role === "Admin" && isOpen && (
           <div className="pt-6 pb-2 px-3">
-            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Administration</p>
+            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{t("sidebar.administration")}</p>
           </div>
         )}
         {Role === "Admin" && (
           <NavItem
             to="/fiscalyear"
             icon="CalendarDays"
-            label="Fiscal Year"
+            label={t("sidebar.fiscalYear")}
             isOpen={isOpen}
             iconMap={iconMap}
           />
@@ -129,7 +130,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           <NavItem
             to="/office"
             icon="corporate_fare"
-            label="Office"
+            label={t("sidebar.office")}
             isOpen={isOpen}
             iconMap={iconMap}
           />
@@ -138,7 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           <NavItem
             to="/user"
             icon="person"
-            label="User"
+            label={t("sidebar.user")}
             isOpen={isOpen}
             iconMap={iconMap}
           />
@@ -155,7 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           )}
         >
           <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          {isOpen && <span>Logout</span>}
+          {isOpen && <span>{t("sidebar.logout")}</span>}
         </button>
       </div>
     </aside>

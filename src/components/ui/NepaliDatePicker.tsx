@@ -12,7 +12,7 @@ interface NepaliDatePickerProps {
     name?: string;
 }
 
-function NepaliDatePicker({ id, value, onSelect, placeholder = "Select Date", className, name }: NepaliDatePickerProps) {
+function NepaliDatePicker({ id, value, onSelect, placeholder = "", className, name }: NepaliDatePickerProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [initialized, setInitialized] = useState(false);
 

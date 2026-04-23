@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -33,8 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  ChevronUp,
-  ChevronDown,
+
   Pencil,
   Trash,
   Search,
@@ -46,19 +46,83 @@ import {
   Settings2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Card } from "@/components/ui/card";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import { useMutate } from "@/hooks/useMutate";
 import type { User } from "@/type/user";
 import UserForm from "./user-form";
 import { ChangePasswordDialog } from "./change-password";
 
+// Helper function for sorting (moved outside to avoid re-creation)
+const sortedUser = <T extends Record<string, any>>(
+  items: T[],
+  sortConfig: { key: keyof T; direction: "ascending" | "descending" } | null
+): T[] => {
+  const sortableItems = [...items];
+
+  if (!sortConfig) return sortableItems;
+
+  sortableItems.sort((a, b) => {
+    const aValue = a[sortConfig.key];
+    const bValue = b[sortConfig.key];
+
+    if (aValue == null || bValue == null) return 0;
+
+    if (typeof aValue === "string" && typeof bValue === "string") {
+      return sortConfig.direction === "ascending"
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    }
+
+    if (typeof aValue === "number" && typeof bValue === "number") {
+      return sortConfig.direction === "ascending"
+        ? aValue - bValue
+        : bValue - aValue;
+    }
+
+    return 0;
+  });
+
+  return sortableItems;
+};
+
+// Mobile Card Component (moved outside for optimization)
+const MobileUserCard = ({ item, onEdit, onDelete, onChangePassword }: { item: User; onEdit: (id: number) => void; onDelete: (item: User) => void; onChangePassword: (id: number) => void }) => (
+  <div className="bg-white rounded-lg border border-slate-200 p-4 mb-4 shadow-sm">
+    <div className="flex justify-between items-start mb-3">
+      <div>
+        <h3 className="font-semibold text-lg text-slate-900">{item.name}</h3>
+        <p className="text-sm text-slate-500">{item.email}</p>
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+      <div>
+        <span className="text-slate-400">Role:</span> <span className="text-slate-700">{item.role || "-"}</span>
+      </div>
+      <div>
+        <span className="text-slate-400">Username:</span> <span className="text-slate-700">{item.username || "-"}</span>
+      </div>
+    </div>
+    <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
+      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => onChangePassword(item.id)}>
+        <Key size={16} strokeWidth={2} />
+      </Button>
+      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900" onClick={() => onEdit(item.id)}>
+        <Pencil size={16} strokeWidth={2} />
+      </Button>
+      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={() => onDelete(item)}>
+        <Trash size={16} strokeWidth={2} />
+      </Button>
+    </div>
+  </div>
+);
+
 export default function UserList() {
+  const { t } = useTranslation(); // Using the hook without namespace to access root keys
   const { items: userData, isLoadingItems, error: fetchError } = useFetchAll<User>("/api/user", ["user"]);
   const { delete: deleteUser } = useMutate<User>("/api/user", "user");
+
   const [selectedUserId, setSelectedUserId] = useState<number | null>();
   const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
-
 
   const extractData = (data: any) => {
     if (!data) return [];
@@ -76,7 +140,6 @@ export default function UserList() {
   };
 
   const rawUsers = extractData(userData);
-
   const users = rawUsers;
 
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -104,61 +167,28 @@ export default function UserList() {
     actions: true,
   });
 
-
-  const handleEdit = (id: number) => {
+  const handleEdit = useCallback((id: number) => {
     const item = users.find((v) => v.id === id);
     if (item) {
       setEditingUser(item);
     }
-  };
+  }, [users]);
 
   const handleAddNew = () => {
     setIsAddingNew(true);
   };
 
-  function sortedUser<T extends Record<string, any>>(
-    items: T[],
-    sortConfig: { key: keyof T; direction: "ascending" | "descending" } | null
-  ): T[] {
-    const sortableItems = [...items];
-
-    if (!sortConfig) return sortableItems;
-
-    sortableItems.sort((a, b) => {
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
-
-      if (aValue == null || bValue == null) return 0;
-
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        return sortConfig.direction === "ascending"
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-
-      if (typeof aValue === "number" && typeof bValue === "number") {
-        return sortConfig.direction === "ascending"
-          ? aValue - bValue
-          : bValue - aValue;
-      }
-
-      return 0;
-    });
-
-    return sortableItems;
-  }
-
-  const sortedUsers = sortedUser(users, sortConfig);
+  const sortedUsers = useMemo(() => sortedUser(users, sortConfig), [users, sortConfig]);
 
   // Handle filtering and search
-  const filteredUsers = sortedUsers.filter((item) => {
+  const filteredUsers = useMemo(() => sortedUsers.filter((item) => {
     const matchesSearch =
       searchTerm === "" ||
       (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (item.email && item.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (item.username && item.username.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesSearch;
-  });
+  }), [sortedUsers, searchTerm]);
 
   // Pagination
   const totalPages = Math.ceil(filteredUsers.length / entriesPerPage);
@@ -166,27 +196,10 @@ export default function UserList() {
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + entriesPerPage);
 
   // Request sort
-  const requestSort = (key: keyof User) => {
-    let direction: "ascending" | "descending" = "ascending";
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === "ascending"
-    ) {
-      direction = "descending";
-    }
-    setSortConfig({ key, direction });
-  };
+
 
   // Get sort indicator
-  const getSortIndicator = (key: keyof User) => {
-    if (!sortConfig || sortConfig.key !== key) return null;
-    return sortConfig.direction === "ascending" ? (
-      <ChevronUp className="inline h-4 w-4" />
-    ) : (
-      <ChevronDown className="inline h-4 w-4" />
-    );
-  };
+
 
   // Page navigation
   const goToPage = (page: number) => {
@@ -205,13 +218,13 @@ export default function UserList() {
     if (userToDelete) {
       try {
         await deleteUser.mutateAsync(userToDelete.id);
-        toast.success("User deleted successfully", {
+        toast.success(t("deletedSuccessfully") || "User deleted successfully", {
           style: { background: "#10b981", color: "white" },
         });
         setDeleteDialogOpen(false);
         setUserToDelete(null);
       } catch (err) {
-        toast.error("Failed to delete user", {
+        toast.error(t("deleteFailed") || "Failed to delete user", {
           style: { background: "#c6212d", color: "white" },
         });
       }
@@ -226,59 +239,23 @@ export default function UserList() {
 
   if (fetchError) return (
     <div className="p-4 text-red-500 bg-red-50 rounded-lg m-4">
-      Failed to load users: {fetchError.message}
-    </div>
-  );
-
-  // Mobile responsive card view
-  const MobileUserCard = ({ item }: { item: User }) => (
-    <div className="bg-white rounded-lg border border-slate-200 p-4 mb-4 shadow-sm">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h3 className="font-semibold text-lg text-slate-900">{item.name}</h3>
-          <p className="text-sm text-slate-500">{item.email}</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-2 text-sm mb-4">
-        <div>
-          <span className="text-slate-400">Role:</span> <span className="text-slate-700">{item.role || "-"}</span>
-        </div>
-        <div>
-          <span className="text-slate-400">Username:</span> <span className="text-slate-700">{item.username || "-"}</span>
-        </div>
-      </div>
-      <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-          onClick={() => handleEdit(item.id)}
-        >
-          <Pencil size={16} strokeWidth={2} />
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
-          onClick={() => confirmDelete(item)}
-        >
-          <Trash size={16} strokeWidth={2} />
-        </Button>
-      </div>
+      {t("failedToLoad") || "Failed to load users"}: {fetchError.message}
     </div>
   );
 
   return (
     <div className="-mt-5 md:p-1 max-w-9xl mx-auto space-y-4">
       {/* Debug: Show user count */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="text-sm text-slate-500">Total users: {users.length}</div>
+      {import.meta.env.DEV && (
+        <div className="text-sm text-slate-500">
+          {t("user.totalUser")} {users.length}
+        </div>
       )}
 
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Users</h2>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{t("user.Users")}</h2>
         </div>
       </div>
 
@@ -300,7 +277,7 @@ export default function UserList() {
                 <Input
                   ref={searchInputRef}
                   type="search"
-                  placeholder="Search users..."
+                  placeholder={t("searchPlaceholder") || "Search users..."}
                   className="pl-9 w-full bg-slate-50 border-2 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
                   value={searchTerm}
                   onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -315,7 +292,7 @@ export default function UserList() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("toggleColumns") || "Toggle Columns"}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {Object.entries(columnVisibility).map(([key, visible]) => (
                   <DropdownMenuCheckboxItem
@@ -331,7 +308,7 @@ export default function UserList() {
           </div>
 
           <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0" onClick={handleAddNew}>
-            <span className="mr-2 text-lg leading-none">+</span> Add User
+            <span className="mr-2 text-lg leading-none">+</span> {t("user.addUser")}
           </Button>
         </div>
 
@@ -341,22 +318,22 @@ export default function UserList() {
             <TableHeader className="bg-slate-50 border-b border-slate-200">
               <TableRow className="hover:bg-slate-50/50">
                 {columnVisibility.sn && (
-                  <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">S.N.</TableHead>
+                  <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("common.sn")}</TableHead>
                 )}
                 {columnVisibility.name && (
-                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Name</TableHead>
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("common.name")}</TableHead>
                 )}
                 {columnVisibility.role && (
-                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Role</TableHead>
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("common.role")}</TableHead>
                 )}
                 {columnVisibility.username && (
-                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Username</TableHead>
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("common.username")}</TableHead>
                 )}
                 {columnVisibility.email && (
-                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Email</TableHead>
+                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("common.email")}</TableHead>
                 )}
                 {columnVisibility.actions && (
-                  <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">Actions</TableHead>
+                  <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">{t("common.action")}</TableHead>
                 )}
               </TableRow>
             </TableHeader>
@@ -388,7 +365,7 @@ export default function UserList() {
                             size="sm"
                             variant="ghost"
                             className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                            title="Change Password"
+                            title={t("changePassword") || "Change Password"}
                             onClick={() => {
                               setSelectedUserId(item.id);
                               setOpenPasswordDialog(true);
@@ -425,7 +402,7 @@ export default function UserList() {
                     }
                     className="h-24 text-center"
                   >
-                    No users found.
+                    {t("noUsersFound") || "No users found."}
                   </TableCell>
                 </TableRow>
               )}
@@ -437,28 +414,34 @@ export default function UserList() {
         <div className="md:hidden">
           {paginatedUsers.length > 0 ? (
             paginatedUsers.map((item) => (
-              <MobileUserCard key={item.id} item={item} />
+              <MobileUserCard
+                key={item.id}
+                item={item}
+                onEdit={handleEdit}
+                onDelete={confirmDelete}
+                onChangePassword={(id) => { setSelectedUserId(id); setOpenPasswordDialog(true); }}
+              />
             ))
           ) : (
             <div className="text-center py-8 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">No users found.</p>
+              <p className="text-gray-500">{t("noUsersFound") || "No users found."}</p>
             </div>
           )}
         </div>
         {/* Pagination */}
         <div className="hidden sm:flex items-center justify-between px-2 mt-4 flex-col sm:flex-row gap-4">
           <div className="flex items-center text-sm text-muted-foreground">
-            Showing{" "}
+            {t("showing") || "Showing"}{" "}
             {filteredUsers.length === 0
               ? 0
               : (currentPage - 1) * entriesPerPage + 1}{" "}
-            to {Math.min(currentPage * entriesPerPage, filteredUsers.length)} of{" "}
-            {filteredUsers.length} entries
+            {t("to") || "to"} {Math.min(currentPage * entriesPerPage, filteredUsers.length)} {t("of") || "of"}{" "}
+            {filteredUsers.length} {t("entries") || "entries"}
           </div>
 
           <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-2">
-              <p className="text-sm font-medium">Show</p>
+              <p className="text-sm font-medium">{t("show") || "Show"}</p>
               <Select
                 value={entriesPerPage.toString()}
                 onValueChange={(value) => {
@@ -477,7 +460,7 @@ export default function UserList() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-sm font-medium">entries</p>
+              <p className="text-sm font-medium">{t("entries") || "entries"}</p>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -499,7 +482,7 @@ export default function UserList() {
               </Button>
 
               <span className="text-sm">
-                Page {currentPage} of {totalPages}
+                {t("page") || "Page"} {currentPage} {t("of") || "of"} {totalPages}
               </span>
 
               <Button
@@ -526,54 +509,44 @@ export default function UserList() {
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Confirm Deletion</DialogTitle>
+              <DialogTitle>{t("confirmDeletion") || "Confirm Deletion"}</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete the user{" "}
-                {userToDelete?.name}? This action cannot be undone.
+                {t("deleteConfirmation", { name: userToDelete?.name }) || `Are you sure you want to delete user ${userToDelete?.name}? This action cannot be undone.`}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(false)}
-              >
-                Cancel
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                {t("cancel") || "Cancel"}
               </Button>
               <Button variant="destructive" onClick={handleDelete}>
-                Delete
+                {t("delete") || "Delete"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {editingUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <Card className="w-full max-w-3xl max-h-[90vh] p-2 shadow-lg overflow-hidden">
-              <div className="overflow-y-auto max-h-[calc(90vh-1rem)]">
-                <UserForm
-                  mode="edit"
-                  initialData={editingUser}
-                  onSuccess={() => setEditingUser(null)}
-                  onCancel={() => setEditingUser(null)}
-                />
-              </div>
-            </Card>
-          </div>
-        )}
+        {/* Edit User Dialog */}
+        <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+            <UserForm
+              mode="edit"
+              initialData={editingUser!}
+              onSuccess={() => setEditingUser(null)}
+              onCancel={() => setEditingUser(null)}
+            />
+          </DialogContent>
+        </Dialog>
 
-        {isAddingNew && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <Card className="w-full max-w-3xl max-h-[90vh] p-2 shadow-lg overflow-hidden">
-              <div className="overflow-y-auto max-h-[calc(90vh-1rem)]">
-                <UserForm
-                  mode="add"
-                  onSuccess={() => setIsAddingNew(false)}
-                  onCancel={() => setIsAddingNew(false)}
-                />
-              </div>
-            </Card>
-          </div>
-        )}
+        {/* Add User Dialog */}
+        <Dialog open={isAddingNew} onOpenChange={setIsAddingNew}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+            <UserForm
+              mode="add"
+              onSuccess={() => setIsAddingNew(false)}
+              onCancel={() => setIsAddingNew(false)}
+            />
+          </DialogContent>
+        </Dialog>
 
         <ChangePasswordDialog
           open={openPasswordDialog}

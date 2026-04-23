@@ -19,6 +19,7 @@ import { useMutate } from "@/hooks/useMutate";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import type { FiscalYear } from "@/type/fiscalyear";
 import NepaliDatePicker from "../ui/NepaliDatePicker";
+import { t } from "i18next";
 
 
 // -------------------- SCHEMA --------------------
@@ -75,8 +76,8 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
     setLoading(true);
 
     try {
-      const existingFy = fiscalYears.find(fy => 
-        fy.fiscalYear.toLowerCase() === values.name.toLowerCase() && 
+      const existingFy = fiscalYears.find(fy =>
+        fy.fiscalYear.toLowerCase() === values.name.toLowerCase() &&
         fy.id !== initialData?.id
       );
 
@@ -103,8 +104,8 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
 
       toast.success(
         mode === "edit"
-          ? "Fiscal Year updated successfully"
-          : "Fiscal Year added successfully",
+          ? t("fiscalYear.fiscalYearUpdatedSuccessfully")
+          : t("fiscalYear.fiscalYearAddedSuccessfully"),
         { style: { background: "#10b981", color: "white" } }
       );
 
@@ -126,14 +127,14 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
   return (
     <div className="">
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300">
-        
+
         {/* Header Section */}
         <div className="bg-white border-b border-gray-100 p-8 pb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-start gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-                  {mode === "add" ? "Add New Fiscal Year" : "Edit Fiscal Year"}
+                  {mode === "add" ? t("fiscalYear.addFiscalYear") : t("fiscalYear.editFiscalYear")}
                 </h1>
               </div>
             </div>
@@ -168,7 +169,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel className="text-sm font-medium text-gray-700 flex items-center justify-between">
-                          Fiscal Year Name
+                          {t("fiscalYear.fiscalYearName")}
                           <span className="text-red-500 text-xs">*</span>
                         </FormLabel>
                         <FormControl>
@@ -193,7 +194,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel className="text-sm font-medium text-gray-700 flex items-center justify-between">
-                          Start Miti
+                          {t("fiscalYear.startMiti")}
                           <span className="text-red-500 text-xs">*</span>
                         </FormLabel>
                         <FormControl>
@@ -217,7 +218,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                     render={({ field }) => (
                       <FormItem className="space-y-2">
                         <FormLabel className="text-sm font-medium text-gray-700 flex items-center justify-between">
-                          End Miti
+                          {t("fiscalYear.endMiti")}
                           <span className="text-red-500 text-xs">*</span>
                         </FormLabel>
                         <FormControl>
@@ -246,7 +247,7 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                   disabled={loading}
                   className="px-6 py-2.5 border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 font-medium"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -256,12 +257,12 @@ export default function FiscalyearForm({ mode, initialData, onSuccess, onCancel 
                   {loading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Saving...
+                      {t("common.saving")}
                     </>
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      {mode === "edit" ? "Update Fiscal Year" : "Save Fiscal Year"}
+                      {mode === "edit" ? t("common.update") : t("common.save")}
                     </>
                   )}
                 </Button>

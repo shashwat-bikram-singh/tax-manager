@@ -50,12 +50,13 @@ import { useFetchAll } from "@/hooks/useFetchAll";
 import { useMutate } from "@/hooks/useMutate"
 import type { Office } from "@/type/office";
 import OfficeForm from "./office-form";
+import { useTranslation } from "react-i18next";
 
 
 export default function OfficeList() {
   const { items: fyData, isLoadingItems } = useFetchAll<Office>("/api/office", ["office"]);
   const { delete: deleteFy } = useMutate<Office>("/api/office", "office");
-
+  const { t } = useTranslation();
 
 
 
@@ -200,20 +201,20 @@ export default function OfficeList() {
 
       <div className="bg-slate-50 rounded-lg p-3 mb-4 grid grid-cols-2 gap-4">
         <div>
-          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Code</span>
+          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-1">{t("common.code")}</span>
           <span className="text-sm font-medium text-slate-700">{item.code || "-"}</span>
         </div>
         <div>
-          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Parent Office</span>
+          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-1">{t("common.parentOffice")}</span>
           <span className="text-sm font-medium text-slate-700">{Offices.find(o => o.id === item.parentId)?.name || item.parentId || "-"}</span>
         </div>
       </div>
 
       <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-        <Button size="sm" variant="ghost" className="text-slate-600 hover:bg-slate-100 h-9 w-9 p-0" onClick={() => handleEdit(item.id!)} title="Edit">
+        <Button size="sm" variant="ghost" className="text-slate-600 hover:bg-slate-100 h-9 w-9 p-0" onClick={() => handleEdit(item.id!)} title={t("common.edit")}>
           <Pencil size={18} />
         </Button>
-        <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50 h-9 w-9 p-0" onClick={() => confirmDelete(item)} title="Delete">
+        <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50 h-9 w-9 p-0" onClick={() => confirmDelete(item)} title={t("common.delete")}>
           <Trash size={18} />
         </Button>
       </div>
@@ -225,7 +226,7 @@ export default function OfficeList() {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Offices</h2>
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{t("common.office")}</h2>
 
         </div>
       </div>
@@ -280,39 +281,39 @@ export default function OfficeList() {
           </div>
 
           <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0" onClick={handleAddNew}>
-            <span className="mr-2 text-lg leading-none">+</span> Add Office
+            <span className="mr-2 text-lg leading-none">+</span> {t("office.addOffice")}
           </Button>
         </div>
         <Table>
           <TableHeader className="bg-slate-50 border-b border-slate-200">
             <TableRow className="hover:bg-slate-50/50">
               {columnVisibility.sn && (
-                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">S.N.</TableHead>
+                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">{t("common.sn")}</TableHead>
               )}
               {columnVisibility.name && (
                 <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("name")}>
-                  Office {getSortIndicator("name")}
+                  {t("common.name")} {getSortIndicator("name")}
                 </TableHead>
               )}
               {columnVisibility.code && (
                 <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 hover:text-slate-700 transition-colors" onClick={() => requestSort("code")}>
-                  Code {getSortIndicator("code")}
+                  {t("common.code")} {getSortIndicator("code")}
                 </TableHead>
               )}
               {columnVisibility.parentId && (
                 <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 hover:text-slate-700 transition-colors" onClick={() => requestSort("parentId")}>
-                  Parent Office {getSortIndicator("parentId")}
+                  {t("common.parentOffice")} {getSortIndicator("parentId")}
                 </TableHead>
               )}
 
               {columnVisibility.measurementUnit && (
                 <TableHead className="cursor-pointer text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4 hover:text-slate-700 transition-colors" onClick={() => requestSort("parentId")}>
-                  Measurement Unit {getSortIndicator("parentId")}
+                  {t("office.measurementUnit")} {getSortIndicator("parentId")}
                 </TableHead>
               )}
 
               {columnVisibility.actions && (
-                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">Actions</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">{t("common.action")}</TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -366,8 +367,8 @@ export default function OfficeList() {
                 <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length} className="h-64 text-center">
                   <div className="flex flex-col items-center justify-center text-slate-400">
                     <FileX className="w-12 h-12 mb-3 opacity-50" />
-                    <p className="text-sm font-medium">No Offices found.</p>
-                    <p className="text-xs mt-1">Try adjusting your search or filters.</p>
+                    <p className="text-sm font-medium">{t("office.noOfficesFound")}</p>
+                    <p className="text-xs mt-1">{t("office.tryAdjustingYourSearchOrFilters")}</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -385,7 +386,7 @@ export default function OfficeList() {
         ) : (
           <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
             <FileX className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-            <p className="text-slate-500 font-medium">No results found</p>
+            <p className="text-slate-500 font-medium">{t("office.noOfficesFound")}</p>
           </div>
         )}
       </div>
@@ -397,7 +398,7 @@ export default function OfficeList() {
             {filteredOffices.length === 0 ? 0 : (currentPage - 1) * entriesPerPage + 1}
           </span> to <span className="font-medium text-slate-900">
             {Math.min(currentPage * entriesPerPage, filteredOffices.length)}
-          </span> of <span className="font-medium text-slate-900">{filteredOffices.length}</span> results
+          </span> of <span className="font-medium text-slate-900">{filteredOffices.length}</span> {t("common.results")}
         </div>
 
         <div className="flex items-center space-x-6 lg:space-x-8">
@@ -441,14 +442,14 @@ export default function OfficeList() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-slate-900">Delete Office</DialogTitle>
+            <DialogTitle className="text-slate-900">{t("office.deleteOffice")}</DialogTitle>
             <DialogDescription className="text-slate-500 pt-2">
-              Are you sure you want to delete <strong className="text-slate-800">{fyToDelete?.id}</strong>? This action cannot be undone.
+              {t("office.deleteMessage")} <strong className="text-slate-800">{fyToDelete?.id}</strong>? {t("office.thisActionCannotBeUndone")}.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>{t("common.cancel")}</Button>
+            <Button variant="destructive" onClick={handleDelete}>{t("common.delete")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

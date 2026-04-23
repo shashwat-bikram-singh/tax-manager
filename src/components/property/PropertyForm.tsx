@@ -583,6 +583,14 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
     }
   };
 
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    } else {
+      navigate("/property");
+    }
+  };
+
   const disabled = loading;
 
 

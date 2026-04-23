@@ -5,12 +5,59 @@ import { Button } from '@/components/ui/button';
 import { useFetchAll } from "@/hooks/useFetchAll";
 import Sidebar from './Sidebar';
 import MobileSidebar from './MobileSidebar';
-// Keeping import if Sidebar/Outlet need it, but removing dependency for the header display
 import type { FiscalYear } from '@/type/fiscalyear';
-import { Calendar, Loader2 } from 'lucide-react';
+import { Calendar, Loader2, Languages, ChevronDown } from 'lucide-react';
 import NotificationPanel from './NotificationPanel';
+import { useTranslation } from 'react-i18next';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import i18n from '@/config/i18n'; // Direct import to ensure changeLanguage is always available
+import { t } from 'i18next';
+
+const LanguageSwitcher = () => {
+  const [open, setOpen] = useState(false);
+
+  const languages = [
+    { code: 'en', label: 'English', short: 'En' },
+    { code: 'np', label: 'नेपाली', short: 'ने' },
+  ];
+
+  // Use the imported i18n instance directly to prevent runtime errors
+  const currentLangObj = languages.find((lang) => lang.code === i18n.language) || languages[0];
+
+  const handleLanguageChange = (code: string) => {
+    i18n.changeLanguage(code);
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-9 gap-2 px-3">
+          <Languages className="h-4 w-4" />
+          <span className="text-sm font-medium">{currentLangObj.short}</span>
+          <ChevronDown className="h-3 w-3 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-40 p-1">
+        {languages.map((lang) => (
+          <Button
+            key={lang.code}
+            variant={i18n.language === lang.code ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => handleLanguageChange(lang.code)}
+          >
+            {lang.label}
+          </Button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 const MainLayout: React.FC = () => {
+  // Use the hook here to ensure the layout text updates when language changes
+  const { t } = useTranslation();
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -30,7 +77,6 @@ const MainLayout: React.FC = () => {
   const displayFy = useMemo(() => {
     if (!fiscalYears || fiscalYears.length === 0) return null;
 
-    // Filter for the active fiscal year
     const activeFy = fiscalYears.find((fy: FiscalYear) =>
       fy.isActive === 1 || fy.isActive === true
     );
@@ -57,7 +103,7 @@ const MainLayout: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon">
-            <span className="material-symbols-outlined text-outline">search</span>
+            <span className="material-symbols-outlined text-outline">{t("common.search")}</span>
           </Button>
         </div>
       </header>
@@ -114,41 +160,38 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
         >
           <span className="material-symbols-outlined">menu</span>
         </Button>
-
-
-
-        {/* Active Fiscal Year Display based on API Flag */}
-
       </div>
+
       <div className="flex items-center gap-6 mx-auto">
-{isLoading ? (
-  <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 w-[160px] animate-pulse
+        {isLoading ? (
+          <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 w-[160px] animate-pulse
     border-[3px] border-transparent
     [border-image-source:url('data:image/svg+xml,%3Csvg_width=%2220%22_height=%2220%22_viewBox=%220_0_20_20%22_xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath_d=%22M0_10_Q_5_0,_10_10_T_20_10%22_fill=%22none%22_stroke=%22%23cbd5e1%22_stroke-width=%223%22/%3E%3C/svg%3E')]
     [border-image-slice:30%] [border-image-repeat:round]">
-    <Loader2 className="h-4 w-4 text-slate-400 animate-spin" />
-    <span className="text-sm text-slate-400">Loading...</span>
-  </div>
-) : activeFy ? (
-  <div className="flex items-center gap-2 h-10 px-3 bg-primary/5
+            <Loader2 className="h-4 w-4 text-slate-400 animate-spin" />
+            <span className="text-sm text-slate-400">{t("dashboard.loading")}</span>
+          </div>
+        ) : activeFy ? (
+          <div className="flex items-center gap-2 h-10 px-3 bg-primary/5
     border-[3px] border-transparent
     [border-image-source:url('data:image/svg+xml,%3Csvg_width=%2220%22_height=%2220%22_viewBox=%220_0_20_20%22_xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath_d=%22M0_10_Q_5_0,_10_10_T_20_10%22_fill=%22none%22_stroke=%22%233b82f6%22_stroke-width=%223%22/%3E%3C/svg%3E')]
     [border-image-slice:30%] [border-image-repeat:round]">
-    <Calendar className="h-4 w-4 text-primary" />
-    <span className="text-sm font-medium text-primary">FY {activeFy.fiscalYear}</span>
-  </div>
-) : (
-  <div className="flex items-center gap-2 h-10 px-3 bg-red-50
+            <Calendar className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-primary">FY {activeFy.fiscalYear}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 h-10 px-3 bg-red-50
     border-[3px] border-transparent
     [border-image-source:url('data:image/svg+xml,%3Csvg_width=%2220%22_height=%2220%22_viewBox=%220_0_20_20%22_xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath_d=%22M0_10_Q_5_0,_10_10_T_20_10%22_fill=%22none%22_stroke=%22%23ef4444%22_stroke-width=%223%22/%3E%3C/svg%3E')]
     [border-image-slice:30%] [border-image-repeat:round]">
-    <Calendar className="h-4 w-4 text-red-500" />
-    <span className="text-sm font-medium text-red-600">No Active FY Found</span>
-  </div>
-)}
-</div>
+            <Calendar className="h-4 w-4 text-red-500" />
+            <span className="text-sm font-medium text-red-600">{t("dashboard.noActiveFYFound")}</span>
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center gap-4">
+        <LanguageSwitcher />
         <NotificationPanel />
         <span className="material-symbols-outlined p-2 text-outline hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">settings</span>
         <div className="h-8 w-8 rounded-full overflow-hidden border border-outline-variant">
