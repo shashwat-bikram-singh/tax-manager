@@ -642,16 +642,18 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Property Type <span className="text-red-500">*</span></FormLabel>
+                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
                                 <SearchableSelect
                                   options={PropertyData || []}
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
                                   getLabel={(item) => item.propertyType}
-                                  placeholder={isLoadingItems ? "Loading..." : "Select property type"}
+                                  placeholder={isLoadingItems ? "Loading..." : ""}
                                   disabled={disabled || isLoadingItems}
                                 />
                               </FormControl>
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -664,6 +666,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Province <span className="text-red-500">*</span></FormLabel>
+                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
                                 <SearchableSelect
                                   options={provinceData || []}
@@ -674,10 +677,11 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                     form.setValue("localbody", "");
                                   }}
                                   getLabel={(item) => item.name || item.province}
-                                  placeholder={isLoadingProvince ? "Loading..." : "Select province"}
+                                  placeholder={isLoadingProvince ? "Loading..." : ""}
                                   disabled={disabled || isLoadingProvince}
                                 />
                               </FormControl>
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -690,6 +694,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">District <span className="text-red-500">*</span></FormLabel>
+                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
                                 <SearchableSelect
                                   options={districtData || []}
@@ -699,10 +704,11 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                     form.setValue("localbody", "");
                                   }}
                                   getLabel={(item) => item.name || item.district}
-                                  placeholder={!selectedProvinceId ? "Select province first" : isLoadingDistrict ? "Loading..." : "Select district"}
+                                  placeholder={!selectedProvinceId ? "Enter Province First" : isLoadingDistrict ? "Loading..." : ""}
                                   disabled={disabled || !selectedProvinceId || isLoadingDistrict}
                                 />
                               </FormControl>
+                                </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -715,16 +721,18 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Local body <span className="text-red-500">*</span></FormLabel>
+                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
                                 <SearchableSelect
                                   options={localbodyData || []}
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
                                   getLabel={(item) => item.name || item.localbody}
-                                  placeholder={!selectedDistrictId ? "Select district first" : isLoadingLocalbody ? "Loading..." : "Select local body"}
+                                  placeholder={!selectedDistrictId ? "Enter District first" : isLoadingLocalbody ? "Loading..." : ""}
                                   disabled={disabled || !selectedDistrictId || isLoadingLocalbody}
                                 />
                               </FormControl>
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -742,9 +750,8 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                   {...field}
                                   value={field.value ?? ""}
                                   onChange={(e) => field.onChange(e.target.value || "")}
-                                  placeholder="e.g. 12"
                                   disabled={disabled}
-                                  className="bg-gray-50 border-gray-300 h-12 rounded-xl focus:bg-white transition-all shadow-none"
+                                  className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -759,16 +766,18 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Geographic Region <span className="text-red-500">*</span></FormLabel>
+                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
                                 <SearchableSelect
                                   options={geographicRegionData || []}
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
                                   getLabel={(item) => item.name || item.geographicRegion}
-                                  placeholder={isLoadingGeographicRegion ? "Loading..." : "Select geographic region"}
+                                  placeholder={isLoadingGeographicRegion ? "Loading..." : ""}
                                   disabled={disabled || isLoadingGeographicRegion}
                                 />
                               </FormControl>
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -791,7 +800,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                     onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
                                     placeholder="e.g. 3"
                                     disabled={disabled}
-                                    className="bg-gray-50 border-gray-300 h-12 rounded-xl focus:bg-white transition-all shadow-none"
+                                    className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
                                   />
                                 </FormControl>
                                 <FormMessage />
@@ -815,7 +824,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                     onChange={(e) => field.onChange(e.target.value || "")}
                                     placeholder="e.g. 4529-B"
                                     disabled={disabled}
-                                    className="bg-gray-50 border-gray-300 h-12 rounded-xl focus:bg-white transition-all shadow-none"
+                                    className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
                                   />
                                 </FormControl>
                                 <FormMessage />
@@ -837,7 +846,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                   value={field.value ?? ""}
                                   onChange={(e) => field.onChange(e.target.value || "")}
                                   disabled={disabled}
-                                  className="bg-gray-50 border-gray-300 h-12 rounded-xl focus:bg-white"
+                                  className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -858,7 +867,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                   value={field.value ?? ""}
                                   onChange={(e) => field.onChange(e.target.value || "")}
                                   disabled={disabled}
-                                  className="bg-gray-50 border-gray-300 h-12 rounded-xl focus:bg-white"
+                                  className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -882,6 +891,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                     const year = value.value.split("-")[0];
                                     field.onChange(year || "");
                                   }}
+                                   className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -904,6 +914,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                   onSelect={(value: any) => {
                                     field.onChange(value.value);
                                   }}
+                                   className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white border-xl"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -918,16 +929,18 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Current Usage <span className="text-red-500">*</span></FormLabel>
+                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
                                 <SearchableSelect
                                   options={usageRightsData || []}
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
                                   getLabel={(item) => item.name || item.usageRight}
-                                  placeholder={isLoadingItems ? "Loading..." : "Select usage"}
+                                  placeholder={isLoadingItems ? "Loading..." : ""}
                                   disabled={disabled || isLoadingItems}
                                 />
                               </FormControl>
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -940,16 +953,18 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Legal Status <span className="text-red-500">*</span></FormLabel>
+                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
                                 <SearchableSelect
                                   options={legalstatusData || []}
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
                                   getLabel={(item) => item.name || item.legalStatus}
-                                  placeholder={isLoadingItems ? "Loading..." : "Select legal status"}
+                                  placeholder={isLoadingItems ? "Loading..." : ""}
                                   disabled={disabled || isLoadingItems}
                                 />
                               </FormControl>
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -983,7 +998,7 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                       onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
                                       placeholder="0"
                                       disabled={disabled}
-                                      className="text-center bg-gray-50 border-gray-300 h-12 rounded-xl font-bold text-gray-700"
+                                      className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -1003,9 +1018,8 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                       {...field}
                                       value={field.value ?? ""}
                                       onChange={(e) => field.onChange(e.target.value || "")}
-                                      placeholder="e.g. GC-2024-001"
                                       disabled={disabled}
-                                      className="bg-gray-50 border-gray-300 h-12 rounded-xl focus:bg-white"
+                                      className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -1025,9 +1039,8 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                       {...field}
                                       value={field.value ?? ""}
                                       onChange={(e) => field.onChange(e.target.value || "")}
-                                      placeholder="e.g. 5000000"
                                       disabled={disabled}
-                                      className="bg-gray-50 border-gray-300 h-12 rounded-xl focus:bg-white"
+                                      className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -1054,16 +1067,18 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ownership Type <span className="text-red-500">*</span></FormLabel>
+                                <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                                 <FormControl>
                                   <SearchableSelect
                                     options={ownershipTypeData || []}
                                     value={field.value}
                                     onChange={(v) => field.onChange(v || "")}
                                     getLabel={(item) => item.name || item.ownershipType}
-                                    placeholder={isLoadingItems ? "Loading..." : "Select ownership type"}
+                                    placeholder={isLoadingItems ? "Loading..." : ""}
                                     disabled={disabled || isLoadingItems}
                                   />
                                 </FormControl>
+                                </div>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -1077,16 +1092,18 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Usage Rights <span className="text-red-500">*</span></FormLabel>
+                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
                                 <SearchableSelect
                                   options={usageRightsData || []}
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
                                   getLabel={(item) => item.name || item.usageRight}
-                                  placeholder={isLoadingItems ? "Loading..." : "Select rights"}
+                                  placeholder={isLoadingItems ? "Loading..." : ""}
                                   disabled={disabled || isLoadingItems}
                                 />
                               </FormControl>
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -1099,16 +1116,18 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Usage Type <span className="text-red-500">*</span></FormLabel>
+                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
                                 <SearchableSelect
                                   options={usageTypeData || []}
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
                                   getLabel={(item) => item.name || item.usageType}
-                                  placeholder={isLoadingItems ? "Loading..." : "Select type"}
+                                  placeholder={isLoadingItems ? "Loading..." : ""}
                                   disabled={disabled || isLoadingItems}
                                 />
                               </FormControl>
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}

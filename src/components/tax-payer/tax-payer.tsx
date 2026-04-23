@@ -10,27 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  FileX,
-  Eye,
-  Settings2,
-  Download,
-  X,
-  Plus,
-  PencilLine,
-} from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileX, Eye, Settings2, Download, X, Plus, ChevronDown } from "lucide-react";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import axiosInstance from "@/config/axios";
 import {
@@ -48,6 +28,126 @@ import { useAuthStore } from "@/store/authStore";
 import { jwtDecode } from "jwt-decode";
 import TaxPaymentForm from "./tax-payment-form";
 
+// ─── REUSABLE SEARCHABLE SELECT COMPONENT ─────────────────────────────
+interface SearchableSelectProps {
+  options: any[];
+  value: string | number | undefined;
+  onChange: (value: string) => void;
+  getLabel: (item: any) => string;
+  placeholder: string;
+  className?: string;
+  disabled?: boolean;
+}
+
+const SearchableSelect = ({
+  options = [],
+  value,
+  onChange,
+  getLabel,
+  placeholder,
+  className = "",
+  disabled = false,
+}: SearchableSelectProps) => {
+  const [inputValue, setInputValue] = useState("");
+  const [showOptions, setShowOptions] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sync input with form value (when value changes externally)
+  useEffect(() => {
+    if (value) {
+      const selectedOption = options.find((item) => item.id == value);
+      if (selectedOption) {
+        setInputValue(getLabel(selectedOption));
+      }
+    } else {
+      setInputValue("");
+    }
+  }, [value, options]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    setShowOptions(val.length > 0);
+  };
+
+  const handleSelect = (item: any) => {
+    setInputValue(getLabel(item));
+    onChange(item.id.toString());
+    setShowOptions(false);
+  };
+
+  const handleClear = () => {
+    setInputValue("");
+    onChange(""); // Assuming onChange handles clearing to empty string
+  };
+
+  const filteredOptions = options.filter((item) =>
+    getLabel(item).toLowerCase().includes(inputValue.toLowerCase())
+  );
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <div className="relative">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={() => setShowOptions(!disabled)}
+          placeholder={placeholder}
+          disabled={disabled}
+          className={className}
+        />
+        {/* Chevron Icon */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+          <ChevronDown size={16} />
+        </div>
+        {/* Clear Button */}
+        {value && inputValue && !disabled && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClear();
+            }}
+            className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown Options */}
+      {showOptions && !disabled && (
+        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((item, index) => (
+              <li
+                key={index}
+                onClick={() => handleSelect(item)}
+                className="px-3 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors border-b border-gray-50 last:border-0"
+              >
+                {getLabel(item)}
+              </li>
+            ))
+          ) : (
+            <li className="p-4 text-center text-sm text-gray-400 italic">No matches found</li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
 
 export default function PaymentList() {
   const navigate = useNavigate();
@@ -94,7 +194,7 @@ export default function PaymentList() {
 
   useEffect(() => {
     if (fiscalYears.length > 0 && !selectedFiscalYearId) {
-      const activeFy = fiscalYears.find((fy) => fy.isActive === true);
+      const activeFy = fiscalYears.find((fy) => fy.isActive === true || fy.isActive === 1);
       if (activeFy) {
         setSelectedFiscalYearId(activeFy.id);
       } else {
@@ -114,7 +214,7 @@ export default function PaymentList() {
     setPropertyPopupOpen(true);
     setPopupPropertyName(propertyName);
     try {
-      const response = await axiosInstance.get(`/api/payment?propertyId=${propertyId}`);
+      const response = await axiosInstance.get(`/api/paymentStatus?propertyId=${propertyId}`);
       const data = response.data;
       const arr = Array.isArray(data) ? data : data.data || [];
       setPropertyPopupData(getPayment(arr));
@@ -145,7 +245,7 @@ export default function PaymentList() {
       const normalizedId = item.id ?? item.Id ?? item.taxId ?? item.TaxId ?? item.paymentId ?? item.PaymentId;
       return {
         ...item,
-        id: normalizedId,
+        id:item.id,
         taxRecordId: item.taxRecordId ?? item.TaxRecordId ?? item.taxrecordid ?? normalizedId,
         amountPaid: item.amountPaid ?? item.amount ?? item.Amount,
         propertyId: item.propertyId ?? item.PropertyId,
@@ -158,9 +258,9 @@ export default function PaymentList() {
     
     return normalized as Payment[];
   }
-
+console.log("askjba",)
   const payments = getPayment(paymentData);
-
+console.log("askjba",payments)
   // Search State
   const [searchTerm, setSearchTerm] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -252,20 +352,14 @@ export default function PaymentList() {
     }
   };
 
-  // const closeFileModal = () => {
-  //   setIsModalOpen(false);
-  //   setSelectedFileUrl(null);
-  // };
-
   // Filter Logic
   const filteredpayments = payments.filter((item) => {
       const searchLower = searchTerm.toLowerCase();
       const amountStr = item.amountPaid ? item.amountPaid.toString() : "";
-      
       const statusMatch =
         activeTab === "all" ||
-        (activeTab === "paid" && (item.isPaid === 1 || item.isPaid === 1)) ||
-        (activeTab === "unpaid" && item.isPaid !== 1 && item.isPaid !== 1);
+        (activeTab === "paid" && (item.isPaid === 1 || item.isPaid === true)) ||
+        (activeTab === "unpaid" && item.isPaid !== 1 && item.isPaid !== true);
 
       const searchMatch =
         searchTerm === "" ||
@@ -334,18 +428,14 @@ export default function PaymentList() {
         <div className="flex flex-1 sm:flex-none items-center gap-3 w-full">
           {/* Fiscal Year Selector */}
           <div className="w-full sm:w-48 shrink-0">
-             <Select value={selectedFiscalYearId?.toString()} onValueChange={handleFiscalYearChange}>
-              <SelectTrigger className="h-9 w-full bg-slate-50 border-slate-200">
-                <SelectValue placeholder="Select Fiscal Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {fiscalYears.map((fy) => (
-                  <SelectItem key={fy.id} value={fy.id?.toString() ?? ""}>
-                    {fy.fiscalYear}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+             <SearchableSelect
+              options={fiscalYears}
+              value={selectedFiscalYearId?.toString()}
+              onChange={handleFiscalYearChange}
+              getLabel={(fy) => fy.fiscalYear}
+              placeholder="Select Fiscal Year"
+              className="h-9 w-full bg-slate-50 border-slate-200 pl-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all disabled:opacity-50"
+            />
           </div>
 
           <Button 
@@ -414,19 +504,22 @@ export default function PaymentList() {
               {columnVisibility.receiptNo && (
                 <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Receipt No</TableHead>
               )}
-{columnVisibility.amountPaid && (
-                  <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Amount Paid</TableHead>
-                )}
+              {columnVisibility.amountPaid && (
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Amount Paid</TableHead>
+              )}
               {columnVisibility.paymentMiti && (
                 <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Payment Date</TableHead>
               )}
               {columnVisibility.status && (
                 <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Status</TableHead>
               )}
-{columnVisibility.file && (
-                  <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Receipt</TableHead>
-                )}
-             </TableRow>
+              {columnVisibility.file && (
+                 <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Receipt</TableHead>
+               )}
+               {columnVisibility.action && (
+                 <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">Action</TableHead>
+               )}
+            </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedpayments.length > 0 ? (
@@ -463,7 +556,7 @@ export default function PaymentList() {
                   )}
                   {columnVisibility.status && (
                     <TableCell className="text-center text-sm font-semibold py-2">
-                      {item.isPaid === 1 || item.isPaid === 1 ? (
+                      {item.isPaid === 1 || item.isPaid === true ? (
                         <span className="text-green-600">Paid</span>
                       ) : (
                         <span className="text-red-600">Unpaid</span>
@@ -471,24 +564,37 @@ export default function PaymentList() {
                     </TableCell>
                   )}
                   
-{columnVisibility.file && (
+                   {columnVisibility.file && (
+                     <TableCell className="text-center text-sm font-semibold py-2">
+                       {item.isPaid === 1 || item.isPaid === true ? (
+                         <Button
+                           size="sm"
+                           variant="ghost"
+                           className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                           onClick={() => handleViewFile(item.taxRecordId)}
+                           title="View Receipt"
+                         >
+                           <Eye size={16} strokeWidth={2} />
+                         </Button>
+                       ) : (
+                         <span className="text-slate-400">-</span>
+                       )}
+                     </TableCell>
+                   )}
+                    {columnVisibility.action && (
                       <TableCell className="text-center text-sm font-semibold py-2">
-                        {item.isPaid === 1 || item.isPaid === 1 ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
-                            onClick={() => handleViewFile(item.taxRecordId)}
-                            title="View Receipt"
-                          >
-                            <Eye size={16} strokeWidth={2} />
-                          </Button>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-green-600"
+                          onClick={() => setEditingPayment(item.id)}
+                          disabled={!item.id}
+                          title="Edit Payment"
+                        >
+                        </Button>
                       </TableCell>
                     )}
-                  </TableRow>
+                 </TableRow>
               ))
             ) : (
               <TableRow>
@@ -518,16 +624,14 @@ export default function PaymentList() {
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
             <p className="text-sm font-medium text-slate-700">Rows per page</p>
-            <Select value={entriesPerPage.toString()} onValueChange={(v) => { setEntriesPerPage(Number(v)); setCurrentPage(1); }}>
-              <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue placeholder={entriesPerPage} />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((size) => (
-                  <SelectItem key={size} value={size.toString()}>{size}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[10, 20, 30, 40, 50].map(size => ({ id: size, fiscalYear: size.toString() }))}
+              value={entriesPerPage.toString()}
+              onChange={(val) => { setEntriesPerPage(Number(val)); setCurrentPage(1); }}
+              getLabel={(item) => item.fiscalYear}
+              placeholder={entriesPerPage.toString()}
+              className="h-8 w-[70px] pl-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all disabled:opacity-50"
+            />
           </div>
 
           <div className="flex items-center space-x-2">
@@ -587,8 +691,8 @@ export default function PaymentList() {
               {selectedFileUrl.toLowerCase().includes('.pdf') ? (
                 <div className="w-full h-full">
                   <iframe
-                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedFileUrl)}&embedded=true`}
-                    className="absolute w-full h-[calc(100%+65px)] -top-[65px] left-0 border-none"
+                    src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(selectedFileUrl)}`}
+                    className="w-full h-full border-none shadow-inner"
                     title="Secure PDF Viewer"
                   />
                 </div>
@@ -687,7 +791,6 @@ export default function PaymentList() {
                             >
                               <Eye size={16} strokeWidth={2} />
                             </Button>
-
                           
                         </TableCell>
                       </TableRow>

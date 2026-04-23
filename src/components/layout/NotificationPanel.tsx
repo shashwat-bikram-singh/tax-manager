@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@/config/axios";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner"; 
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────
 interface Notification {
   id: number;
   subject: string;
@@ -25,7 +26,7 @@ interface NotificationResponse {
 const PAGE_SIZE = 10;
 const BASE = import.meta.env.VITE_API_BASE_URL;
 
-// ── Fetcher ───────────────────────────────────────────────────────────────────
+// ── Fetcher ───────────────────────────────────────────────────────
 const fetchNotifications = async (
   pageNumber: number,
   onlyUnread: boolean
@@ -36,7 +37,7 @@ const fetchNotifications = async (
   return res.data;
 };
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────────
 export default function NotificationPanel() {
   const [open, setOpen] = useState(false);
   const [onlyUnread, setOnlyUnread] = useState(false);
@@ -44,7 +45,7 @@ export default function NotificationPanel() {
   const listRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
-  // ── Unread badge count — polls every 10 s ─────────────────────────────────
+  // ── Unread badge count — polls every 10 s ─────────────────────────
   const { data: unreadData } = useQuery<NotificationResponse>({
     queryKey: ["notifications-unread-count"],
     queryFn: () => fetchNotifications(1, true),
@@ -53,7 +54,7 @@ export default function NotificationPanel() {
   });
   const totalUnread = unreadData?.data?.length ?? 0;
 
-  // ── Infinite query for the panel list ────────────────────────────────────
+  // ── Infinite query for panel list ────────────────────────────────────
   const {
     data,
     fetchNextPage,
@@ -76,7 +77,7 @@ export default function NotificationPanel() {
   // Flatten all pages into one array
   const notifications: Notification[] = data?.pages.flatMap((p) => p.data ?? []) ?? [];
 
-  // ── Scroll-to-bottom → load next page ────────────────────────────────────
+  // ── Scroll-to-bottom → load next page ──────────────────────────────
   const handleScroll = useCallback(() => {
     const el = listRef.current;
     if (!el) return;
@@ -93,7 +94,7 @@ export default function NotificationPanel() {
     return () => el.removeEventListener("scroll", handleScroll);
   }, [handleScroll, open]);
 
-  // ── Close on outside click ────────────────────────────────────────────────
+  // ── Close on outside click ───────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
@@ -104,14 +105,49 @@ export default function NotificationPanel() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // ── Toggle filter — resets the infinite query ─────────────────────────────
+  // ── Toggle filter — resets infinite query ─────────────────────────────
   const toggleFilter = () => {
     setOnlyUnread((v) => !v);
     // Reset scroll position
     if (listRef.current) listRef.current.scrollTop = 0;
   };
 
-  // ── Mark as read ──────────────────────────────────────────────────────────
+  // ── Mark all as read ──────────────────────────────────────────────────────
+  const markAllAsRead = async () => {
+    try {
+      // 1. Send API request
+      await axiosInstance.patch(`${BASE}/api/notification/read-all`);
+
+      // 2. Optimistically update the CURRENT list (immediate UI feedback)
+      //    We update the cache for the specific view the user is currently in.
+      queryClient.setQueryData(["notifications-list", onlyUnread], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page: NotificationResponse) => ({
+            ...page,
+            data: page.data.map((n) => ({ ...n, isRead: true })), // Visually mark all as read
+          })),
+        };
+      });
+
+      // 3. Invalidate BOTH "All" and "Unread" list queries.
+      //    This ensures that the "Unread" tab refetches (showing empty list).
+      //    AND the "All" tab refetches (showing items with isRead: true).
+      //    This satisfies "make isRead true for all notification" everywhere.
+      queryClient.invalidateQueries({ queryKey: ["notifications-list"] });
+
+      // 4. Invalidate unread count query to reset badge
+      queryClient.invalidateQueries({ queryKey: ["notifications-unread-count"] });
+
+      toast.success("All notifications marked as read");
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+      toast.error("Failed to mark all as read");
+    }
+  };
+
+  // ── Mark single as read ──────────────────────────────────────────────────
   const markAsRead = async (id: number) => {
     try {
       await axiosInstance.patch(`${BASE}/api/notification/${id}/read`);
@@ -126,13 +162,14 @@ export default function NotificationPanel() {
           })),
         };
       });
+      // Invalidate unread count to update badge
       queryClient.invalidateQueries({ queryKey: ["notifications-unread-count"] });
     } catch {
       // silently fail
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────
   return (
     <div className="relative" ref={panelRef}>
       {/* Bell button */}
@@ -168,26 +205,39 @@ export default function NotificationPanel() {
               )}
             </div>
 
-            {/* Unread toggle */}
-            <div className="flex gap-1 p-1 bg-slate-100 rounded-lg text-[10px] font-bold">
-              <button
-                onClick={() => onlyUnread && toggleFilter()}
-                className={cn(
-                  "px-2.5 py-1 rounded-md transition-all uppercase tracking-wider",
-                  !onlyUnread ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                )}
-              >
-                All
-              </button>
-              <button
-                onClick={() => !onlyUnread && toggleFilter()}
-                className={cn(
-                  "px-2.5 py-1 rounded-md transition-all uppercase tracking-wider",
-                  onlyUnread ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                )}
-              >
-                Unread Only
-              </button>
+            <div className="flex items-center gap-2">
+               {/* Unread toggle */}
+               <div className="flex gap-1 p-1 bg-slate-100 rounded-lg text-[10px] font-bold">
+                <button
+                  onClick={() => onlyUnread && toggleFilter()}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md transition-all uppercase tracking-wider",
+                    !onlyUnread ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  )}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => !onlyUnread && toggleFilter()}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md transition-all uppercase tracking-wider",
+                    onlyUnread ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  )}
+                >
+                  Unread Only
+                </button>
+              </div>
+              
+              {/* Mark All Read Button */}
+              {totalUnread > 0 && (
+                 <button
+                    onClick={markAllAsRead}
+                    className="px-2.5 py-1 rounded-md transition-all uppercase tracking-wider text-[10px] font-bold bg-primary text-white hover:bg-primary/90"
+                    title="Mark all as read"
+                  >
+                    Read All
+                  </button>
+              )}
             </div>
           </div>
 
