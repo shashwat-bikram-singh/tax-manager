@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -586,10 +585,6 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
 
   const disabled = loading;
 
-  const handleCancel = () => {
-    if (onCancel) onCancel();
-    else navigate("/property");
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/40 p-6 space-y-6">
