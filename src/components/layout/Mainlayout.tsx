@@ -38,18 +38,18 @@ const LanguageSwitcher = () => {
           <ChevronDown className="h-3 w-3 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-40 p-1">
-        {languages.map((lang) => (
-          <Button
-            key={lang.code}
-            variant={i18n.language === lang.code ? "secondary" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => handleLanguageChange(lang.code)}
-          >
-            {lang.label}
-          </Button>
-        ))}
-      </PopoverContent>
+       <PopoverContent align="end" className="w-40 p-1 bg-white border border-slate-200 shadow-lg">
+         {languages.map((lang) => (
+           <Button
+             key={lang.code}
+             variant="ghost"
+             className={`w-full justify-start ${i18n.language === lang.code ? 'bg-primary/10 text-primary font-medium' : 'text-slate-700 hover:bg-slate-100'}`}
+             onClick={() => handleLanguageChange(lang.code)}
+           >
+             {lang.label}
+           </Button>
+         ))}
+       </PopoverContent>
     </Popover>
   );
 };
@@ -162,7 +162,12 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
         </Button>
       </div>
 
-      <div className="flex items-center gap-6 mx-auto">
+      
+
+      <div className="flex items-center gap-4">
+        <LanguageSwitcher />
+        <NotificationPanel />
+        <div className="flex items-center gap-6 mx-auto">
         {isLoading ? (
           <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 w-[160px] animate-pulse
     border-[3px] border-transparent
@@ -189,18 +194,16 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           </div>
         )}
       </div>
-
-      <div className="flex items-center gap-4">
-        <LanguageSwitcher />
-        <NotificationPanel />
-        <span className="material-symbols-outlined p-2 text-outline hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">settings</span>
+        
+        
+        {/* <span className="material-symbols-outlined p-2 text-outline hover:bg-surface-container-low rounded-full transition-colors cursor-pointer">settings</span>
         <div className="h-8 w-8 rounded-full overflow-hidden border border-outline-variant">
           <img
             alt="Administrator Profile"
             className="w-full h-full object-cover"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_jRfTD3DULUoQVmnnXWVmhyQ_-UhhVFJYd8ORvgG5bqf8QS9AtYAiuP9Hmm55BVDalwG8e9khsOtpBG7a-F53RbA0UqzlX_cQkw-PIxpZS8Am8qyqzJa3HaG721QlNxP4yHuyb4KWmMVVpTFPRJc8XseAsOsRtXxxsX-pZFyHHM5eQviN3FKCoB2vGgg5oTxdkGQHiu5zbaSWBFByan5R9g-xq13EXnjkBACd6nVpOa3WX_IqD9KxXJoPbsC6XzqlXFyWem96GW8"
           />
-        </div>
+        </div> */}
       </div>
     </header>
   );

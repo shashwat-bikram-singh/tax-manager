@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +10,27 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileX, Eye, Settings2, Download, X, Plus, ChevronDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  FileX,
+  Eye,
+  Settings2,
+  Download,
+  X,
+  Plus,
+  ChevronDown
+} from "lucide-react";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import axiosInstance from "@/config/axios";
 import {
@@ -27,16 +47,19 @@ import type { Payment } from "@/type/payment";
 import { useAuthStore } from "@/store/authStore";
 import { jwtDecode } from "jwt-decode";
 import TaxPaymentForm from "./tax-payment-form";
+import { t } from "i18next";
 
-// ─── REUSABLE SEARCHABLE SELECT COMPONENT ─────────────────────────────
+// ─── REUSABLE SEARCHABLE SELECT COMPONENT (Same as Property Form) ─────────────────────────────
 interface SearchableSelectProps {
   options: any[];
-  value: string | number | undefined;
+  value: string | undefined;
   onChange: (value: string) => void;
   getLabel: (item: any) => string;
   placeholder: string;
   className?: string;
   disabled?: boolean;
+  isLoading?: boolean;
+  onClear?: () => void;
 }
 
 const SearchableSelect = ({
@@ -47,13 +70,15 @@ const SearchableSelect = ({
   placeholder,
   className = "",
   disabled = false,
+  isLoading = false,
+  onClear
 }: SearchableSelectProps) => {
   const [inputValue, setInputValue] = useState("");
   const [showOptions, setShowOptions] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // Sync input with form value (when value changes externally)
-  useEffect(() => {
+  // Sync input with form value (e.g. when editing loads data)
+  React.useEffect(() => {
     if (value) {
       const selectedOption = options.find((item) => item.id == value);
       if (selectedOption) {
@@ -65,7 +90,7 @@ const SearchableSelect = ({
   }, [value, options]);
 
   // Close dropdown when clicking outside
-  useEffect(() => {
+  React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setShowOptions(false);
@@ -79,6 +104,7 @@ const SearchableSelect = ({
     const val = e.target.value;
     setInputValue(val);
     setShowOptions(val.length > 0);
+    if (val.length === 0 && onClear) onClear();
   };
 
   const handleSelect = (item: any) => {
@@ -87,17 +113,13 @@ const SearchableSelect = ({
     setShowOptions(false);
   };
 
-  const handleClear = () => {
-    setInputValue("");
-    onChange(""); // Assuming onChange handles clearing to empty string
-  };
-
   const filteredOptions = options.filter((item) =>
     getLabel(item).toLowerCase().includes(inputValue.toLowerCase())
   );
 
   return (
     <div className="relative w-full" ref={containerRef}>
+      {/* Input Field */}
       <div className="relative">
         <input
           type="text"
@@ -105,20 +127,22 @@ const SearchableSelect = ({
           onChange={handleInputChange}
           onFocus={() => setShowOptions(!disabled)}
           placeholder={placeholder}
-          disabled={disabled}
-          className={className}
+          disabled={disabled || isLoading}
+          className={`w-full bg-gray-50 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all shadow-none disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
         />
         {/* Chevron Icon */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
           <ChevronDown size={16} />
         </div>
-        {/* Clear Button */}
+        {/* Clear Button (optional, if value exists) */}
         {value && inputValue && !disabled && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              handleClear();
+              setInputValue("");
+              onChange("");
+              if (onClear) onClear();
             }}
             className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
           >
@@ -129,19 +153,21 @@ const SearchableSelect = ({
 
       {/* Dropdown Options */}
       {showOptions && !disabled && (
-        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
-          {filteredOptions.length > 0 ? (
+        <ul className="absolute z-50 w-full mt-1 bg-white border-gray-300 rounded-xl shadow-xl max-h-60 overflow-auto">
+          {isLoading ? (
+            <li className="p-4 text-center text-sm text-gray-500">Loading...</li>
+          ) : filteredOptions.length > 0 ? (
             filteredOptions.map((item, index) => (
               <li
                 key={index}
                 onClick={() => handleSelect(item)}
-                className="px-3 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors border-b border-gray-50 last:border-0"
+                className="px-4 py-2.5 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors border-b border-gray-50 last:border-0"
               >
                 {getLabel(item)}
               </li>
             ))
           ) : (
-            <li className="p-4 text-center text-sm text-gray-400 italic">No matches found</li>
+            <li className="p-4 text-center text-sm text-gray-400 italic">{t("document.noPropertyFound") || "No matches found"}</li>
           )}
         </ul>
       )}
@@ -151,22 +177,22 @@ const SearchableSelect = ({
 
 export default function PaymentList() {
   const navigate = useNavigate();
-  
+
   // --- Auth Logic for Modal Download Button ---
-  const {token} = useAuthStore();
+  const { token } = useAuthStore();
   const decoded: any = token ? jwtDecode(token) : {};
-  const Role = decoded.Role || "User"; 
+  const Role = decoded.Role || "User";
 
   // --- Local State for Fiscal Year ---
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [selectedFiscalYearId, setSelectedFiscalYearId] = useState<number | undefined>(undefined);
-  
+
   // --- Property Payment Popup State ---
   const [propertyPopupOpen, setPropertyPopupOpen] = useState(false);
   const [propertyPopupData, setPropertyPopupData] = useState<Payment[]>([]);
   const [propertyPopupLoading, setPropertyPopupLoading] = useState(false);
   const [popupPropertyName, setPopupPropertyName] = useState("");
-  
+
   // --- File View/Modal State ---
   const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -229,7 +255,7 @@ export default function PaymentList() {
   // Helper to normalize Payment data
   function getPayment(data: any): Payment[] {
     if (!data) return [];
-    
+
     let arr: any[] = [];
     if (Array.isArray(data)) {
       arr = data;
@@ -245,7 +271,7 @@ export default function PaymentList() {
       const normalizedId = item.id ?? item.Id ?? item.taxId ?? item.TaxId ?? item.paymentId ?? item.PaymentId;
       return {
         ...item,
-        id:item.id,
+        id: item.id,
         taxRecordId: item.taxRecordId ?? item.TaxRecordId ?? item.taxrecordid ?? normalizedId,
         amountPaid: item.amountPaid ?? item.amount ?? item.Amount,
         propertyId: item.propertyId ?? item.PropertyId,
@@ -255,12 +281,12 @@ export default function PaymentList() {
         isPaid: item.isPaid ?? item.IsPaid,
       };
     });
-    
+
     return normalized as Payment[];
   }
-console.log("askjba",)
+
   const payments = getPayment(paymentData);
-console.log("askjba",payments)
+
   // Search State
   const [searchTerm, setSearchTerm] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -297,7 +323,7 @@ console.log("askjba",payments)
   const handleFiscalYearChange = (val: string) => {
     const id = Number(val);
     setSelectedFiscalYearId(id);
-    setCurrentPage(1); 
+    setCurrentPage(1);
   };
 
   // --- View File Logic ---
@@ -317,33 +343,33 @@ console.log("askjba",payments)
         setSelectedFileUrl(response.data.url);
         setIsModalOpen(true);
       } else {
-        alert("No file URL found for this record.");
+        alert(t("payment.NoFileUrlFoundForThisRecord"));
       }
     } catch (error) {
       console.error("Error fetching file URL:", error);
-      alert("Failed to fetch file. Please try again.");
+      alert(t("payment.FailedToFetchFile"));
     }
   };
 
   // --- Download Logic ---
   const handleDownload = async () => {
     if (!selectedFileUrl) return;
-  
+
     try {
       const response = await fetch(selectedFileUrl);
       if (!response.ok) throw new Error('Network response was not ok');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      
+
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
       const fileName = selectedFileUrl.split('/').pop()?.split('?')[0] || 'document.pdf';
       a.download = fileName;
-      
+
       document.body.appendChild(a);
       a.click();
-      
+
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
@@ -354,21 +380,21 @@ console.log("askjba",payments)
 
   // Filter Logic
   const filteredpayments = payments.filter((item) => {
-      const searchLower = searchTerm.toLowerCase();
-      const amountStr = item.amountPaid ? item.amountPaid.toString() : "";
-      const statusMatch =
-        activeTab === "all" ||
-        (activeTab === "paid" && (item.isPaid === 1 || item.isPaid === true)) ||
-        (activeTab === "unpaid" && item.isPaid !== 1 && item.isPaid !== true);
+    const searchLower = searchTerm.toLowerCase();
+    const amountStr = item.amountPaid ? item.amountPaid.toString() : "";
+    const statusMatch =
+      activeTab === "all" ||
+      (activeTab === "paid" && (item.isPaid === 1 || item.isPaid === true)) ||
+      (activeTab === "unpaid" && item.isPaid !== 1 && item.isPaid !== true);
 
-      const searchMatch =
-        searchTerm === "" ||
-        (item.property && typeof item.property === 'string' && item.property.toLowerCase().includes(searchLower)) ||
-        (item.receiptNo && item.receiptNo.toLowerCase().includes(searchLower)) ||
-        amountStr.includes(searchLower);
+    const searchMatch =
+      searchTerm === "" ||
+      (item.property && typeof item.property === 'string' && item.property.toLowerCase().includes(searchLower)) ||
+      (item.receiptNo && item.receiptNo.toLowerCase().includes(searchLower)) ||
+      amountStr.includes(searchLower);
 
-      return statusMatch && searchMatch;
-    });
+    return statusMatch && searchMatch;
+  });
 
   const totalPages = Math.ceil(filteredpayments.length / entriesPerPage);
   const startIndex = (currentPage - 1) * entriesPerPage;
@@ -391,7 +417,7 @@ console.log("askjba",payments)
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight">Payment Status</h2>
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight">{t("payment.paymentStatus")}</h2>
         </div>
       </div>
 
@@ -399,49 +425,47 @@ console.log("askjba",payments)
       <div className="flex gap-2 p-1 bg-white border-b border-slate-200">
         <button
           onClick={() => { setActiveTab("all"); setCurrentPage(1); }}
-          className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${
-            activeTab === "all" ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100"
-          }`}
+          className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${activeTab === "all" ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100"
+            }`}
         >
-          All
+          {t("payment.all")}
         </button>
         <button
           onClick={() => { setActiveTab("paid"); setCurrentPage(1); }}
-          className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${
-            activeTab === "paid" ? "bg-green-600 text-white" : "text-slate-500 hover:bg-slate-100"
-          }`}
+          className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${activeTab === "paid" ? "bg-green-600 text-white" : "text-slate-500 hover:bg-slate-100"
+            }`}
         >
-          Paid
+          {t("payment.paid")}
         </button>
         <button
           onClick={() => { setActiveTab("unpaid"); setCurrentPage(1); }}
-          className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${
-            activeTab === "unpaid" ? "bg-red-600 text-white" : "text-slate-500 hover:bg-slate-100"
-          }`}
+          className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${activeTab === "unpaid" ? "bg-red-600 text-white" : "text-slate-500 hover:bg-slate-100"
+            }`}
         >
-          Unpaid
+          {t("payment.unpaid")}
         </button>
       </div>
 
       {/* Controls Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex flex-1 sm:flex-none items-center gap-3 w-full">
-          {/* Fiscal Year Selector */}
+          {/* Fiscal Year Selector (Using SearchableSelect) */}
           <div className="w-full sm:w-48 shrink-0">
-             <SearchableSelect
+            <SearchableSelect
               options={fiscalYears}
               value={selectedFiscalYearId?.toString()}
               onChange={handleFiscalYearChange}
               getLabel={(fy) => fy.fiscalYear}
-              placeholder="Select Fiscal Year"
-              className="h-9 w-full bg-slate-50 border-slate-200 pl-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all disabled:opacity-50"
+              placeholder={isLoadingFy ? "Loading..." : "Select Fiscal Year"}
+              disabled={isLoadingFy}
+              className="h-12 px-4"
             />
           </div>
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
-            className="text-slate-500 border-slate-200 hover:bg-slate-50 p-2 h-9 w-9 shrink-0"
+            className="text-slate-500 border-slate-200 hover:bg-slate-50 p-2 h-12 w-12 shrink-0 rounded-xl"
             onClick={() => {
               setSearchOpen(!searchOpen);
               if (!searchOpen) setTimeout(() => searchInputRef.current?.focus(), 100);
@@ -449,23 +473,23 @@ console.log("askjba",payments)
           >
             <Search className="h-4 w-4" />
           </Button>
-          
+
           {searchOpen && (
             <div className="relative w-full sm:w-80">
               <Input
                 ref={searchInputRef}
                 type="search"
                 placeholder="Search payments..."
-                className="pl-3 w-full bg-slate-50 border-2 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
+                className="pl-3 w-full bg-gray-50 border-2 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all rounded-xl"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
               />
             </div>
           )}
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 shrink-0">
+              <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 shrink-0 rounded-xl">
                 <Settings2 />
               </Button>
             </DropdownMenuTrigger>
@@ -484,8 +508,8 @@ console.log("askjba",payments)
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0 w-full sm:w-auto ml-auto" onClick={handleAddNew}>
-            <Plus className="mr-2 h-4 w-4" /> Add Payment
+          <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0 w-full sm:w-auto ml-auto rounded-xl" onClick={handleAddNew}>
+            <Plus className="mr-2 h-4 w-4" /> {t("payment.addPayment")}
           </Button>
         </div>
       </div>
@@ -496,29 +520,27 @@ console.log("askjba",payments)
           <TableHeader className="bg-slate-50 border-b border-slate-200">
             <TableRow className="hover:bg-slate-50/50">
               {columnVisibility.sn && (
-                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">S.N.</TableHead>
+                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">{t("common.sn")}</TableHead>
               )}
               {columnVisibility.property && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Property Name</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.property")}</TableHead>
               )}
               {columnVisibility.receiptNo && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Receipt No</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.receiptNo")}</TableHead>
               )}
               {columnVisibility.amountPaid && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Amount Paid</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.amountPaid")}</TableHead>
               )}
               {columnVisibility.paymentMiti && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Payment Date</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.paymentDate")}</TableHead>
               )}
               {columnVisibility.status && (
-                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Status</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.paymentStatus")}</TableHead>
               )}
               {columnVisibility.file && (
-                 <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Receipt</TableHead>
-               )}
-               {columnVisibility.action && (
-                 <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">Action</TableHead>
-               )}
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.file")}</TableHead>
+              )}
+
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -531,7 +553,7 @@ console.log("askjba",payments)
                     </TableCell>
                   )}
                   {columnVisibility.property && (
-                    <TableCell 
+                    <TableCell
                       className="font-semibold text-slate-900 py-2 cursor-pointer hover:text-blue-600 hover:underline"
                       onClick={() => item.propertyId && handlePropertyClick(item.propertyId, item.property)}
                       title="Click to view payment history"
@@ -556,53 +578,53 @@ console.log("askjba",payments)
                   )}
                   {columnVisibility.status && (
                     <TableCell className="text-center text-sm font-semibold py-2">
-                      {item.isPaid === 1 || item.isPaid === true ? (
+                      {item.isPaid === 1 ? (
                         <span className="text-green-600">Paid</span>
                       ) : (
                         <span className="text-red-600">Unpaid</span>
                       )}
                     </TableCell>
                   )}
-                  
-                   {columnVisibility.file && (
-                     <TableCell className="text-center text-sm font-semibold py-2">
-                       {item.isPaid === 1 || item.isPaid === true ? (
-                         <Button
-                           size="sm"
-                           variant="ghost"
-                           className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
-                           onClick={() => handleViewFile(item.taxRecordId)}
-                           title="View Receipt"
-                         >
-                           <Eye size={16} strokeWidth={2} />
-                         </Button>
-                       ) : (
-                         <span className="text-slate-400">-</span>
-                       )}
-                     </TableCell>
-                   )}
-                    {columnVisibility.action && (
-                      <TableCell className="text-center text-sm font-semibold py-2">
+
+                  {columnVisibility.file && (
+                    <TableCell className="text-center text-sm font-semibold py-2">
+                      {item.isPaid === 1 ? (
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-green-600"
-                          onClick={() => setEditingPayment(item.id)}
-                          disabled={!item.id}
-                          title="Edit Payment"
+                          className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                          onClick={() => handleViewFile(item.taxRecordId)}
+                          title="View Receipt"
                         >
+                          <Eye size={16} strokeWidth={2} />
                         </Button>
-                      </TableCell>
-                    )}
-                 </TableRow>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </TableCell>
+                  )}
+                  {columnVisibility.action && (
+                    <TableCell className="text-center text-sm font-semibold py-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-green-600"
+                        onClick={() => setEditingPayment(item.id)}
+                        disabled={!item.id}
+                        title="Edit Payment"
+                      >
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
               ))
             ) : (
               <TableRow>
                 <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length} className="h-64 text-center">
                   <div className="flex flex-col items-center justify-center text-slate-400">
                     <FileX className="w-12 h-12 mb-3 opacity-50" />
-                    <p className="text-sm font-medium">No payments found.</p>
-                    <p className="text-xs mt-1">Try adjusting your search or filters.</p>
+                    <p className="text-sm font-medium">{t("payment.NoPaymentsFound")}</p>
+                    <p className="text-xs mt-1">{t("payment.TryAdjustingYourSearchOrFilters")}</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -624,14 +646,17 @@ console.log("askjba",payments)
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
             <p className="text-sm font-medium text-slate-700">Rows per page</p>
-            <SearchableSelect
-              options={[10, 20, 30, 40, 50].map(size => ({ id: size, fiscalYear: size.toString() }))}
-              value={entriesPerPage.toString()}
-              onChange={(val) => { setEntriesPerPage(Number(val)); setCurrentPage(1); }}
-              getLabel={(item) => item.fiscalYear}
-              placeholder={entriesPerPage.toString()}
-              className="h-8 w-[70px] pl-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all disabled:opacity-50"
-            />
+            {/* Using standard Shadcn Select for static list */}
+            <Select value={entriesPerPage.toString()} onValueChange={(v) => { setEntriesPerPage(Number(v)); setCurrentPage(1); }}>
+              <SelectTrigger className="h-8 w-[70px] rounded-lg">
+                <SelectValue placeholder={entriesPerPage} />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[10, 20, 30, 40, 50].map((size) => (
+                  <SelectItem key={size} value={size.toString()}>{size}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -655,17 +680,17 @@ console.log("askjba",payments)
           </div>
         </div>
       </div>
-      
+
       {/* --- POPUP MODAL (File Viewer) --- */}
       {isModalOpen && selectedFileUrl && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden p-4">
-          <div 
+          <div
             className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm transition-opacity"
             onClick={() => { setIsModalOpen(false); setSelectedFileUrl(null); }}
           ></div>
 
           <div className="relative bg-white w-full max-w-6xl h-[95vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            
+
             <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-slate-50">
               <div className="flex items-center gap-3">
                 <div className="bg-red-100 p-2 rounded-lg">
@@ -678,8 +703,8 @@ console.log("askjba",payments)
                   <p className="text-[10px] text-slate-400 italic font-medium">Secure Cloud Viewer</p>
                 </div>
               </div>
-              
-              <button 
+
+              <button
                 onClick={() => { setIsModalOpen(false); setSelectedFileUrl(null); }}
                 className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-all"
               >
@@ -698,9 +723,9 @@ console.log("askjba",payments)
                 </div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center p-4 bg-slate-300 overflow-auto">
-                  <img 
-                    src={selectedFileUrl} 
-                    alt="Preview" 
+                  <img
+                    src={selectedFileUrl}
+                    alt="Preview"
                     className="max-w-full max-h-full object-contain rounded-lg shadow-xl bg-white p-1"
                     onError={(e) => {
                       e.currentTarget.src = "https://placehold.co/600x400?text=Preview+Not+Available";
@@ -711,7 +736,7 @@ console.log("askjba",payments)
             </div>
 
             <div className="px-6 py-2 bg-white border-t border-gray-100 flex justify-between items-center">
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-50 rounded-lg transition"
               >
@@ -720,7 +745,7 @@ console.log("askjba",payments)
 
               <div className="flex items-center gap-4">
                 {Role === 'Admin' ? (
-                  <button 
+                  <button
                     type="button"
                     onClick={handleDownload}
                     className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 transition-all active:scale-95"
@@ -748,14 +773,14 @@ console.log("askjba",payments)
                 <h3 className="text-lg font-bold text-slate-800">Payment History</h3>
                 <p className="text-sm text-slate-500">{popupPropertyName}</p>
               </div>
-              <button 
+              <button
                 onClick={() => setPropertyPopupOpen(false)}
                 className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-all"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="flex-grow overflow-auto p-4">
               {propertyPopupLoading ? (
                 <div className="flex justify-center items-center h-40">
@@ -782,16 +807,16 @@ console.log("askjba",payments)
                           <span className="text-green-600 font-bold">Paid</span>
                         </TableCell>
                         <TableCell className="text-center">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
-                              onClick={() => handleViewFile(item.taxRecordId)}
-                              title="View Receipt"
-                            >
-                              <Eye size={16} strokeWidth={2} />
-                            </Button>
-                          
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                            onClick={() => handleViewFile(item.taxRecordId)}
+                            title="View Receipt"
+                          >
+                            <Eye size={16} strokeWidth={2} />
+                          </Button>
+
                         </TableCell>
                       </TableRow>
                     ))}
@@ -804,10 +829,10 @@ console.log("askjba",payments)
                 </div>
               )}
             </div>
-            
+
             <div className="px-6 py-3 border-t border-gray-200 bg-slate-50 flex justify-end">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setPropertyPopupOpen(false)}
                 className="px-4 py-2"
               >
@@ -822,11 +847,11 @@ console.log("askjba",payments)
       {editingPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
-            <TaxPaymentForm 
-              mode="edit" 
-              initialData={editingPayment} 
-              onSuccess={() => setEditingPayment(null)} 
-              onCancel={() => setEditingPayment(null)} 
+            <TaxPaymentForm
+              mode="edit"
+              initialData={editingPayment}
+              onSuccess={() => setEditingPayment(null)}
+              onCancel={() => setEditingPayment(null)}
             />
           </div>
         </div>

@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import axiosInstance from "@/config/axios";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner"; 
+import { toast } from "sonner";
+import { useFetchAll } from "@/hooks/useFetchAll";
 
 // ── Types ─────────────────────────────────────────────────────
 interface Notification {
@@ -16,27 +17,6 @@ interface Notification {
   isRead: boolean;
 }
 
-interface NotificationResponse {
-  data: Notification[];
-  success: boolean;
-  message: string | null;
-  errors: string | null;
-}
-
-const PAGE_SIZE = 10;
-const BASE = import.meta.env.VITE_API_BASE_URL;
-
-// ── Fetcher ───────────────────────────────────────────────────────
-const fetchNotifications = async (
-  pageNumber: number,
-  onlyUnread: boolean
-): Promise<NotificationResponse> => {
-  const res = await axiosInstance.get<NotificationResponse>(
-    `${BASE}/api/notification?pageNumber=${pageNumber}&pageSize=${PAGE_SIZE}&onlyUnread=${onlyUnread}`
-  );
-  return res.data;
-};
-
 // ── Component ─────────────────────────────────────────────────────
 export default function NotificationPanel() {
   const [open, setOpen] = useState(false);
@@ -45,127 +25,69 @@ export default function NotificationPanel() {
   const listRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
-  // ── Unread badge count — polls every 10 s ─────────────────────────
-  const { data: unreadData } = useQuery<NotificationResponse>({
-    queryKey: ["notifications-unread-count"],
-    queryFn: () => fetchNotifications(1, true),
-    refetchInterval: 10_000,
-    refetchIntervalInBackground: true,
-  });
-  const totalUnread = unreadData?.data?.length ?? 0;
+  // ── Data Fetching ───────────────────────────────────────────────
+  // We use useFetchAll to get the notifications.
+  // Note: We fetch all notifications and filter them in the UI to support the toggle instantly.
+  const { items: notificationData, isLoadingItems } = useFetchAll<Notification>(
+    "/api/notification", 
+    ["notifications"]
+  );
 
-  // ── Infinite query for panel list ────────────────────────────────────
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useInfiniteQuery<NotificationResponse>({
-    queryKey: ["notifications-list", onlyUnread],
-    queryFn: ({ pageParam = 1 }) =>
-      fetchNotifications(pageParam as number, onlyUnread),
-    getNextPageParam: (lastPage, allPages) => {
-      // If last page returned a full page, there might be more
-      if ((lastPage.data?.length ?? 0) < PAGE_SIZE) return undefined;
-      return allPages.length + 1;
-    },
-    initialPageParam: 1,
-    enabled: open, // only fetch when panel is open
-  });
+  const allNotifications = notificationData?.data || [];
 
-  // Flatten all pages into one array
-  const notifications: Notification[] = data?.pages.flatMap((p) => p.data ?? []) ?? [];
+  // ── Derived State & Filtering ───────────────────────────────────
+  // 1. Calculate unread count for the badge (always based on all data)
+  const unreadCount = allNotifications.filter((n) => !n.isRead).length;
 
-  // ── Scroll-to-bottom → load next page ──────────────────────────────
-  const handleScroll = useCallback(() => {
-    const el = listRef.current;
-    if (!el) return;
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-    if (nearBottom && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
+  // 2. Filter list based on "Only Unread" toggle
+  const filteredNotifications = useMemo(() => {
+    if (onlyUnread) {
+      return allNotifications.filter((n) => !n.isRead);
     }
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+    return allNotifications;
+  }, [allNotifications, onlyUnread]);
 
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    el.addEventListener("scroll", handleScroll);
-    return () => el.removeEventListener("scroll", handleScroll);
-  }, [handleScroll, open]);
-
-  // ── Close on outside click ───────────────────────────────────────────────
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    if (open) document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  // ── Toggle filter — resets infinite query ─────────────────────────────
+  // ── Actions ─────────────────────────────────────────────────────
+  
+  // Toggle the filter and reset scroll
   const toggleFilter = () => {
     setOnlyUnread((v) => !v);
-    // Reset scroll position
     if (listRef.current) listRef.current.scrollTop = 0;
   };
 
-  // ── Mark all as read ──────────────────────────────────────────────────────
-  const markAllAsRead = async () => {
+  // Mark a single notification as read
+  const handleMarkAsRead = async (id: number) => {
     try {
-      // 1. Send API request
-      await axiosInstance.patch(`${BASE}/api/notification/read-all`);
+      // API call to mark specific ID as read
+      await axiosInstance.put(`/api/notification/read/${id}`); // Adjust endpoint as necessary
+      
+      // Invalidate the query to trigger a re-fetch via useFetchAll
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      toast.error("Failed to mark as read");
+    }
+  };
 
-      // 2. Optimistically update the CURRENT list (immediate UI feedback)
-      //    We update the cache for the specific view the user is currently in.
-      queryClient.setQueryData(["notifications-list", onlyUnread], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page: NotificationResponse) => ({
-            ...page,
-            data: page.data.map((n) => ({ ...n, isRead: true })), // Visually mark all as read
-          })),
-        };
-      });
+  // Mark all unread notifications as read
+  const handleMarkAllAsRead = async () => {
+    // Extract IDs of unread notifications
+    const unreadIds = allNotifications.filter((n) => !n.isRead).map((n) => n.id);
 
-      // 3. Invalidate BOTH "All" and "Unread" list queries.
-      //    This ensures that the "Unread" tab refetches (showing empty list).
-      //    AND the "All" tab refetches (showing items with isRead: true).
-      //    This satisfies "make isRead true for all notification" everywhere.
-      queryClient.invalidateQueries({ queryKey: ["notifications-list"] });
+    if (unreadIds.length === 0) return;
 
-      // 4. Invalidate unread count query to reset badge
-      queryClient.invalidateQueries({ queryKey: ["notifications-unread-count"] });
+    try {
+      // API call to mark all specific IDs as read (or a bulk endpoint)
+      // Assuming a bulk endpoint exists, or we iterate. Ideally use a bulk endpoint.
+      await axiosInstance.put("/api/notification/read-all", { ids: unreadIds }); 
 
+      // Invalidate query to refresh UI
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      
       toast.success("All notifications marked as read");
     } catch (error) {
       console.error("Error marking all as read:", error);
       toast.error("Failed to mark all as read");
-    }
-  };
-
-  // ── Mark single as read ──────────────────────────────────────────────────
-  const markAsRead = async (id: number) => {
-    try {
-      await axiosInstance.patch(`${BASE}/api/notification/${id}/read`);
-      // Optimistically update both queries
-      queryClient.setQueryData(["notifications-list", onlyUnread], (old: any) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page: NotificationResponse) => ({
-            ...page,
-            data: page.data.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
-          })),
-        };
-      });
-      // Invalidate unread count to update badge
-      queryClient.invalidateQueries({ queryKey: ["notifications-unread-count"] });
-    } catch {
-      // silently fail
     }
   };
 
@@ -182,9 +104,9 @@ export default function NotificationPanel() {
         <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>
           notifications
         </span>
-        {totalUnread > 0 && (
+        {unreadCount > 0 && (
           <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-surface leading-none">
-            {totalUnread > 99 ? "99+" : totalUnread}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
@@ -192,15 +114,15 @@ export default function NotificationPanel() {
       {/* Dropdown panel */}
       {open && (
         <div className="absolute right-0 top-12 z-50 w-[390px] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-200">
-
+          
           {/* ── Header ── */}
           <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-lg">notifications</span>
               <h3 className="font-bold text-slate-800 text-sm tracking-tight">Notifications</h3>
-              {totalUnread > 0 && (
+              {unreadCount > 0 && (
                 <span className="bg-red-100 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-                  {totalUnread} new
+                  {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
             </div>
@@ -229,9 +151,9 @@ export default function NotificationPanel() {
               </div>
               
               {/* Mark All Read Button */}
-              {totalUnread > 0 && (
+              {unreadCount > 0 && (
                  <button
-                    onClick={markAllAsRead}
+                    onClick={handleMarkAllAsRead}
                     className="px-2.5 py-1 rounded-md transition-all uppercase tracking-wider text-[10px] font-bold bg-primary text-white hover:bg-primary/90"
                     title="Mark all as read"
                   >
@@ -247,7 +169,7 @@ export default function NotificationPanel() {
             className="max-h-[420px] overflow-y-auto divide-y divide-slate-50"
           >
             {/* Empty state */}
-            {!isLoading && notifications.length === 0 && (
+            {!isLoadingItems && filteredNotifications.length === 0 && (
               <div className="flex flex-col items-center justify-center py-14 text-center px-6">
                 <span className="material-symbols-outlined text-5xl text-slate-200 mb-3">
                   notifications_off
@@ -258,11 +180,26 @@ export default function NotificationPanel() {
               </div>
             )}
 
+            {/* Loading state (Skeleton) */}
+            {isLoadingItems && (
+                <div className="p-5 space-y-4">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="flex gap-3 animate-pulse">
+                            <div className="w-9 h-9 bg-slate-200 rounded-xl shrink-0" />
+                            <div className="flex-1 space-y-2">
+                                <div className="h-4 bg-slate-200 rounded w-3/4" />
+                                <div className="h-3 bg-slate-100 rounded w-1/2" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Notification rows */}
-            {notifications.map((n) => (
+            {!isLoadingItems && filteredNotifications.map((n) => (
               <div
                 key={n.id}
-                onClick={() => !n.isRead && markAsRead(n.id)}
+                onClick={() => !n.isRead && handleMarkAsRead(n.id)}
                 className={cn(
                   "px-5 py-4 flex gap-3 transition-colors group",
                   n.isRead
@@ -307,53 +244,13 @@ export default function NotificationPanel() {
                 </div>
               </div>
             ))}
-
-            {/* Loading skeletons — initial load */}
-            {isLoading && (
-              <div className="px-5 py-3 space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex gap-3 animate-pulse">
-                    <div className="w-9 h-9 rounded-xl bg-slate-100 shrink-0" />
-                    <div className="flex-1 space-y-2 py-1">
-                      <div className="h-3 bg-slate-100 rounded w-2/3" />
-                      <div className="h-3 bg-slate-100 rounded w-full" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Loading more (scroll-triggered) */}
-            {isFetchingNextPage && (
-              <div className="flex items-center justify-center gap-2 py-4 text-slate-400 text-xs font-semibold">
-                <div className="w-4 h-4 border-2 border-slate-200 border-t-primary rounded-full animate-spin" />
-                Loading more...
-              </div>
-            )}
-
-            {/* End of list */}
-            {!hasNextPage && notifications.length > 0 && !isFetchingNextPage && (
-              <div className="text-center py-4 text-[11px] text-slate-300 font-medium uppercase tracking-wider">
-                All caught up
-              </div>
-            )}
           </div>
 
           {/* ── Footer ── */}
           <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/40 flex items-center justify-between">
             <p className="text-[11px] text-slate-400 font-medium">
-              {notifications.length} notification{notifications.length !== 1 ? "s" : ""} shown
+              {filteredNotifications.length} notification{filteredNotifications.length !== 1 ? "s" : ""} shown
             </p>
-            {hasNextPage && (
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="text-[11px] font-bold text-primary hover:underline disabled:opacity-40 flex items-center gap-0.5"
-              >
-                Show more
-                <span className="material-symbols-outlined text-sm">expand_more</span>
-              </button>
-            )}
           </div>
         </div>
       )}

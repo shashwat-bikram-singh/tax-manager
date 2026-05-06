@@ -1,5 +1,5 @@
 export interface ProvinceData {
-  ProvinceId: number;
+  Id: number;
   Name: string;
   TotalProperty: number;
 }
@@ -7,6 +7,7 @@ export interface ProvinceData {
 export interface DistrictData {
   Name: string;
   DistrictId: number;
+  ProvinceId: number;
   TotalProperty: number;
 }
 
@@ -14,6 +15,7 @@ export interface LocalBodyData {
   LocalBodyId: number;
   Name: string;
   TotalProperty: number;
+  DistrictId?: number; // Optional for backward compatibility
 }
 
 export interface DashboardData {

@@ -22,6 +22,7 @@ import { useFetchAll } from "@/hooks/useFetchAll";
 import { useFiscalYear } from "@/context/FiscalYearContext";
 import type { Tax } from "@/type/tax";
 import NepaliDatePicker from "../ui/NepaliDatePicker";
+import { useTranslation } from "react-i18next";
 
 // -------------------- TYPES --------------------
 interface Property {
@@ -59,6 +60,8 @@ interface SearchableSelectProps {
   disabled?: boolean;
   isLoading?: boolean;
   inputClassName?: string;
+  // Optional custom clear handler
+  onClear?: () => void;
 }
 
 const SearchableSelect = ({
@@ -70,6 +73,7 @@ const SearchableSelect = ({
   disabled = false,
   isLoading = false,
   inputClassName = "",
+  onClear
 }: SearchableSelectProps) => {
   const [inputValue, setInputValue] = useState("");
   const [showOptions, setShowOptions] = useState(false);
@@ -131,27 +135,31 @@ const SearchableSelect = ({
         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
           <ChevronDown size={16} />
         </div>
-        {/* Clear Button */}
-        {value && inputValue && !disabled && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setInputValue("");
-              onChange(null);
-            }}
-            className="absolute inset-y-0 right-8 flex items-center text-gray-400 hover:text-gray-600"
-          >
-            <X size={14} />
-          </button>
-        )}
+         {/* Clear Button */}
+         {value && inputValue && !disabled && (
+           <button
+             type="button"
+             onClick={(e) => {
+               e.stopPropagation();
+               if (onClear) {
+                 onClear();
+               } else {
+                 setInputValue("");
+                 onChange(null);
+               }
+             }}
+             className="absolute inset-y-0 right-8 flex items-center text-gray-400 hover:text-gray-600"
+           >
+             <X size={14} />
+           </button>
+         )}
       </div>
 
       {/* Dropdown Options */}
       {showOptions && !disabled && (
         <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
           {isLoading ? (
-            <li className="p-4 text-center text-sm text-gray-500">Loading...</li>
+            <li className="p-4 text-center text-sm text-gray-500">{t("payment.loading")}</li>
           ) : filteredOptions.length > 0 ? (
             filteredOptions.map((item, index) => (
               <li
@@ -172,14 +180,15 @@ const SearchableSelect = ({
 };
 
 // -------------------- COMPONENT --------------------
-export default function TaxPaymentForm({ 
-  mode, 
-  paymentId, 
+export default function TaxPaymentForm({
+  mode,
+  paymentId,
   initialData,
-  onSuccess, 
-  onCancel 
+  onSuccess,
+  onCancel
 }: TaxPaymentFormProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { id: routeId } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState("");
@@ -194,7 +203,7 @@ export default function TaxPaymentForm({
   const editId = paymentId || (mode === "edit" ? Number(routeId) : undefined);
 
   const { items: propertyData, isLoadingItems: isLoadingProperty } = useFetchAll<Property>("/api/property", ["property"]);
-  
+
   const editApiUrl = editId ? `/api/payment?id=${editId}` : "";
   const { items: paymentData, isLoadingItems: isLoadingPayment } = useFetchAll<Tax>(
     editApiUrl,
@@ -209,7 +218,7 @@ export default function TaxPaymentForm({
     else if (Array.isArray(data.data)) item = data.data[0];
     else if (Array.isArray(data.Data)) item = data.Data[0];
     else if (typeof data === 'object' && data.id) item = data;
-    
+
     if (!item) return null;
 
     return {
@@ -286,11 +295,11 @@ export default function TaxPaymentForm({
 
     try {
       const formData = new FormData();
-      
+
       if (mode === "edit" && editId) {
         formData.append("id", editId.toString());
       }
-      
+
       formData.append("propertyId", values.propertyId.toString());
       formData.append("fiscalYearId", values.fiscalYearId.toString());
       formData.append("receiptNo", values.receiptNo);
@@ -303,10 +312,10 @@ export default function TaxPaymentForm({
 
       if (mode === "edit") {
         await update.mutateAsync(formData);
-        toast.success("Payment updated successfully ✅");
+        toast.success(t("payment.paymentUpdatedSuccessfully") + " ✅");
       } else {
         await create.mutateAsync(formData);
-        toast.success("Payment saved successfully ✅");
+        toast.success(t("payment.paymentSavedSuccessfully") + " ✅");
       }
 
       queryClient.invalidateQueries({ queryKey: ["payment"] });
@@ -329,9 +338,9 @@ export default function TaxPaymentForm({
       setFileName(e.target.files[0].name);
     } else {
       if (mode === "edit" && existingPayment?.FilePath) {
-         setFileName(existingPayment.FilePath.split('/').pop() || "Current file");
+        setFileName(existingPayment.FilePath.split('/').pop() || "Current file");
       } else {
-         setFileName("");
+        setFileName("");
       }
     }
   };
@@ -344,17 +353,17 @@ export default function TaxPaymentForm({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-           <div className="bg-blue-100 p-2 rounded-lg">
-               <FileText className="h-6 w-6 text-blue-600" />
-           </div>
-           <div>
-              <h3 className="text-xl font-bold text-slate-900">
-                {mode === "edit" ? "Edit Payment" : "Add Payment"}
-              </h3>
-              <p className="text-xs text-slate-500">
-                 {mode === "edit" ? "Update details below" : "Fill in the details"}
-              </p>
-           </div>
+          <div className="bg-blue-100 p-2 rounded-lg">
+            <FileText className="h-6 w-6 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">
+              {mode === "edit" ? t("payment.editPayment") : t("payment.addPayment")}
+            </h3>
+            <p className="text-xs text-slate-500">
+              {mode === "edit" ? t("payment.editPayment") : t("payment.addPayment")}
+            </p>
+          </div>
         </div>
         <Button
           type="button"
@@ -370,7 +379,7 @@ export default function TaxPaymentForm({
       {/* Form */}
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          
+
           {/* Row 1: Property & Fiscal Year */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
@@ -378,14 +387,14 @@ export default function TaxPaymentForm({
               name="propertyId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Property <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>{t("payment.property")} <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <SearchableSelect
                       options={properties}
                       value={field.value?.toString()}
                       onChange={(val) => field.onChange(val ? Number(val) : null)}
                       getLabel={(p) => p.name}
-                      placeholder={isLoadingProperty ? "Loading..." : "Select Property"}
+                      placeholder={isLoadingProperty ? "Loading..." : ""}
                       disabled={loading || isLoadingProperty}
                       inputClassName={inputBaseClass}
                     />
@@ -400,16 +409,22 @@ export default function TaxPaymentForm({
               name="fiscalYearId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Fiscal Year <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel> {t("payment.fiscalYear")} <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <SearchableSelect
                       options={validFiscalYears}
                       value={field.value?.toString()}
                       onChange={(val) => field.onChange(val ? Number(val) : null)}
                       getLabel={(fy) => fy.fiscalYear}
-                      placeholder="Select Fiscal Year"
+                      placeholder=""
                       disabled={loading}
                       inputClassName={inputBaseClass}
+                      // When X is clicked, reset to active fiscal year
+                      onClear={() => {
+                        if (activeFiscalYearId) {
+                          field.onChange(activeFiscalYearId);
+                        }
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -425,7 +440,7 @@ export default function TaxPaymentForm({
               name="receiptNo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Receipt No <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel> {t("payment.receiptNo")} <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="REC-..." disabled={loading} className="h-11" />
                   </FormControl>
@@ -439,13 +454,13 @@ export default function TaxPaymentForm({
               name="amountPaid"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount (Rs) <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>{t("payment.amount")} <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
-                    <Input 
-                      {...field} 
-                      type="number" 
-                      placeholder="0.00" 
-                      disabled={loading} 
+                    <Input
+                      {...field}
+                      type="number"
+                      placeholder="0.00"
+                      disabled={loading}
                       className="h-11"
                       value={typeof field.value === "number" ? field.value : ""}
                       onChange={(e) => field.onChange(parseFloat(e.target.value))}
@@ -463,7 +478,7 @@ export default function TaxPaymentForm({
             name="paymentMiti"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Payment Date <span className="text-red-500">*</span></FormLabel>
+                <FormLabel>{t("payment.paymentDate")} <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
                   <NepaliDatePicker
                     value={field.value}
@@ -484,7 +499,7 @@ export default function TaxPaymentForm({
             render={({ field: { value, onChange, ...fieldProps } }) => (
               <FormItem>
                 <FormLabel>
-                  Upload Receipt {mode === "add" && <span className="text-red-500">*</span>}
+                  {t("payment.uploadReceipt")} {mode === "add" && <span className="text-red-500">*</span>}
                 </FormLabel>
                 <FormControl>
                   <div>
@@ -503,15 +518,15 @@ export default function TaxPaymentForm({
                       htmlFor="file-upload"
                       className={`
                         flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors
-                        ${fileName 
-                          ? "border-green-500 bg-green-50" 
+                        ${fileName
+                          ? "border-green-500 bg-green-50"
                           : "border-gray-300 hover:border-blue-500 hover:bg-blue-50"
                         }
                       `}
                     >
                       <Upload className={`w-8 h-8 mb-2 ${fileName ? 'text-green-600' : 'text-gray-400'}`} />
                       <p className="mb-1 text-sm text-gray-500">
-                        <span className="font-semibold">Click to upload</span>
+                        <span className="font-semibold"> {t("payment.clickToUpload")}</span>
                       </p>
                       <p className="text-xs text-gray-500">PNG, JPG or PDF (MAX. 5MB)</p>
                       {fileName && (
@@ -536,7 +551,7 @@ export default function TaxPaymentForm({
               disabled={loading}
               className="text-slate-600 border-slate-200"
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"
@@ -546,12 +561,12 @@ export default function TaxPaymentForm({
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Saving...
+
                 </>
               ) : mode === "edit" ? (
-                "Update Payment"
+                t("common.update")
               ) : (
-                "Save Payment"
+                t("common.save")
               )}
             </Button>
           </div>

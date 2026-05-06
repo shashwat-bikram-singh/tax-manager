@@ -24,7 +24,7 @@ import { X, Plus, Trash2, FileText } from "lucide-react";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import { useMutate } from "@/hooks/useMutate";
 import NepaliDatePicker from "@/components/ui/NepaliDatePicker";
-
+import { useTranslation } from "react-i18next";
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
 const documentRowSchema = z.object({
   propertyId: z.string().min(1, "Required"),
@@ -53,6 +53,7 @@ interface DocumentFormProps {
 // ─── Main Form ────────────────────────────────────────────────────────────────
 export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const defaultPropertyId = searchParams.get("propertyId") || "";
   const [loading, setLoading] = useState(false);
@@ -125,17 +126,16 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
         await create.mutateAsync(formData);
       }
 
-      toast.success("Documents uploaded successfully ✅", {
+      toast.success(`${t("property.documentUploadedSuccessfully")} ✅`, {
         style: { background: "#10b981", color: "white" },
       });
       form.reset();
       onSuccess?.();
     } catch (error: any) {
-      console.error("Upload error:", error);
       toast.error(
         Array.isArray(error?.response?.data?.errors)
           ? error.response.data.errors.join(", ")
-          : error?.response?.data?.errors || "Failed to upload documents",
+          : error?.response?.data?.errors || `${t("property.documentUploadFailed")} ❌`,
         { style: { background: "#c6212d", color: "white" } }
       );
     } finally {
@@ -146,7 +146,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/40 p-6">
       <p className="text-xs uppercase tracking-widest text-gray-400 font-semibold mb-3">
-        Vault › Register Documents
+        {t("property.documentVault")} › {t("property.registerDocuments")}
       </p>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -174,7 +174,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                   <FileText className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">Document Upload Registry</h2>
+                  <h2 className="text-lg font-bold text-gray-900">{t("property.documentUploadRegistry")}</h2>
                 </div>
               </div>
               <Button
@@ -184,7 +184,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                 }
                 className="bg-blue-600 text-white hover:bg-indigo-100 border border-indigo-200 shadow-sm flex items-center gap-2 h-9 px-4 rounded-xl text-sm transition-all"
               >
-                <Plus className="w-4 h-4" /> Add Row
+                <Plus className="w-4 h-4" /> {t("property.addRow")}
               </Button>
             </div>
 
@@ -193,13 +193,13 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200 text-gray-500">
-                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest font-body">Property</th>
-                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest font-body">Document Type</th>
-                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest font-body">Fiscal Year</th>
-                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest font-body">File Tag</th>
-                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest font-body">Issue Date</th>
-                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest font-body">File Upload</th>
-                    <th className="pb-3 px-2 text-center text-[10px] uppercase font-bold tracking-widest font-body w-12">Action</th>
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest font-body">{t("property.property")}</th>
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest font-body">{t("property.documentType")}</th>
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest font-body">{t("property.fiscalYear")}</th>
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest font-body">{t("property.fileTag")}</th>
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest font-body">{t("property.issueDate")}</th>
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest font-body">{t("property.fileUpload")}</th>
+                    <th className="pb-3 px-2 text-center text-[10px] uppercase font-bold tracking-widest font-body w-12">{t("common.action")}</th>
                   </tr>
                 </thead>
                 <tbody className="align-top divide-y divide-gray-100">
@@ -215,7 +215,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                               <Select onValueChange={field.onChange} value={field.value} disabled={loading || isPropLoading}>
                                 <FormControl>
                                   <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-11 rounded-xl">
-                                    <SelectValue placeholder="Select Property" />
+                                    <SelectValue placeholder="" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -242,7 +242,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                               <Select onValueChange={field.onChange} value={field.value} disabled={loading || isDocumentTypeLoading}>
                                 <FormControl>
                                   <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-11 rounded-xl">
-                                    <SelectValue placeholder="Select Document Type" />
+                                    <SelectValue placeholder="" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -267,7 +267,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                               <Select onValueChange={field.onChange} value={field.value} disabled={loading || isFiscalYearLoading}>
                                 <FormControl>
                                   <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-11 rounded-xl">
-                                    <SelectValue placeholder="Select Fiscal Year" />
+                                    <SelectValue placeholder="" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -294,7 +294,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                               <Select onValueChange={field.onChange} value={field.value} disabled={loading || isTagLoading}>
                                 <FormControl>
                                   <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-11 rounded-xl">
-                                    <SelectValue placeholder="Select Tag" />
+                                    <SelectValue placeholder="" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>

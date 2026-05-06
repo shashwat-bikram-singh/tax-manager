@@ -3,10 +3,149 @@ import type { DashboardData, ProvinceData, DistrictData, LocalBodyData, Leaderbo
 import ReactApexChart from "react-apexcharts";
 import type { ApexOptions } from "apexcharts";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { ChevronDown, X } from "lucide-react"; // Lucide imports needed for SearchableSelect
+import { useRef } from "react"; // Hook needed for SearchableSelect
+
+// ─── 1. PASTE THE SEARCHABLE SELECT COMPONENT HERE ───────────────────────────
+interface SearchableSelectProps {
+  options: any[];
+  value: string | number | undefined | null;
+  onChange: (value: string) => void;
+  getLabel: (item: any) => string;
+  placeholder: string;
+  disabled?: boolean;
+  isLoading?: boolean;
+  onClear?: () => void;
+  // Customizing for Dashboard width
+  widthClass?: string; 
+  // Field to use for the value (default: 'Id' or 'id')
+  valueField?: string;
+}
+
+const SearchableSelect = ({
+  options = [],
+  value,
+  onChange,
+  getLabel,
+  placeholder,
+  disabled = false,
+  isLoading = false,
+  onClear,
+  widthClass = "w-full",
+  valueField = "Id"
+}: SearchableSelectProps) => {
+  const [inputValue, setInputValue] = useState("");
+  const [showOptions, setShowOptions] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sync input with form value (e.g. when editing loads data)
+  useEffect(() => {
+    if (value) {
+      const selectedOption = options.find((item) => {
+        const itemValue = item[valueField] ?? item.Id ?? item.id ?? item.ProvinceId;
+        return itemValue == value;
+      });
+      if (selectedOption) {
+        setInputValue(getLabel(selectedOption));
+      }
+    } else {
+      setInputValue("");
+    }
+  }, [value, options, valueField, getLabel]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowOptions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInputValue(val);
+    setShowOptions(val.length > 0);
+    if (val.length === 0 && onClear) onClear();
+  };
+
+  const handleSelect = (item: any) => {
+    setInputValue(getLabel(item));
+    const itemValue = item[valueField] ?? item.Id ?? item.id ?? item.ProvinceId;
+    onChange(itemValue ? itemValue.toString() : "");
+    setShowOptions(false);
+  };
+
+  const filteredOptions = options.filter((item) =>
+    getLabel(item).toLowerCase().includes(inputValue.toLowerCase())
+  );
+
+  return (
+    <div className={`relative ${widthClass}`} ref={containerRef}>
+      {/* Input Field */}
+      <div className="relative">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={() => setShowOptions(!disabled)}
+          placeholder={placeholder}
+          disabled={disabled || isLoading}
+          className="w-full h-[32px] px-3 py-2 bg-surface-container-low border border-surface-container-highest text-on-surface-variant text-[11px] font-bold rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-all shadow-none disabled:opacity-50"
+        />
+        {/* Chevron Icon */}
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">
+          <ChevronDown size={14} />
+        </div>
+        {/* Clear Button */}
+        {value && inputValue && !disabled && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setInputValue("");
+              onChange("");
+              if (onClear) onClear();
+            }}
+            className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <X size={12} />
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown Options */}
+      {showOptions && !disabled && (
+        <ul className="absolute z-50 w-full mt-1 bg-white border border-surface-container-highest rounded-lg shadow-lg max-h-60 overflow-auto">
+          {isLoading ? (
+            <li className="p-3 text-center text-sm text-gray-500">Loading...</li>
+          ) : filteredOptions.length > 0 ? (
+            filteredOptions.map((item, index) => (
+              <li
+                key={index}
+                onClick={() => handleSelect(item)}
+                className="px-3 py-2 text-sm text-on-surface-variant cursor-pointer hover:bg-primary/10 transition-colors border-b border-slate-50 last:border-0"
+              >
+                {getLabel(item)}
+              </li>
+            ))
+          ) : (
+            <li className="p-3 text-center text-sm text-gray-400 italic">No matches found</li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
+// ────────────────────────────────────────────────────────────────────────────────
+
 export default function Dashboard() {
-  const [viewType, setViewType] = useState('district');
+  const [selectedProvinceId, setSelectedProvinceId] = useState<string | number | null>(null);
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string | number | null>(null);
   const { t } = useTranslation();
   const { items: dashboardResponse, isLoadingItems: loading, error } = useFetchAll<DashboardData>("/api/dashboard", ["dashboard"]);
   const { items: leaderboardResponse } = useFetchAll<LeaderboardData>("/api/leaderboard", ["leaderboard"]);
@@ -32,50 +171,70 @@ export default function Dashboard() {
   const d = getDashboardData(dashboardResponse);
   const ld = getLeaderboardData(leaderboardResponse);
 
-  const provinceData: ProvinceData[] = d?.provinceData ? JSON.parse(d.provinceData) : [];
-  const districtData: DistrictData[] = d?.districtData ? JSON.parse(d.districtData) : [];
-  const localBodyData: LocalBodyData[] = d?.localBodyData ? JSON.parse(d.localBodyData) : [];
-  console.log(provinceData)
+   const provinceData: ProvinceData[] = d?.provinceData ? JSON.parse(d.provinceData) : [];
+   const districtData: DistrictData[] = d?.districtData ? JSON.parse(d.districtData) : [];
+   const localBodyData: LocalBodyData[] = d?.localBodyData ? JSON.parse(d.localBodyData) : [];
 
-  const unpaidProperty = (d?.totalProperty ?? 0) - (d?.totalPaidProperty ?? 0);
+   // Debug: Log district data to verify ProvinceId field
+   console.log('District Data:', districtData);
+   console.log('Selected Province Id:', selectedProvinceId);
 
-  // ── ApexCharts configs ──────────────────────────────────────────────────────
+  // ── Logic: Set Default Province (Bagmati) ─────────────────────────────────────
+  useEffect(() => {
+    if (provinceData.length > 0 && !selectedProvinceId) {
+      // Find Bagmati Province
+      const bagmati = provinceData.find((p) => p.Name && p.Name.toLowerCase().includes("bagmati"));
+      
+      if (bagmati) {
+        setSelectedProvinceId(bagmati.Id); 
+      } else if (provinceData.length > 0) {
+        // Fallback to first province if Bagmati not found
+        setSelectedProvinceId(provinceData[0].Id);
+      }
+    }
+  }, [provinceData, selectedProvinceId]);
 
-  // Province bar chart
-  const provinceChartOptions: ApexOptions = {
-    chart: { type: "bar", toolbar: { show: false }, background: "transparent" },
-    plotOptions: { bar: { borderRadius: 8, horizontal: false, columnWidth: "20%" } },
-    dataLabels: { enabled: true, style: { fontSize: "11px", fontWeight: "700" } },
-    xaxis: {
-      // categories: provinceData.map((p) => `${p.Name}`),
-      categories: provinceData.map((p) => `${p.Name}`),
-      labels: { style: { fontSize: "11px", fontWeight: "600" } },
-    },
-    yaxis: { labels: { style: { fontSize: "11px" } }, tickAmount: 4 },
-    colors: ["#4f46e5"],
-    grid: { borderColor: "#f0f0f0" },
-    tooltip: { y: { formatter: (v) => `${v} Properties` } },
-  };
-  const districtChartSeries = [{ name: "Properties", data: districtData.map((p) => p.TotalProperty) }];
+   // ── Logic: Filter Districts based on Selection ──────────────────────────────────
+   const filteredDistricts = useMemo(() => {
+     if (!selectedProvinceId) return districtData;
+     const provinceId = Number(selectedProvinceId);
+     return districtData.filter((d) => d.ProvinceId === provinceId);
+   }, [districtData, selectedProvinceId]);
 
-  //province chart
-  const districtChartOptions: ApexOptions = {
-    chart: { type: "bar", toolbar: { show: false }, background: "transparent" },
-    plotOptions: { bar: { borderRadius: 6, horizontal: false, columnWidth: "40%" } },
-    dataLabels: { enabled: true, style: { fontSize: "11px", fontWeight: "700" } },
-    xaxis: {
-      categories: districtData.map((p) => `${p.Name}`),
-      labels: { style: { fontSize: "11px", fontWeight: "600" } },
-    },
-    yaxis: { labels: { style: { fontSize: "11px" } }, tickAmount: 4 },
-    colors: ["#4f46e5"],
-    grid: { borderColor: "#f0f0f0" },
-    tooltip: { y: { formatter: (v) => `${v} Properties` } },
-  };
-  const provinceChartSeries = [{ name: "Properties", data: provinceData.map((p) => p.TotalProperty) }];
+   // ── Logic: Filter Local Bodies based on District Selection ─────────────────────
+   const filteredLocalBodies = useMemo(() => {
+     if (!selectedDistrictId) return localBodyData;
+     const districtId = Number(selectedDistrictId);
+     return localBodyData.filter((lb) => lb.DistrictId === districtId);
+   }, [localBodyData, selectedDistrictId]);
+
+   // Reset district selection when province changes
+   useEffect(() => {
+     setSelectedDistrictId(null);
+   }, [selectedProvinceId]);
 
 
-  // Paid vs Unpaid radial bar
+   const unpaidProperty = (d?.totalProperty ?? 0) - (d?.totalPaidProperty ?? 0);
+
+   // ── District Chart Options (Dynamic based on filtered data) ────────────────────
+   const districtChartOptions: ApexOptions = useMemo(() => ({
+     chart: { type: "bar", toolbar: { show: false }, background: "transparent" },
+     plotOptions: { bar: { borderRadius: 6, horizontal: false, columnWidth: "40%" } },
+     dataLabels: { enabled: true, style: { fontSize: "11px", fontWeight: "700" } },
+     xaxis: {
+       categories: filteredDistricts.map((p) => `${p.Name}`),
+       labels: { style: { fontSize: "11px", fontWeight: "600" } },
+     },
+     yaxis: { labels: { style: { fontSize: "11px" } }, tickAmount: 4 },
+     colors: ["#4f46e5"],
+     grid: { borderColor: "#f0f0f0" },
+     tooltip: { y: { formatter: (v) => `${v} Properties` } },
+   }), [filteredDistricts]);
+
+   const districtChartSeries = useMemo(() => [{ name: "Properties", data: filteredDistricts.map((p) => p.TotalProperty) }], [filteredDistricts]);
+
+
+  // Paid vs Unpaid radial bar (Static)
   const radialOptions: ApexOptions = {
     chart: { type: "radialBar", background: "transparent" },
     plotOptions: {
@@ -167,42 +326,40 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* ── Charts Row 1: Province Bar + Payment Radial ── */}
+      {/* ── Charts Row 1: District Bar + Payment Radial ── */}
       <div className="gap-3">
-        {/* Province Bar Chart */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-surface-container shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
+        {/* Bar Chart Section */}
+        <div className="bg-white rounded-2xl border border-surface-container shadow-sm p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+            
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-lg">bar_chart</span>
               <h4 className="font-headline font-bold text-primary text-sm">
-                {t("dashboard.propertiesBy")}
+                {t("dashboard.districtsBy")}
               </h4>
             </div>
 
-            {/* Radio Buttons for Switching */}
-            <div className="flex bg-surface-container-low p-1 rounded-lg gap-1 border">
-              <button
-                onClick={() => setViewType('district')}
-                className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${viewType === 'district' ? 'bg-primary text-white shadow-sm' : 'text-outline hover:bg-surface-container-highest'
-                  }`}
-              >
-                {t("dashboard.district")}
-              </button>
-              <button
-                onClick={() => setViewType('province')}
-                className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${viewType === 'province' ? 'bg-primary text-white shadow-sm' : 'text-outline hover:bg-surface-container-highest'
-                  }`}
-              >
-                {t("dashboard.province")}
-              </button>
+            <div className="flex items-center gap-3 flex-wrap">
+              
+              {/* Province Searchable Select */}
+              <SearchableSelect
+                options={provinceData || []}
+                value={selectedProvinceId}
+                onChange={(v) => setSelectedProvinceId(v)}
+                getLabel={(item) => item.Name || item.name}
+                placeholder="Search Province..."
+                widthClass="w-48"
+                isLoading={loading}
+                valueField="ProvinceId"
+              />
             </div>
           </div>
 
-          {/* Dynamic Chart Display */}
-          {(viewType === 'district' ? districtData : provinceData).length > 0 ? (
+          {/* District Chart Display */}
+          {filteredDistricts.length > 0 ? (
             <ReactApexChart
-              options={viewType === 'district' ? districtChartOptions : provinceChartOptions}
-              series={viewType === 'district' ? districtChartSeries : provinceChartSeries}
+              options={districtChartOptions}
+              series={districtChartSeries}
               type="bar"
               height={220}
             />
@@ -339,49 +496,69 @@ export default function Dashboard() {
         {/* Local Body Horizontal Bar */}
         <div className="p-2 flex flex-col h-[380px]">
           {/* Header Section */}
-          <div className="flex items-center gap-2 mb-4 shrink-0">
-            <span className="material-symbols-outlined text-[#0ea5e9] text-lg">home_work</span>
-            <h4 className="font-headline font-bold text-[#0ea5e9] text-sm">{t("dashboard.propertiesByLocalBody")}</h4>
-            <span className="ml-auto bg-tertiary-container text-on-tertiary-container text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-              {localBodyData.length} {t("common.bodies")}
-            </span>
-          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 shrink-0 gap-3">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#0ea5e9] text-lg">home_work</span>
+              <h4 className="font-headline font-bold text-[#0ea5e9] text-sm">{t("dashboard.propertiesByLocalBody")}</h4>
+              <span className="bg-tertiary-container text-on-tertiary-container text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                {filteredLocalBodies.length} {t("common.bodies")}
+              </span>
+            </div>
 
-          {/* Scrollable Table Container */}
-          <div className="flex-grow overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-slate-200">
-            {localBodyData.length > 0 ? (
-              <table className="w-full text-left border-collapse">
-                <thead className="sticky top-0 bg-white z-10">
-                  <tr className="border-b border-slate-100">
-                    {/* Added S.N. Header */}
-                    <th className="py-2 w-10 text-[11px] font-bold text-slate-500 uppercase tracking-wider">S.N.</th>
-                    <th className="py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">{t("common.localBody")}</th>
-                    <th className="py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">{t("common.properties")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {localBodyData.map((data, index) => (
-                    <tr key={index} className="hover:bg-slate-50 transition-colors">
-                      {/* Added S.N. Cell using index + 1 */}
-                      <td className="py-2.5 text-xs text-slate-400 font-mono">
-                        {index + 1}.
-                      </td>
-                      <td className="py-2.5 text-sm text-slate-700 font-medium">
-                        {data.Name || data.LocalBodyId}
-                      </td>
-                      <td className="py-2.5 text-sm text-slate-600 text-right font-mono">
-                        {data.TotalProperty || data.TotalProperty}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="h-full flex items-center justify-center text-outline text-sm italic">
-                No local body data
+            {/* District Filter - Only show when province is selected */}
+            {selectedProvinceId && filteredDistricts.length > 0 && (
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">Filter by District:</label>
+                <SearchableSelect
+                  options={filteredDistricts || []}
+                  value={selectedDistrictId}
+                  onChange={(v) => setSelectedDistrictId(v)}
+                  getLabel={(item) => item.Name || item.name}
+                  placeholder="All Districts"
+                  widthClass="w-44"
+                  isLoading={loading}
+                  valueField="DistrictId"
+                  onClear={() => setSelectedDistrictId(null)}
+                />
               </div>
             )}
           </div>
+
+           {/* Scrollable Table Container */}
+           <div className="flex-grow overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-slate-200">
+             {filteredLocalBodies.length > 0 ? (
+               <table className="w-full text-left border-collapse">
+                 <thead className="sticky top-0 bg-white z-10">
+                   <tr className="border-b border-slate-100">
+                     {/* Added S.N. Header */}
+                     <th className="py-2 w-10 text-[11px] font-bold text-slate-500 uppercase tracking-wider">S.N.</th>
+                     <th className="py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">{t("common.localBody")}</th>
+                     <th className="py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">{t("common.properties")}</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-slate-50">
+                   {filteredLocalBodies.map((data, index) => (
+                     <tr key={index} className="hover:bg-slate-50 transition-colors">
+                       {/* Added S.N. Cell using index + 1 */}
+                       <td className="py-2.5 text-xs text-slate-400 font-mono">
+                         {index + 1}.
+                       </td>
+                       <td className="py-2.5 text-sm text-slate-700 font-medium">
+                         {data.Name || data.LocalBodyId}
+                       </td>
+                       <td className="py-2.5 text-sm text-slate-600 text-right font-mono">
+                         {data.TotalProperty || data.TotalProperty}
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             ) : (
+               <div className="h-full flex items-center justify-center text-outline text-sm italic">
+                 {selectedDistrictId ? "No local bodies found for this district" : "Select a district to view local bodies"}
+               </div>
+             )}
+           </div>
         </div>
       </section>
       {/* System Footer */}
@@ -390,4 +567,4 @@ export default function Dashboard() {
       </footer>
     </div >
   );
-} 
+}

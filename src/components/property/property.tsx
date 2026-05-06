@@ -118,7 +118,8 @@ export default function PropertyList() {
       (item.name && item.name.toLowerCase().includes(searchLower)) ||
       (item.legalStatus && item.legalStatus.toLowerCase().includes(searchLower)) ||
       (item.ownershipType && item.ownershipType.toLowerCase().includes(searchLower)) ||
-      (item.usageName && item.usageName.toLowerCase().includes(searchLower))
+      (item.usageName && item.usageName.toLowerCase().includes(searchLower)) ||
+      (item.province && item.province.toLowerCase().includes(searchLower))
     );
   });
 
@@ -161,7 +162,7 @@ export default function PropertyList() {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight"></h2>
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight">{t("property.propertyInventory")}</h2>
 
         </div>
       </div>
@@ -187,7 +188,7 @@ export default function PropertyList() {
                 <Input
                   ref={searchInputRef}
                   type="search"
-                  placeholder="Search fiscal years..."
+                  placeholder="Search"
                   className="pl-9 w-full bg-slate-50 border-2 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
                   value={searchTerm}
                   onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -218,38 +219,38 @@ export default function PropertyList() {
           </div>
 
           <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0" onClick={handleAddNew}>
-            <span className="mr-2 text-lg leading-none">+</span> Add Property
+            <span className="mr-2 text-lg leading-none">+</span> {t("common.add")}
           </Button>
         </div>
         <Table>
           <TableHeader className="bg-slate-50 border-b border-slate-200">
             <TableRow className="hover:bg-slate-50/50">
               {columnVisibility.sn && (
-                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">S.N.</TableHead>
+                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("common.sn")}</TableHead>
               )}
               {columnVisibility.name && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Name</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("property.propertyName")}</TableHead>
               )}
               {columnVisibility.propertyType && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Property Type</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("property.propertyType")}</TableHead>
               )}
               {columnVisibility.province && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">Province</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-4">{t("property.province")}</TableHead>
               )}
               {(columnVisibility.landArea || columnVisibility.buildingArea) && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Area (sq.m)</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("property.area")}</TableHead>
               )}
               {columnVisibility.legalStatus && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Legal Status</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("property.legalStatus")}</TableHead>
               )}
               {columnVisibility.usageName && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">Reason to Use</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("property.usageName")}</TableHead>
               )}
               {columnVisibility.ownershipType && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">Ownership Type</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">{t("property.ownershipType")}</TableHead>
               )}
               {columnVisibility.actions && (
-                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">Actions</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">{t("common.action")}</TableHead>
               )}
             </TableRow>
           </TableHeader>
