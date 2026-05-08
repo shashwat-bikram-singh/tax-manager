@@ -186,7 +186,16 @@
         "usageTypes": "Usage Types",
         "wardNo": "Ward",
         "localBody": "Local Body",
-        "geographicRegion": "Geographic Region"
+        "geographicRegion": "Geographic Region",
+        "physicalMeasurementsAndLocation": "Physical Measurements and Location",
+        "kittaNumber": "Kitta Number",
+        "description": "Description",
+        "sheetNumber": "Sheet Number",
+        "constructionYear": "Construction Year",
+        "ownershipTransferMiti": "Ownership Transfer Miti",
+        "currentUsage": "Current Usage",
+        "propertyInformation": "Property Information",
+        "generalDetails": "General Details"
     },
     "document": {
         "noPropertyFound": "No property found",

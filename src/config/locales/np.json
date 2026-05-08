@@ -194,7 +194,8 @@
         "constructionYear": "निर्माण वर्ष",
         "ownershipTransferMiti": "स्वामित्व हस्तान्तरण मिति",
         "generalDetails": "सामान्य विवरण",
-        "physicalMeasurementsAndLocation": "भौतिक मापन र स्थान"
+        "physicalMeasurementsAndLocation": "भौतिक मापन र स्थान",
+        "propertyInformation": "सम्पत्ति जानकारी"
     },
     "document": {
         "documentSearch": "कागजात खोज्नुहोस्",
@@ -269,23 +270,23 @@
         "paymentUpdatedSuccessfully": "भुक्तानी सफलतापूर्वक अद्यावधिक गरियो",
         "paymentSavedSuccessfully": "भुक्तानी सफलतापूर्वक बचत गरियो",
         "uploadReceipt": "रसिद अपलोड गर्नुहोस्",
-            "savepayment": "भुक्तानी बचत गर्नुहोस्",
-            "updatepayment": "भुक्तानी अद्यावधिक गर्नुहोस्"
-        },
-        "notification": {
-            "title": "सूचनाहरू",
-            "unreadOnly": "अपडिट मात्र",
-            "all": "सबै",
-            "markAllRead": "सबै पढिएको मार्क गर्नुहोस्",
-            "noUnreadNotifications": "कुनै अपडिट सूचना छैन",
-            "noNotifications": "कुनै सूचना छैन",
-            "allCaughtUp": "सबै पढिएको",
-            "notificationsShown": "{count} सूचना देखिएको",
-            "notificationsShown_plural": "{count} सूचनाहरू देखिएको",
-            "showMore": "थप देखाउनुहोस्",
-            "loadingMore": "थप लोड हुँदैछ...",
-            "failedToUpdateStatus": "सूचना स्थिति अपडेट गर्न असफल भयो",
-            "failedToMarkAllRead": "सबैलाई पढिएको मार्क गर्न असफल भयो",
-            "allMarkedRead": "सबै सूचनाहरूलाई पढिएको मार्क गरियो"
-        }
+        "savepayment": "भुक्तानी बचत गर्नुहोस्",
+        "updatepayment": "भुक्तानी अद्यावधिक गर्नुहोस्"
+    },
+    "notification": {
+        "title": "सूचनाहरू",
+        "unreadOnly": "अपडिट मात्र",
+        "all": "सबै",
+        "markAllRead": "सबै पढिएको मार्क गर्नुहोस्",
+        "noUnreadNotifications": "कुनै अपडिट सूचना छैन",
+        "noNotifications": "कुनै सूचना छैन",
+        "allCaughtUp": "सबै पढिएको",
+        "notificationsShown": "{count} सूचना देखिएको",
+        "notificationsShown_plural": "{count} सूचनाहरू देखिएको",
+        "showMore": "थप देखाउनुहोस्",
+        "loadingMore": "थप लोड हुँदैछ...",
+        "failedToUpdateStatus": "सूचना स्थिति अपडेट गर्न असफल भयो",
+        "failedToMarkAllRead": "सबैलाई पढिएको मार्क गर्न असफल भयो",
+        "allMarkedRead": "सबै सूचनाहरूलाई पढिएको मार्क गरियो"
     }
+}

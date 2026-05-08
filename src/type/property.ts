@@ -73,5 +73,6 @@ export interface PropertyDetail {
     ownershipTypeId: number;
     geographicRegionId: number;
     ownershipTransferMiti: string;
+    defaultArea: string;
 
 }

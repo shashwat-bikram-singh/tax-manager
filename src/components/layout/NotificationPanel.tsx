@@ -26,20 +26,16 @@ export default function NotificationPanel() {
   const queryClient = useQueryClient();
 
   // ── Data Fetching ───────────────────────────────────────────────
-  // We use useFetchAll to get the notifications.
-  // Note: We fetch all notifications and filter them in the UI to support the toggle instantly.
   const { items: notificationData, isLoadingItems } = useFetchAll<Notification>(
-    "/api/notification", 
+    "/api/notification",
     ["notifications"]
   );
 
   const allNotifications = notificationData?.data || [];
 
   // ── Derived State & Filtering ───────────────────────────────────
-  // 1. Calculate unread count for the badge (always based on all data)
   const unreadCount = allNotifications.filter((n) => !n.isRead).length;
 
-  // 2. Filter list based on "Only Unread" toggle
   const filteredNotifications = useMemo(() => {
     if (onlyUnread) {
       return allNotifications.filter((n) => !n.isRead);
@@ -48,8 +44,7 @@ export default function NotificationPanel() {
   }, [allNotifications, onlyUnread]);
 
   // ── Actions ─────────────────────────────────────────────────────
-  
-  // Toggle the filter and reset scroll
+
   const toggleFilter = () => {
     setOnlyUnread((v) => !v);
     if (listRef.current) listRef.current.scrollTop = 0;
@@ -58,9 +53,10 @@ export default function NotificationPanel() {
   // Mark a single notification as read
   const handleMarkAsRead = async (id: number) => {
     try {
-      // API call to mark specific ID as read
-      await axiosInstance.put(`/api/notification/read/${id}`); // Adjust endpoint as necessary
-      
+      const jsonString = JSON.stringify([id]);
+      // API call sending the JSON string in the body
+      await axiosInstance.post(`/api/mark-as-read?ids=${jsonString}`);
+
       // Invalidate the query to trigger a re-fetch via useFetchAll
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     } catch (error) {
@@ -71,19 +67,19 @@ export default function NotificationPanel() {
 
   // Mark all unread notifications as read
   const handleMarkAllAsRead = async () => {
-    // Extract IDs of unread notifications
     const unreadIds = allNotifications.filter((n) => !n.isRead).map((n) => n.id);
 
     if (unreadIds.length === 0) return;
 
     try {
-      // API call to mark all specific IDs as read (or a bulk endpoint)
-      // Assuming a bulk endpoint exists, or we iterate. Ideally use a bulk endpoint.
-      await axiosInstance.put("/api/notification/read-all", { ids: unreadIds }); 
+      // Prepare payload as a JSON string
+      const jsonString = JSON.stringify(unreadIds);
+      // API call sending the JSON string in the body
+      await axiosInstance.post(`/api/mark-as-read?ids=${jsonString}`);
 
       // Invalidate query to refresh UI
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      
+
       toast.success("All notifications marked as read");
     } catch (error) {
       console.error("Error marking all as read:", error);
@@ -114,7 +110,6 @@ export default function NotificationPanel() {
       {/* Dropdown panel */}
       {open && (
         <div className="absolute right-0 top-12 z-50 w-[390px] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-200">
-          
           {/* ── Header ── */}
           <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
             <div className="flex items-center gap-2">
@@ -128,8 +123,8 @@ export default function NotificationPanel() {
             </div>
 
             <div className="flex items-center gap-2">
-               {/* Unread toggle */}
-               <div className="flex gap-1 p-1 bg-slate-100 rounded-lg text-[10px] font-bold">
+              {/* Unread toggle */}
+              <div className="flex gap-1 p-1 bg-slate-100 rounded-lg text-[10px] font-bold">
                 <button
                   onClick={() => onlyUnread && toggleFilter()}
                   className={cn(
@@ -149,16 +144,16 @@ export default function NotificationPanel() {
                   Unread Only
                 </button>
               </div>
-              
+
               {/* Mark All Read Button */}
               {unreadCount > 0 && (
-                 <button
-                    onClick={handleMarkAllAsRead}
-                    className="px-2.5 py-1 rounded-md transition-all uppercase tracking-wider text-[10px] font-bold bg-primary text-white hover:bg-primary/90"
-                    title="Mark all as read"
-                  >
-                    Read All
-                  </button>
+                <button
+                  onClick={handleMarkAllAsRead}
+                  className="px-2.5 py-1 rounded-md transition-all uppercase tracking-wider text-[10px] font-bold bg-primary text-white hover:bg-primary/90"
+                  title="Mark all as read"
+                >
+                  Read All
+                </button>
               )}
             </div>
           </div>
@@ -182,17 +177,17 @@ export default function NotificationPanel() {
 
             {/* Loading state (Skeleton) */}
             {isLoadingItems && (
-                <div className="p-5 space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                        <div key={i} className="flex gap-3 animate-pulse">
-                            <div className="w-9 h-9 bg-slate-200 rounded-xl shrink-0" />
-                            <div className="flex-1 space-y-2">
-                                <div className="h-4 bg-slate-200 rounded w-3/4" />
-                                <div className="h-3 bg-slate-100 rounded w-1/2" />
-                            </div>
-                        </div>
-                    ))}
-                </div>
+              <div className="p-5 space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex gap-3 animate-pulse">
+                    <div className="w-9 h-9 bg-slate-200 rounded-xl shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-slate-200 rounded w-3/4" />
+                      <div className="h-3 bg-slate-100 rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
             {/* Notification rows */}

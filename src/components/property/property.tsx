@@ -250,7 +250,7 @@ export default function PropertyList() {
                 <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">{t("property.ownershipType")}</TableHead>
               )}
               {columnVisibility.actions && (
-                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">{t("common.action")}</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">{t("property.actions")}</TableHead>
               )}
             </TableRow>
           </TableHeader>

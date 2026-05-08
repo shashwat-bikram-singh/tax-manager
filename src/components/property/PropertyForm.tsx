@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { property, z } from "zod";
+import { z } from "zod";
 import {
   Form,
   FormControl,
@@ -23,7 +23,7 @@ import type { District, LegalStatus, Localbody, OwnershipType, PropertyType, Usa
 import NepaliDatePicker from "@/components/ui/NepaliDatePicker";
 import { useTranslation } from "react-i18next";
 
-// ─── Zod Schema ───────────────────────────────────────────────────────────────
+// ─── Zod Schema ───────────────────────────────────────────────────────
 const propertySchema = z.object({
   province: z.string().min(1, { message: "Province is required" }),
   name: z.string().min(1, { message: "Name is required" }),
@@ -48,6 +48,17 @@ const propertySchema = z.object({
   encroachmentRisk: z.string().min(1, { message: "Encroachment risk is required" }),
   noOfFloor: z.coerce.number({ required_error: "Number of floors is required" }).min(0, { message: "Must be 0 or more" }),
   ownershipTransferMiti: z.string().min(1, { message: "Ownership transfer date is required" }),
+  // New Fields for Measurement Unit and details
+  measurementUnit: z.string().min(1, { message: "Measurement unit is required" }),
+  bigha: z.coerce.number().optional(),
+  kattha: z.coerce.number().optional(),
+  dhur: z.coerce.number().optional(),
+  ropani: z.coerce.number().optional(),
+  aana: z.coerce.number().optional(),
+  paisa: z.coerce.number().optional(),
+  daam: z.coerce.number().optional(),
+  latitude: z.string().optional(),
+  longitude: z.string().optional(),
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
@@ -85,7 +96,6 @@ const SearchableSelect = ({
   const [showOptions, setShowOptions] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sync input with form value (e.g. when editing loads data)
   useEffect(() => {
     if (value) {
       const selectedOption = options.find((item) => item.id == value);
@@ -97,7 +107,6 @@ const SearchableSelect = ({
     }
   }, [value, options]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -127,7 +136,6 @@ const SearchableSelect = ({
 
   return (
     <div className="relative w-full" ref={containerRef}>
-      {/* Input Field */}
       <div className="relative">
         <input
           type="text"
@@ -138,11 +146,9 @@ const SearchableSelect = ({
           disabled={disabled || isLoading}
           className="w-full h-12 px-4 bg-gray-50 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
         />
-        {/* Chevron Icon */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
           <ChevronDown size={16} />
         </div>
-        {/* Clear Button (optional, if value exists) */}
         {value && inputValue && !disabled && (
           <button
             type="button"
@@ -159,7 +165,6 @@ const SearchableSelect = ({
         )}
       </div>
 
-      {/* Dropdown Options */}
       {showOptions && !disabled && (
         <ul className="absolute z-50 w-full mt-1 bg-white border-gray-300 rounded-xl shadow-xl max-h-60 overflow-auto">
           {isLoading ? (
@@ -488,6 +493,17 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
       currentUsage: "",
       valuation: (initialData as any)?.valuation?.toString() ?? "",
       ownershipTransferMiti: (initialData as any)?.ownershipTransferDate ?? "",
+      // Default measurement unit
+      measurementUnit: "Katha",
+      bigha: 0,
+      kattha: 0,
+      dhur: 0,
+      ropani: 0,
+      aana: 0,
+      paisa: 0,
+      daam: 0,
+      latitude: "",
+      longitude: "",
     },
   });
 
@@ -507,6 +523,10 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
     ["localbody", selectedDistrictId || ""]
   );
   const localbodyData = rawLocalbodyData?.data;
+
+  // Watch measurement unit to toggle inputs
+  const measurementUnit = form.watch("measurementUnit");
+
   useEffect(() => {
     if (!initialData) return;
     const d = initialData as any;
@@ -533,13 +553,31 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
       currentUsage: "",
       valuation: d.valuation?.toString() ?? "",
       ownershipTransferMiti: d.ownershipTransferDate ?? "",
+      measurementUnit: d.measurementUnit ?? "Katha",
+      bigha: d.bigha ?? 0,
+      kattha: d.kattha ?? 0,
+      dhur: d.dhur ?? 0,
+      ropani: d.ropani ?? 0,
+      aana: d.aana ?? 0,
+      paisa: d.paisa ?? 0,
+      daam: d.daam ?? 0,
+      latitude: d.latitude ?? "",
+      longitude: d.longitude ?? "",
     });
   }, [initialData]);
 
   const onSubmit = async (values: PropertyFormValues) => {
     setLoading(true);
     try {
-      const payload: Partial<PropertyDetail> = {
+      // 1. Determine Area String
+      const areaMeasurement = values.measurementUnit === "Katha"
+        ? `${values.bigha || 0}B-${values.kattha || 0}K-${values.dhur || 0}D`
+        : values.measurementUnit === "Aana"
+          ? `${values.ropani || 0}R-${values.aana || 0}A-${values.paisa || 0}P-${values.daam || 0}D`
+          : "";
+
+      // 2. Base Payload Construction
+      const payload: any = {
         propertyTypeId: Number(values.propertytype) || 0,
         name: values.name || "",
         provinceId: Number(values.province) || 0,
@@ -559,13 +597,29 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
         ownershipTypeId: Number(values.ownershipType) || 0,
         geographicRegionId: Number(values.geographicRegion) || 0,
         ownershipTransferMiti: values.ownershipTransferMiti || "",
+        latitude: values.latitude || "",
+        longitude: values.longitude || "",
+        defaultArea: areaMeasurement,
       };
 
+      // 3. Conditionally Add Units based on selection
+      if (values.measurementUnit === "Katha") {
+        payload.bigha = Number(values.bigha) || 0;
+        payload.kattha = Number(values.kattha) || 0;
+        payload.dhur = Number(values.dhur) || 0;
+      } else {
+        payload.ropani = Number(values.ropani) || 0;
+        payload.aana = Number(values.aana) || 0;
+        payload.paisa = Number(values.paisa) || 0;
+        payload.daam = Number(values.daam) || 0;
+      }
+
+      // 4. Handle Edit/Create Mode
       if (mode === "edit" && initialData?.id) {
         payload.id = initialData.id;
-        await update.mutateAsync(payload as PropertyDetail);
+        await update.mutateAsync(payload);
       } else {
-        await create.mutateAsync(payload as PropertyDetail);
+        await create.mutateAsync(payload);
       }
 
       toast.success(mode === "edit" ? `${t("property.propertyUpdatedSuccessfully")} ✅` : `${t("property.propertySavedSuccessfully")} ✅`, {
@@ -595,6 +649,10 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
 
   const disabled = loading;
 
+  const measurementUnitOptions = [
+    { id: "Katha", measurementUnit: "Katha" },
+    { id: "Aana", measurementUnit: "Aana" }
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/40 p-6 space-y-6">
@@ -982,42 +1040,227 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
                         <h3 className="text-base font-bold text-gray-800 tracking-tight">{t("property.physicalMeasurementsAndLocation")}</h3>
+                        <FormField
+                          control={form.control}
+                          name="measurementUnit"
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
+                                <FormControl>
+                                  <SearchableSelect
+                                    options={measurementUnitOptions}
+                                    value={field.value}
+                                    onChange={(v) => field.onChange(v || "")}
+                                    getLabel={(item) => item.measurementUnit}
+                                    placeholder="Select Unit"
+                                    disabled={disabled}
+                                  />
+                                </FormControl>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {/* Conditional Inputs: Terai (Katha) */}
+                            {measurementUnit === "Katha" && (
+                              <>
+                                <FormField
+                                  control={form.control}
+                                  name="bigha"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Bigha</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          type="number"
+                                          min="0"
+                                          value={field.value ?? ""}
+                                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                                          placeholder="0"
+                                          disabled={disabled}
+                                          className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="kattha"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Kattha</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          type="number"
+                                          min="0"
+                                          value={field.value ?? ""}
+                                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                                          placeholder="0"
+                                          disabled={disabled}
+                                          className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="dhur"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Dhur</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          type="number"
+                                          min="0"
+                                          value={field.value ?? ""}
+                                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                                          placeholder="0"
+                                          disabled={disabled}
+                                          className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </>
+                            )}
 
-                            {/* Area In Sq Meters */}
+                            {/* Conditional Inputs: Hilly (Aana) */}
+                            {measurementUnit === "Aana" && (
+                              <>
+                                <FormField
+                                  control={form.control}
+                                  name="ropani"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Ropani</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          type="number"
+                                          min="0"
+                                          value={field.value ?? ""}
+                                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                                          placeholder="0"
+                                          disabled={disabled}
+                                          className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="aana"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Aana</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          type="number"
+                                          min="0"
+                                          value={field.value ?? ""}
+                                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                                          placeholder="0"
+                                          disabled={disabled}
+                                          className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="paisa"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Paisa</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          type="number"
+                                          min="0"
+                                          value={field.value ?? ""}
+                                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                                          placeholder="0"
+                                          disabled={disabled}
+                                          className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={form.control}
+                                  name="daam"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Daam</FormLabel>
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          type="number"
+                                          min="0"
+                                          value={field.value ?? ""}
+                                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                                          placeholder="0"
+                                          disabled={disabled}
+                                          className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </>
+                            )}
+                          </div>
+                          {/* Additional Fields */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+
+
+                            {/* Ground Coordinate (Optional) */}
                             <FormField
                               control={form.control}
-                              name="areaInSqMeters"
+                              name="latitude"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-[9px] uppercase tracking-tighter text-gray-400 font-semibold"> {t("property.areaInSqMeters")} <span className="text-red-500">*</span></FormLabel>
+                                  <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Latitude</FormLabel>
                                   <FormControl>
                                     <Input
                                       {...field}
-                                      type="number"
-                                      min="0"
                                       value={field.value ?? ""}
-                                      onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
-                                      placeholder="0"
+                                      onChange={(e) => field.onChange(e.target.value || "")}
                                       disabled={disabled}
-                                      className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700"
+                                      className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
                                     />
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
                               )}
                             />
-
-                            {/* Ground Coordinate (Optional) */}
                             <FormField
                               control={form.control}
-                              name="groundCode"
+                              name="longitude"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.groundCode")} </FormLabel>
+                                  <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Longitude</FormLabel>
                                   <FormControl>
                                     <Input
                                       {...field}
@@ -1047,9 +1290,11 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                                       disabled={disabled}
                                       className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
                                     />
+
                                   </FormControl>
                                   <FormMessage />
                                 </FormItem>
+
                               )}
                             />
                           </div>
@@ -1161,10 +1406,6 @@ export default function PropertyForm({ mode, initialData: propInitialData, onSuc
                 </div>
               </form>
             </Form>
-
-            <div className="sticky top-6">
-              <MeasurementConverter />
-            </div>
           </div>
         </>
       )}
