@@ -74,5 +74,18 @@ export interface PropertyDetail {
     geographicRegionId: number;
     ownershipTransferMiti: string;
     defaultArea: string;
-
+    valuation?: number | string;
+    encroachmentRisk?: string;
+    currentUsage?: number; // used to populate usageRights field in form
+    latitude?: string;
+    longitude?: string;
+    bigha?: number;
+    kattha?: number;
+    dhur?: number;
+    ropani?: number;
+    aana?: number;
+    paisa?: number;
+    daam?: number;
+    landArea?: number; // used to calculate area fields
+    landGeoCoordinate?: string; // same as geoCoordinates
 }

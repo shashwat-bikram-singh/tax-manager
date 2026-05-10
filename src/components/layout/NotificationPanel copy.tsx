@@ -50,7 +50,7 @@ export default function NotificationPanel() {
   const queryClient = useQueryClient();
 
   // ── Mark as read mutation ────────────────────────────────────────────────────
-  const markAsReadMutation = useMutation({
+  const        markAsReadMutation = useMutation({
     mutationFn: async (ids: number[]) => {
       // Corrected API Endpoint
 console.log("Marking as read, IDs:", ids);

@@ -7,6 +7,7 @@ interface AuthState {
     refreshToken: string | null
     userName: string | null
     Id: string | null
+    OfficeId: number | null
     role: string | null
     multipleSuboffice: string | null
     moduleId: number | null
@@ -15,6 +16,7 @@ interface AuthState {
         refreshToken: string,
         userName: string,
         Id: string,
+        OfficeId: number | null,
         role: string | null,
         multipleSuboffice: string | null,
         moduleId?: number | null
@@ -31,15 +33,17 @@ export const useAuthStore = create<AuthState>()(
             refreshToken: null,
             userName: null,
             Id: null,
+            OfficeId: null,
             role: null,
             multipleSuboffice: null,
             moduleId: null,
-            login: (token, refreshToken, userName, Id, role, multipleSuboffice, moduleId = null) => set({
+            login: (token, refreshToken, userName, Id, OfficeId, role, multipleSuboffice, moduleId = null) => set({
                 isAuthenticated: true,
                 token,
                 refreshToken,
                 userName,
                 Id,
+                OfficeId,
                 role,
                 multipleSuboffice,
                 moduleId,
@@ -50,6 +54,7 @@ export const useAuthStore = create<AuthState>()(
                 refreshToken: null,
                 userName: null,
                 Id: null,
+                OfficeId: null,
                 role: null,
                 multipleSuboffice: null,
                 moduleId: null,

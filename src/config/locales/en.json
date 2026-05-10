@@ -68,7 +68,8 @@
         "confirmPassword": "Confirm Password",
         "code": "Code",
         "parentOffice": "Parent Office",
-        "clear": "Clear Filters"
+        "clear": "Clear Filters",
+        "update": "Update"
     },
     "user": {
         "deleteTitle": "Delete User",
