@@ -131,6 +131,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
       });
       form.reset();
       onSuccess?.();
+      navigate("/property");
     } catch (error: any) {
       toast.error(
         Array.isArray(error?.response?.data?.errors)

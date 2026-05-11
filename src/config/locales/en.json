@@ -69,7 +69,9 @@
         "code": "Code",
         "parentOffice": "Parent Office",
         "clear": "Clear Filters",
-        "update": "Update"
+        "update": "Update",
+        "action": "Action",
+        "results": "results"
     },
     "user": {
         "deleteTitle": "Delete User",
@@ -87,7 +89,8 @@
         "updateDetailsFor": "Update details for",
         "addedSuccessfully": "User added successfully",
         "updatedSuccessfully": "User updated successfully",
-        "failedToSaveUser": "Failed to save user"
+        "failedToSaveUser": "Failed to save user",
+        "totalUser": "Total Users"
     },
     "office": {
         "officeList": "Office List",
@@ -205,7 +208,8 @@
         "documentType": "Document Type",
         "propertyType": "Property Type",
         "itemsFound": "Items Found",
-        "searchResults": "Search Results"
+        "searchResults": "Search Results",
+        "fileTag": "File Tag"
     },
     "payment": {
         "title": "Payment",
@@ -272,7 +276,8 @@
         "paymentSavedSuccessfully": "Payment saved successfully",
         "uploadReceipt": "Upload Receipt",
         "savePayment": "Save Payment",
-        "updatePayment": "Update Payment"
+        "updatePayment": "Update Payment",
+        "clickToUpload": "Click to upload"
     },
     "notification": {
         "title": "Notifications",

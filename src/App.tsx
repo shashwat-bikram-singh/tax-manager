@@ -16,15 +16,15 @@ import { useEffect, useState, type ReactNode } from "react";
 import SuperAdminLayout from "./superadmin-Layout/setup-layout";
 import SuperAdminDashboard from "./superadmin-Layout/super-admin-dashboard";
 import OfficeListPage from "./superadmin-Layout/Office/office-list";
-import UserReport from "./components/report/report";
-import RevenueReport from "./components/report/revenue-report";
+
 import DocumentForm from "./components/document/documentForm";
 import DocumentList from "./components/document/document";
 import OfficeForm from "./components/suboffices/office-form";
 import TaxPayerList from "./components/tax-payer/tax-payer";
 import TaxPayerForm from "./components/tax-payer/tax-payment-form";
 import { MeasurementConverter } from "./components/Converter/converter";
-
+import TaxComplianceReport from "./components/report/tax-compliance-report"
+import Report from "./components/report/report";
 
 // Super admin private route
 const SuperAdminRoute = ({ children }: { children: ReactNode }) => {
@@ -80,12 +80,12 @@ function App() {
         <Route path="property/add" element={<PropertyForm mode="add" onSuccess={() => navigate("/property")} />} />
         <Route path="property/edit/:id" element={<EditProperty />} />
         <Route path="document-vault" element={<DocumentList />} />
-        <Route path="user-report" element={<UserReport />} />
-        <Route path="revenue-report" element={<RevenueReport />} />
         <Route path="office-form" element={<OfficeForm mode="add" />} />
         <Route path="documentForm/add" element={<DocumentForm mode="add" onSuccess={() => navigate("/documentForm")} />} />
         <Route path="converter" element={<MeasurementConverter />} />
         <Route path="tax-compliance" element={<TaxPayerList />} />
+        <Route path="tax-compliance-report" element={<TaxComplianceReport />} />
+        <Route path="result" element={<Report />} />
         <Route path="tax-payer/add" element={<TaxPayerForm mode="add" onSuccess={() => navigate("/tax-compliance")} onCancel={() => navigate("/tax-compliance")} />} />
         <Route path="tax-payer/edit/:id" element={<TaxPayerForm mode="edit" onCancel={() => navigate("/tax-compliance")} />} />
       </Route>

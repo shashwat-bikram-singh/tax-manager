@@ -11,7 +11,9 @@ import {
   LogOut,
   Users,
   Building2,
-  Calculator
+  Calculator,
+  FileCheck,
+  Split
 } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
 import { t } from 'i18next';
@@ -42,6 +44,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     logout: LogOut,
     person: Users,
     corporate_fare: Building2,
+    FileCheck: FileCheck,
+    Split: Split,
   };
 
   return (
@@ -103,9 +107,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           iconMap={iconMap}
         />
         <NavItem
+          to="/tax-compliance-report"
+          icon="FileCheck"
+          label="Tax Compliance Report"
+          isOpen={isOpen}
+          iconMap={iconMap}
+        />
+        <NavItem
           to="/converter"
           icon="converter"
           label={t("sidebar.areaConverter")}
+          isOpen={isOpen}
+          iconMap={iconMap}
+        />
+        <NavItem
+          to="/result"
+          icon="Split"
+          label="Decision Logic"
           isOpen={isOpen}
           iconMap={iconMap}
         />

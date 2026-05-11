@@ -49,7 +49,7 @@ import { jwtDecode } from "jwt-decode";
 import TaxPaymentForm from "./tax-payment-form";
 import { t } from "i18next";
 
-// ─── REUSABLE SEARCHABLE SELECT COMPONENT (Same as Property Form) ─────────────────────────────
+// ─── REUSABLE SEARCHABLE SELECT COMPONENT ─────────────────────────────
 interface SearchableSelectProps {
   options: any[];
   value: string | undefined;
@@ -77,7 +77,6 @@ const SearchableSelect = ({
   const [showOptions, setShowOptions] = useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // Sync input with form value (e.g. when editing loads data)
   React.useEffect(() => {
     if (value) {
       const selectedOption = options.find((item) => item.id == value);
@@ -89,7 +88,6 @@ const SearchableSelect = ({
     }
   }, [value, options]);
 
-  // Close dropdown when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -119,7 +117,6 @@ const SearchableSelect = ({
 
   return (
     <div className="relative w-full" ref={containerRef}>
-      {/* Input Field */}
       <div className="relative">
         <input
           type="text"
@@ -130,11 +127,9 @@ const SearchableSelect = ({
           disabled={disabled || isLoading}
           className={`w-full bg-gray-50 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all shadow-none disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
         />
-        {/* Chevron Icon */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
           <ChevronDown size={16} />
         </div>
-        {/* Clear Button (optional, if value exists) */}
         {value && inputValue && !disabled && (
           <button
             type="button"
@@ -151,7 +146,6 @@ const SearchableSelect = ({
         )}
       </div>
 
-      {/* Dropdown Options */}
       {showOptions && !disabled && (
         <ul className="absolute z-50 w-full mt-1 bg-white border-gray-300 rounded-xl shadow-xl max-h-60 overflow-auto">
           {isLoading ? (
@@ -203,7 +197,6 @@ export default function PaymentList() {
   // Fetch Fiscal Years Locally
   const { items: fyData, isLoadingItems: isLoadingFy } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
 
-  // Helper to normalize Fiscal Year data
   function getFiscalYears(data: any): FiscalYear[] {
     if (!data) return [];
     if (Array.isArray(data)) return data;
@@ -212,7 +205,6 @@ export default function PaymentList() {
     return [];
   }
 
-  // --- Effects for Fiscal Years ---
   useEffect(() => {
     const years = getFiscalYears(fyData);
     setFiscalYears(years);
@@ -240,7 +232,8 @@ export default function PaymentList() {
     setPropertyPopupOpen(true);
     setPopupPropertyName(propertyName);
     try {
-      const response = await axiosInstance.get(`/api/paymentStatus?propertyId=${propertyId}`);
+      // Fetching by propertyId only ensures we get records for all fiscal years (assuming API supports filtering by propertyId without restricting FY)
+      const response = await axiosInstance.get(`/api/payment?propertyId=${propertyId}`);
       const data = response.data;
       const arr = Array.isArray(data) ? data : data.data || [];
       setPropertyPopupData(getPayment(arr));
@@ -279,9 +272,10 @@ export default function PaymentList() {
         receiptNo: item.receiptNo ?? item.ReceiptNo,
         paymentMiti: item.paymentMiti ?? item.PaymentMiti,
         isPaid: item.isPaid ?? item.IsPaid,
+        // Extract Fiscal Year Name to distinguish payments from different years in the popup
+        fiscalYearName: item.fiscalYear?.fiscalYear ?? item.fiscalYearName ?? item.FiscalYear ?? "-",
       };
     });
-
     return normalized as Payment[];
   }
 
@@ -314,7 +308,6 @@ export default function PaymentList() {
     setSearchTerm(val);
     setCurrentPage(1);
   };
-
 
   const handleAddNew = () => {
     navigate("/tax-payer/add");
@@ -767,7 +760,7 @@ export default function PaymentList() {
       {/* --- PROPERTY PAYMENT POPUP --- */}
       {propertyPopupOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-slate-50">
               <div>
                 <h3 className="text-lg font-bold text-slate-800">Payment History</h3>
@@ -792,6 +785,7 @@ export default function PaymentList() {
                     <TableRow className="hover:bg-slate-50/50">
                       <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Receipt No</TableHead>
                       <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Amount</TableHead>
+                      <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Fiscal Year</TableHead>
                       <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Payment Date</TableHead>
                       <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Status</TableHead>
                       <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase">Receipt</TableHead>
@@ -802,6 +796,7 @@ export default function PaymentList() {
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.receiptNo ?? "-"}</TableCell>
                         <TableCell>{item.amountPaid ? `Rs. ${Number(item.amountPaid).toLocaleString()}` : "-"}</TableCell>
+                        <TableCell className="text-slate-600">{item.fiscalYearName}</TableCell>
                         <TableCell>{item.paymentMiti ?? "-"}</TableCell>
                         <TableCell>
                           <span className="text-green-600 font-bold">Paid</span>

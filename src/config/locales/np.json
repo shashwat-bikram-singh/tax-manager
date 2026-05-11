@@ -205,7 +205,8 @@
         "documentType": "कागजातको प्रकार",
         "propertyType": "सम्पत्तिको प्रकार",
         "itemsFound": "वस्तुहरू फेला ",
-        "searchResults": "खोज नतिजा"
+        "searchResults": "खोज नतिजा",
+        "fileTag": "फाइल ट्याग"
     },
     "payment": {
         "title": "भुक्तानी",
@@ -272,7 +273,8 @@
         "paymentSavedSuccessfully": "भुक्तानी सफलतापूर्वक बचत गरियो",
         "uploadReceipt": "रसिद अपलोड गर्नुहोस्",
         "savepayment": "भुक्तानी बचत गर्नुहोस्",
-        "updatepayment": "भुक्तानी अद्यावधिक गर्नुहोस्"
+        "updatepayment": "भुक्तानी अद्यावधिक गर्नुहोस्",
+        "clickToUpload": "अपलोड गर्न क्लिक गर्नुहोस्"
     },
     "notification": {
         "title": "सूचनाहरू",

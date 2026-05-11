@@ -45,9 +45,10 @@ const propertySchema = z.object({
   propertytype: z.string().min(1, { message: "Property type is required" }),
   currentUsage: z.string().min(1, { message: "Current usage is required" }),
   legalstatus: z.string().min(1, { message: "Legal status is required" }),
-  valuation: z.string().min(1, { message: "Valuation is required" }),
-   kittaNumber: z.string(),
-   sheetNumber: z.string().optional().nullable(),
+  valuation: z.coerce.number().min(1, { message: "Valuation is required" }),
+  taxAmount: z.coerce.number().min(1, { message: "Tax Amount is required" }),
+  kittaNumber: z.string(),
+  sheetNumber: z.string().optional().nullable(),
   groundCode: z.string().optional().nullable(),
   constructionYear: z.string().min(1, { message: "Construction year is required" }),
   areaInSqMeters: z.coerce
@@ -59,7 +60,7 @@ const propertySchema = z.object({
   usageRights: z.string().min(1, { message: "Usage rights is required" }),
   usageTypes: z.string().min(1, { message: "Usage types is required" }),
   geographicRegion: z.string().min(1, { message: "Geographic region is required" }),
-   encroachmentRisk: z.string().optional().nullable(),
+  encroachmentRisk: z.string().optional().nullable(),
   noOfFloor: z.coerce
     .number({ required_error: "Number of floors is required" })
     .min(0, { message: "Must be 0 or more" }),
@@ -471,7 +472,8 @@ export default function PropertyForm({
       noOfFloor: 0,
       encroachmentRisk: "",
       currentUsage: "",
-      valuation: "",
+      valuation: 0,
+      taxAmount: 0, // Added Tax Amount
       ownershipTransferMiti: "",
       measurementUnit: "Katha",
       bigha: 0,
@@ -615,6 +617,7 @@ export default function PropertyForm({
        noOfFloor:            d.noOfFloors                  ?? 0,
        encroachmentRisk:     d.encroachmentRisk            ?? "",
        valuation:            d.valuation?.toString()       ?? "",
+       taxAmount:            d.taxAmount?.toString()       ?? "", // Mapping Tax Amount
        ownershipTransferMiti: d.ownershipTransferDate      ?? "",
        measurementUnit:      officeMeasurementUnit || "Katha",
        bigha:                terai.bigha,
@@ -678,6 +681,8 @@ export default function PropertyForm({
         ownershipTransferMiti: values.ownershipTransferMiti || "",
         latitude:             values.latitude              || "",
         longitude:            values.longitude             || "",
+        valuation:            Number(values.valuation)     || 0,
+        taxAmount:            Number(values.taxAmount)     || 0,
         defaultArea:          areaMeasurement,
       };
 
@@ -1098,7 +1103,30 @@ export default function PropertyForm({
                               <FormMessage />
                             </FormItem>
                           )} />
-                          <FormField control={form.control} name="valuation" render={({ field }) => (
+                        </div>
+
+                      </div>
+                    </div>
+                     <div className="space-y-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
+                        <h3 className="text-base font-bold text-gray-800 tracking-tight">Tax & Valuation</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 pt-2">
+                        
+                        {/* Tax Amount Field */}
+                        <FormField control={form.control} name="taxAmount" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Tax Amount <span className="text-red-500">*</span></FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || "")} disabled={disabled} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        
+                        {/* Valuation Field */}
+                        <FormField control={form.control} name="valuation" render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.valuation")} <span className="text-red-500">*</span></FormLabel>
                               <FormControl>
@@ -1107,10 +1135,10 @@ export default function PropertyForm({
                               <FormMessage />
                             </FormItem>
                           )} />
-                        </div>
-
+                        
+                          </div>
                       </div>
-                    </div>
+                    
 
                     {/* ── Section 3: Legal & Usage Rights ── */}
                     <div className="space-y-6 pt-6 border-t border-gray-100">
