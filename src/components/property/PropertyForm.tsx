@@ -76,8 +76,8 @@ const propertySchema = z.object({
   paisa: z.coerce.number().optional().nullable(),
   daam: z.coerce.number().optional().nullable(),
   // Coords
-  latitude: z.string().optional(),
-  longitude: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
@@ -483,8 +483,8 @@ export default function PropertyForm({
       aana: 0,
       paisa: 0,
       daam: 0,
-      latitude: "",
-      longitude: "",
+      latitude: 0,
+      longitude: 0,
     },
   });
 
@@ -627,8 +627,8 @@ export default function PropertyForm({
        aana:                 hilly.aana,
        paisa:                hilly.paisa,
        daam:                 hilly.daam,
-       latitude:             d.propertyTypeId.toString()==1 ? d.land_Latitude : d.building_Latitude ?? "",
-       longitude:            d.propertyTypeId.toString()==1 ? d.land_Longitude : d.building_Longitude ?? "",
+       latitude:             d.propertyTypeId ? d.land_Latitude : d.building_Latitude ?? "",
+       longitude:            d.propertyTypeId ? d.land_Longitude : d.building_Longitude ?? "",
      });
   }, [initialData]);
   console.log("Initial form values:", initialData);
@@ -700,7 +700,7 @@ export default function PropertyForm({
         { style: { background: "#10b981", color: "white" } }
       );
       onSuccess?.();
-      navigate("/property");
+      navigate("/app/property");
     } catch (error: any) {
       console.error("Save error:", error);
       toast.error(
@@ -716,7 +716,7 @@ export default function PropertyForm({
 
   const handleCancel = () => {
     if (onCancel) onCancel();
-    else navigate("/property");
+    else navigate("/app/property");
   };
 
   const disabled = loading;

@@ -6,14 +6,14 @@
     "sidebar": {
         "dashboard": "Dashboard",
         "user": "User",
-        "office": "office",
-        "fiscalYear": "fiscalYear",
-        "logout": "logout",
-        "propertyInventory": "propertyInventory",
-        "documentVault": "documentVault",
-        "taxCompliance": "taxCompliance",
-        "administration": "administration",
-        "areaConverter": "areaConverter"
+        "office": "Office",
+        "fiscalYear": "Fiscal Year",
+        "logout": "Logout",
+        "propertyInventory": "Property Inventory",
+        "documentVault": "Document Vault",
+        "taxCompliance": "Tax Compliance",
+        "administration": "Administration",
+        "areaConverter": "Area Converter"
     },
     "dashboard": {
         "totalProperties": "Total Properties",

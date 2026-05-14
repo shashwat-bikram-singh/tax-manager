@@ -24,6 +24,7 @@ const Login = () => {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
     const login = useAuthStore((state) => state.login)
 
+    // ── Redirect if already authenticated ────────────────────────────────────
     useEffect(() => {
         if (isAuthenticated) {
             const token = sessionStorage.getItem("token");
@@ -34,11 +35,14 @@ const Login = () => {
                 return;
             }
 
-            const officeId = parseInt(officeIdStr);
-            if (officeId === 0) {
-                navigate('/super-admin', { replace: true })
-            } else {
-                navigate('/', { replace: true })
+            try {
+                const decoded: any = jwtDecode(token);
+                const role = decoded.Role;
+                console.log("Already authenticated role:", role);
+                // All roles → go to /app (Dashboard)
+                navigate('/app', { replace: true });
+            } catch {
+                navigate('/app', { replace: true });
             }
         }
     }, [isAuthenticated, navigate])
@@ -79,6 +83,8 @@ const Login = () => {
                     sessionStorage.setItem('ModuleId', String(moduleId || ''))
                     sessionStorage.setItem('SubModuleId', String(subModuleId || ''))
                     sessionStorage.setItem('SubOfficeId', String(subOfficeId || '0'))
+
+                    console.log("Login role:", role);
                 } catch (decodeError) {
                     console.error('Error decoding token:', decodeError)
                 }
@@ -94,16 +100,13 @@ const Login = () => {
                     moduleId,
                 )
 
-                if (officeId === 0) {
-                    navigate('/super-admin')
-                } else {
-                    navigate('/')
-                }
+                // ── All roles → Dashboard (/app) ──────────────────────────
+                navigate('/app', { replace: true })
+
             } else {
                 setError(response.data?.message || 'Invalid credentials. Please try again.')
             }
         } catch (err: any) {
-
             setError(
                 err.response?.data?.message ||
                 err.message ||
@@ -116,7 +119,7 @@ const Login = () => {
 
     return (
         <div className="min-h-screen flex bg-surface font-body text-on-surface items-center justify-center p-6 relative overflow-hidden">
-            {/* Ambient Background Elements */}
+            {/* Ambient Background */}
             <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]"></div>
             <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/5 rounded-full blur-[120px]"></div>
 
@@ -131,7 +134,9 @@ const Login = () => {
                         <p className="text-xs uppercase tracking-[0.2em] text-outline font-bold mt-1">Property Authority Portal</p>
                     </div>
                 </div>
+
                 <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Username */}
                     <div className="space-y-2">
                         <label htmlFor="username" className="text-[10px] font-black uppercase tracking-widest text-outline ml-1">
                             Username
@@ -150,6 +155,7 @@ const Login = () => {
                         </div>
                     </div>
 
+                    {/* Password */}
                     <div className="space-y-2">
                         <label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-outline ml-1">
                             Password
@@ -177,6 +183,7 @@ const Login = () => {
                         </div>
                     </div>
 
+                    {/* Error */}
                     {error && (
                         <div className="bg-error-container/30 border border-error-container text-on-error-container px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
                             <span className="material-symbols-outlined text-error">warning</span>
@@ -184,6 +191,7 @@ const Login = () => {
                         </div>
                     )}
 
+                    {/* Submit */}
                     <button
                         type="submit"
                         disabled={loading}
@@ -204,7 +212,7 @@ const Login = () => {
                 </form>
             </div>
 
-            {/* Bottom Footer */}
+            {/* Footer */}
             <div className="absolute bottom-8 text-[10px] font-black uppercase tracking-[0.3em] text-outline opacity-40">
                 © 2080 Tribhuvan University System Core
             </div>

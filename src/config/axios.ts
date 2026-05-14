@@ -36,6 +36,7 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
+        console.error('API errfdggor:', error)
         if (error.response?.status === 401) {
             const { pathname } = window.location
 

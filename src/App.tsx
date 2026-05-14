@@ -2,21 +2,15 @@ import { Navigate, Route, Routes, useNavigate } from "react-router-dom"
 import MainLayout from "./components/layout/Mainlayout"
 import NotFound from "./pages/NotFound"
 import Dashboard from "./components/dashboard/Dashboard"
-import LeaderboardPage from "./components/dashboard/LeaderboardPage"
 import Login from "./pages/login/Login";
 import SubofficeList from "./components/suboffices/office";
 import UserList from "./components/user/user";
-import ProtectedRoute from "./ProtectedRoute";
 import FiscalyearList from "./components/fiscalyear/fiscalyear";
 import FiscalyearForm from "./components/fiscalyear/fiscalyear-form";
 import PropertyList from "./components/property/property";
 import PropertyForm from "./components/property/PropertyForm";
 import EditProperty from "./components/property/property-edit";
 import { useEffect, useState, type ReactNode } from "react";
-import SuperAdminLayout from "./superadmin-Layout/setup-layout";
-import SuperAdminDashboard from "./superadmin-Layout/super-admin-dashboard";
-import OfficeListPage from "./superadmin-Layout/Office/office-list";
-
 import DocumentForm from "./components/document/documentForm";
 import DocumentList from "./components/document/document";
 import OfficeForm from "./components/suboffices/office-form";
@@ -25,71 +19,73 @@ import TaxPayerForm from "./components/tax-payer/tax-payment-form";
 import { MeasurementConverter } from "./components/Converter/converter";
 import TaxComplianceReport from "./components/report/tax-compliance-report"
 import Report from "./components/report/report";
+import GenericPage from "./components/generic-page/generic-page";
 
-// Super admin private route
-const SuperAdminRoute = ({ children }: { children: ReactNode }) => {
+// Unified authentication wrapper to allow any logged-in user (Admin or SuperAdmin)
+const AuthenticatedRoute = ({ children }: { children: ReactNode }) => {
   const [authChecked, setAuthChecked] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const token = sessionStorage.getItem("token");
-    const officeId = parseInt(sessionStorage.getItem("OfficeId") || "1"); // Default to 1 to avoid accidental super admin access
-    setIsSuperAdmin(!!token && officeId === 0);
+    setIsAuthenticated(!!token);
     setAuthChecked(true);
   }, []);
 
-  if (!authChecked) return null;
+  if (!authChecked) return null; // or a spinner
 
-  return isSuperAdmin ? <>{children}</> : <Navigate to="/login" replace />;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/generic-page" replace />;
 };
-
 
 function App() {
   const navigate = useNavigate();
 
   return (
     <Routes>
+
+      {/* Redirect root to generic-page */}
+      <Route path="/" element={<GenericPage />} />
+
+      {/* Public initial page */}
+      <Route path="/generic-page" element={<GenericPage />} />
+
+      {/* Public login page */}
       <Route path="/login" element={<Login />} />
 
-      {/* Super Admin routes */}
+      {/* Protected routes for authenticated users */}
       <Route
-        path="/super-admin"
+        path="/app"
         element={
-          <SuperAdminRoute>
-            <SuperAdminLayout />
-          </SuperAdminRoute>
+          <AuthenticatedRoute>
+            <MainLayout />
+          </AuthenticatedRoute>
         }
       >
-        <Route index element={<SuperAdminDashboard />} />
-        <Route path="offices" element={<OfficeListPage />} />
-      </Route>
-
-      <Route path="/" element={
-        <ProtectedRoute>
-          <MainLayout />
-        </ProtectedRoute>
-      } >
+        {/* Dashboard is the default landing page after login */}
         <Route index element={<Dashboard />} />
-        <Route path="leaderboard" element={<LeaderboardPage />} />
+
         <Route path="office" element={<SubofficeList />} />
         <Route path="user" element={<UserList />} />
         <Route path="fiscalyear" element={<FiscalyearList />} />
         <Route path="fiscalyear/add" element={<FiscalyearForm mode="add" />} />
         <Route path="fiscalyear/edit/:id" element={<FiscalyearForm mode="edit" />} />
         <Route path="property" element={<PropertyList />} />
-        <Route path="property/add" element={<PropertyForm mode="add" onSuccess={() => navigate("/property")} />} />
+        <Route path="property/add" element={<PropertyForm mode="add" onSuccess={() => navigate("/app/property")} />} />
         <Route path="property/edit/:id" element={<EditProperty />} />
         <Route path="document-vault" element={<DocumentList />} />
+        <Route path="document-vault/add" element={<DocumentForm mode="add" onSuccess={() => navigate("/app/document-vault")} />} />
         <Route path="office-form" element={<OfficeForm mode="add" />} />
-        <Route path="documentForm/add" element={<DocumentForm mode="add" onSuccess={() => navigate("/documentForm")} />} />
+        <Route path="tax-payer/add" element={<TaxPayerForm mode="add" onSuccess={() => navigate("/app/tax-compliance")} onCancel={() => navigate("/app/tax-compliance")} />} />
+        <Route path="tax-payer/edit/:id" element={<TaxPayerForm mode="edit" onCancel={() => navigate("/app/tax-compliance")} />} />
         <Route path="converter" element={<MeasurementConverter />} />
         <Route path="tax-compliance" element={<TaxPayerList />} />
         <Route path="tax-compliance-report" element={<TaxComplianceReport />} />
         <Route path="result" element={<Report />} />
-        <Route path="tax-payer/add" element={<TaxPayerForm mode="add" onSuccess={() => navigate("/tax-compliance")} onCancel={() => navigate("/tax-compliance")} />} />
-        <Route path="tax-payer/edit/:id" element={<TaxPayerForm mode="edit" onCancel={() => navigate("/tax-compliance")} />} />
       </Route>
-      <Route path="*" element={<NotFound />} />
+
+      {/* Catch-all for unknown routes */}
+      <Route path="/app" element={<NotFound />} />
+
     </Routes>
   )
 }

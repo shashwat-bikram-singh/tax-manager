@@ -8,7 +8,7 @@ export default function TaxComplianceReport() {
     "/tax-compliance-rpt",
     ["tax-compliance-report"]
   );
-
+console.log("Tax Compliance Report Data:", response);
   const taxComplianceData = response?.data;
 
   // --- Summary Cards ---

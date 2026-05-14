@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import 'leaflet/dist/leaflet.css';
 import './index.css'
 import App from './App.tsx'
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -13,9 +14,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <FiscalYearProvider>
+        {/* <FiscalYearProvider> */}
           <App />
-        </FiscalYearProvider>
+        {/* </FiscalYearProvider> */}
         <Toaster position="top-right" />
       </BrowserRouter>
     </QueryClientProvider>

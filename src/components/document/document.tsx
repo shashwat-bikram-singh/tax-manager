@@ -10,7 +10,7 @@ import { jwtDecode } from 'jwt-decode';
 import { useTranslation } from 'react-i18next';
 import React from 'react';
 
-// ─── REUSABLE SEARCHABLE SELECT COMPONENT (Same as Property Form) ─────────────────────────────
+// ─── REUSABLE SEARCHABLE SELECT COMPONENT ─────────────────────────────
 interface SearchableSelectProps {
   options: any[];
   value: string | undefined;
@@ -38,7 +38,6 @@ const SearchableSelect = ({
   const [showOptions, setShowOptions] = useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // Sync input with form value (e.g. when editing loads data)
   React.useEffect(() => {
     if (value) {
       const selectedOption = options.find((item) => item.id == value);
@@ -48,9 +47,8 @@ const SearchableSelect = ({
     } else {
       setInputValue("");
     }
-  }, [value, options]);
+  }, [value, options, getLabel]);
 
-  // Close dropdown when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -80,7 +78,6 @@ const SearchableSelect = ({
 
   return (
     <div className="relative w-full" ref={containerRef}>
-      {/* Input Field */}
       <div className="relative">
         <input
           type="text"
@@ -89,13 +86,11 @@ const SearchableSelect = ({
           onFocus={() => setShowOptions(!disabled)}
           placeholder={placeholder}
           disabled={disabled || isLoading}
-          className={`w-full bg-gray-50 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all shadow-none disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+          className={`w-full bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all shadow-none disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
         />
-        {/* Chevron Icon */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
           <ChevronDown size={16} />
         </div>
-        {/* Clear Button (optional, if value exists) */}
         {value && inputValue && !disabled && (
           <button
             type="button"
@@ -112,9 +107,8 @@ const SearchableSelect = ({
         )}
       </div>
 
-      {/* Dropdown Options */}
       {showOptions && !disabled && (
-        <ul className="absolute z-50 w-full mt-1 bg-white border-gray-300 rounded-xl shadow-xl max-h-60 overflow-auto">
+        <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-auto">
           {isLoading ? (
             <li className="p-4 text-center text-sm text-gray-500">Loading...</li>
           ) : filteredOptions.length > 0 ? (
@@ -187,7 +181,32 @@ export default function DocumentSearchForm() {
     },
     onSuccess: (data) => {
       const results = data?.data || data || [];
-      setSearchResults(results);
+
+      // --- LOGIC TO SHOW ONLY LATEST DOCUMENTS ---
+      // 1. Sort by ID descending (Higher ID = Newer Document)
+      const sortedResults = results.sort((a: any, b: any) => b.id - a.id);
+
+      // 2. Deduplicate using a Map
+      // Key: Property + Doc Type + Fiscal Year
+      // This ensures we keep the latest (first) entry for this specific combination
+      const uniqueMap = new Map<string, any>();
+
+      sortedResults.forEach((doc: any) => {
+        // Define what constitutes a "duplicate" group here.
+        // We group by Property Name, Document Type, and Fiscal Year.
+        // If you want a broader "duplicate" definition (e.g., just Property), remove fiscalYear from the key.
+        const key = `${doc.property}_${doc.documentTypeName}_${doc.fiscalYear}`.trim();
+
+        // If this key hasn't been added yet, add it.
+        // Since we sorted descending, the first one is the latest.
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, doc);
+        }
+      });
+
+      // Convert back to array
+      setSearchResults(Array.from(uniqueMap.values()));
+      
       setShowTable(true);
     },
     onError: (error) => {
@@ -271,7 +290,7 @@ export default function DocumentSearchForm() {
     });
     setShowTable(false);
     setSearchResults([]);
-    setIsModalOpen(false); // Close modal on reset
+    setIsModalOpen(false);
   };
 
   return (
@@ -297,17 +316,10 @@ export default function DocumentSearchForm() {
                 {t("property.propertyName")}
               </label>
               <SearchableSelect
-                // propertyData छैन भने खाली एरे पठाउने
                 options={propertyData ?? []}
-
-                // भ्यालुलाई सधैं एउटा सुरक्षित स्ट्रिङ वा नम्बरमा राख्ने
                 value={searchParams.propertyid ?? ""}
-
                 onChange={(val) => handleChange('propertyid', val)}
-
-                // item र item.name दुबै चेक गर्ने
                 getLabel={(item) => (item && item.name) ? item.name : ""}
-
                 placeholder={isLoadingProperty ? "Loading..." : "Select Property Name..."}
                 disabled={isLoadingProperty}
                 className="h-12 px-4"
@@ -390,9 +402,6 @@ export default function DocumentSearchForm() {
             <button type="button" onClick={handleReset} className="px-5 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 text-sm">
               {t("common.clear")}
             </button>
-            {/* <button type="submit" disabled={isPending} className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50">
-              {isPending ? 'Searching...' : <><Search className="h-4 w-4" /> {t("common.search")} />}
-            </button> */}
             <button
               type="submit"
               disabled={isPending}

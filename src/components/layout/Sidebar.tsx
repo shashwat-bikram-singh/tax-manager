@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
 import { t } from 'i18next';
+
 interface SidebarProps {
   isOpen: boolean;
 }
@@ -25,15 +26,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
   const { logout } = useAuthStore();
   const navigate = useNavigate();
   const { token } = useAuthStore();
-  const decoded: any = jwtDecode(token!);
-  const Role = decoded.Role;
+
+  let decoded: any = null;
+  if (token && typeof token === "string") {
+    try {
+      decoded = jwtDecode(token);
+    } catch (error) {
+      console.error("Invalid token:", error);
+      sessionStorage.removeItem("token");
+    }
+  }
+
+  const Role = decoded?.Role;
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/generic-page"); // ✅ Redirect to generic-page on logout
   };
 
-  // Mapping icon names to Lucide components
   const iconMap: Record<string, React.ElementType> = {
     dashboard: LayoutDashboard,
     domain: Building,
@@ -68,99 +78,99 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
             </div>
           )}
         </div>
-        {/* Close button for mobile view */}
-        {!isOpen && (
-          <div className="w-10 h-10 flex items-center justify-center text-slate-400">
-            {/* Placeholder or minimal icon if needed */}
-          </div>
-        )}
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
         <NavItem
-          to="/"
+          to="/app"
           icon="dashboard"
           label={t("sidebar.dashboard")}
           isOpen={isOpen}
           iconMap={iconMap}
         />
         <NavItem
-          to="/property"
+          to="/app/property"
           icon="domain"
           label={t("sidebar.propertyInventory")}
           isOpen={isOpen}
           iconMap={iconMap}
         />
         <NavItem
-          to="/document-vault"
+          to="/app/document-vault"
           icon="folder_shared"
           label={t("sidebar.documentVault")}
           isOpen={isOpen}
           iconMap={iconMap}
         />
         <NavItem
-          to="/tax-compliance"
+          to="/app/tax-compliance"
           icon="gavel"
           label={t("sidebar.taxCompliance")}
           isOpen={isOpen}
           iconMap={iconMap}
         />
         <NavItem
-          to="/tax-compliance-report"
-          icon="FileCheck"
-          label="Tax Compliance Report"
-          isOpen={isOpen}
-          iconMap={iconMap}
-        />
-        <NavItem
-          to="/converter"
+          to="/app/converter"
           icon="converter"
           label={t("sidebar.areaConverter")}
           isOpen={isOpen}
           iconMap={iconMap}
         />
-        <NavItem
-          to="/result"
-          icon="Split"
-          label="Decision Logic"
-          isOpen={isOpen}
-          iconMap={iconMap}
-        />
 
-
-        {/* Admin Sections */}
-        {Role === "Admin" && isOpen && (
+        {/* --- Administration Section --- */}
+        {(Role === "Admin" || Role === "SuperAdmin") && isOpen && (
           <div className="pt-6 pb-2 px-3">
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{t("sidebar.administration")}</p>
           </div>
         )}
-        {Role === "Admin" && (
-          <NavItem
-            to="/fiscalyear"
-            icon="CalendarDays"
-            label={t("sidebar.fiscalYear")}
-            isOpen={isOpen}
-            iconMap={iconMap}
-          />
+
+        {(Role === "Admin" || Role === "SuperAdmin") && (
+          <>
+            <NavItem
+              to="/app/fiscalyear"
+              icon="CalendarDays"
+              label={t("sidebar.fiscalYear")}
+              isOpen={isOpen}
+              iconMap={iconMap}
+            />
+            <NavItem
+              to="/app/office"
+              icon="corporate_fare"
+              label={t("sidebar.office")}
+              isOpen={isOpen}
+              iconMap={iconMap}
+            />
+            <NavItem
+              to="/app/user"
+              icon="person"
+              label={t("sidebar.user")}
+              isOpen={isOpen}
+              iconMap={iconMap}
+            />
+          </>
         )}
-        {(Role === "Admin" || Role === "OfficeAdmin") && (
-          <NavItem
-            to="/office"
-            icon="corporate_fare"
-            label={t("sidebar.office")}
-            isOpen={isOpen}
-            iconMap={iconMap}
-          />
-        )}
-        {(Role === "Admin" || Role === "OfficeAdmin") && (
-          <NavItem
-            to="/user"
-            icon="person"
-            label={t("sidebar.user")}
-            isOpen={isOpen}
-            iconMap={iconMap}
-          />
+
+        {Role === "SuperAdmin" && (
+          <>
+            <div className="pt-6 pb-2 px-3">
+              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Reports</p>
+            </div>
+            <NavItem
+              to="/app/tax-compliance-report"
+              icon="FileCheck"
+              label="Tax Compliance Report"
+              isOpen={isOpen}
+              iconMap={iconMap}
+            />
+            <NavItem
+              to="/app/result"
+              icon="Split"
+              label="Decision Logic"
+              isOpen={isOpen}
+              iconMap={iconMap}
+            />
+          </>
         )}
       </nav>
 
@@ -206,12 +216,7 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isOpen, iconMap }) =
       title={!isOpen ? label : undefined}
     >
       {IconComponent && (
-        <IconComponent
-          className={cn(
-            "w-5 h-5 shrink-0",
-            // Optional: Make icon slightly larger or colored when active
-          )}
-        />
+        <IconComponent className="w-5 h-5 shrink-0" />
       )}
       {isOpen && <span className="truncate">{label}</span>}
     </NavLink>

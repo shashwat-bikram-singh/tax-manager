@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useFetchAll } from '@/hooks/useFetchAll';
 import type { FiscalYear } from '@/type/fiscalyear';
+import { useLocation } from 'react-router-dom';
 
 interface FiscalYearContextType {
   selectedFiscalYearId: number | null;
@@ -33,6 +34,8 @@ interface FiscalYearProviderProps {
 }
 
 export function FiscalYearProvider({ children }: FiscalYearProviderProps) {
+  const route = useLocation();
+  console.log("FiscalYearProvider - Current Route:", route.pathname);
   const { items: fyData, isLoadingItems } = useFetchAll<FiscalYear>('/api/fiscalyear', ['fiscalyear']);
   const [selectedFiscalYearId, setSelectedFiscalYearId] = useState<number | null>(null);
 

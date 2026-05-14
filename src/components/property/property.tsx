@@ -100,15 +100,18 @@ export default function PropertyList() {
   const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
 
   const handleEdit = (id: number) => {
-    navigate(`/property/edit/${id}`);
+    navigate(`/app/property/edit/${id}`);
   };
   const handleUpload = (id: number) => {
     navigate(`/documentForm/add?propertyId=${id}`);
   };
 
   const handleAddNew = () => {
-    navigate("/property/add");
+    navigate("/app/property/add");
   };
+  const handleCancel = () => {
+    navigate("/app/property")
+  }
 
   const filteredProperties = properties.filter((item) => {
     const searchLower = searchTerm.toLowerCase();
@@ -372,7 +375,7 @@ export default function PropertyList() {
               Are you sure you want to delete this property? This action cannot be undone.
             </p>
             <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={handleCancel}>Cancel</Button>
               <Button variant="destructive" onClick={handleDelete}>Delete</Button>
             </div>
           </div>

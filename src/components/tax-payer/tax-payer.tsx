@@ -310,7 +310,7 @@ export default function PaymentList() {
   };
 
   const handleAddNew = () => {
-    navigate("/tax-payer/add");
+    navigate("/app/tax-payer/add");
   };
 
   const handleFiscalYearChange = (val: string) => {

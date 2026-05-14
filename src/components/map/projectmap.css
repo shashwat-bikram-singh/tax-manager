@@ -1,0 +1,55 @@
+/* Leaflet map shell — complements Tailwind layout in ProjectMap */
+
+.project-map .project-map-pin.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.project-map .leaflet-container {
+  font-family: inherit;
+  background: rgb(248 250 252);
+}
+
+.project-map .leaflet-popup-content img {
+  border-radius: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+.project-map .map-label.leaflet-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: rgb(30 64 175);
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0;
+}
+
+.project-map .leaflet-control-layers {
+  max-height: min(70vh, 28rem);
+  overflow-y: auto;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(226 232 240);
+  box-shadow: 0 10px 15px -3px rgb(15 23 42 / 0.08);
+  font-size: 0.75rem;
+  background: white;
+}
+
+.project-map .leaflet-control-layers-expanded {
+  padding: 0.5rem 0.75rem;
+}
+
+.project-map .leaflet-control-layers label {
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  display: block;
+  color: rgb(51 65 85);
+}
+
+.project-map .leaflet-control-layers-selector {
+  margin-right: 0.5rem;
+}
+
+.project-map .leaflet-control-layers-separator {
+  margin: 0.35rem 0;
+}
