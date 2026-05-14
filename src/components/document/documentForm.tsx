@@ -136,7 +136,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
 
   const handleCancel = () => {
     if (onCancel) onCancel();
-    else navigate("/property");
+    else navigate("/app/property");
   };
 
   const { create } = useMutate<any>("/api/document", "document");
@@ -265,7 +265,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
       });
       form.reset();
       onSuccess?.();
-      navigate("/property");
+      navigate("/app/property");
     } catch (error: any) {
       toast.error(
         Array.isArray(error?.response?.data?.errors)

@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useFetchAll } from '@/hooks/useFetchAll';
 // Assuming you have a type file. If 'GenericData' is not defined, ensure it matches your API response.
-import type { DashboardData } from '@/type/dashboard'; 
-
+import { MapPin } from 'lucide-react';
+import { GenericMap } from '../map/genericmap';
 // Define the interface for the data structure based on usage
 interface GenericData {
   totalProperty?: number;
@@ -153,7 +153,22 @@ export default function GenericPage() {
               </div>
 
             </section>
-
+               <section className="mt-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="p-2.5 bg-blue-50 rounded-lg">
+            <MapPin className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Property Location Map</h2>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Geographic distribution of assets across Nepal
+            </p>
+          </div>
+        </div>
+        <div className="h-[520px] w-full rounded-xl overflow-hidden">
+          <GenericMap className="h-full w-full" />
+        </div>
+      </section>
           </div>
         </div>
       </main>

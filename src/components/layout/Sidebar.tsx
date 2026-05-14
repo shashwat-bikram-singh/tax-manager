@@ -41,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
 
   const handleLogout = () => {
     logout();
-    navigate("/generic-page"); // ✅ Redirect to generic-page on logout
+    navigate("/login"); // ✅ Redirect to generic-page on logout
   };
 
   const iconMap: Record<string, React.ElementType> = {

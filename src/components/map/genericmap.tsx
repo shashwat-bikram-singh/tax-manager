@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import './projectmap.css';
 import { useFetchAll } from '@/hooks/useFetchAll';
-import type { PropertyDetail } from '@/type/property';
+import type { Map } from '@/type/genericmap';
 
 /* ─── GeoJSON asset map (Vite) ──────────────────────────────────────────── */
 const GEO_ASSET_URLS: Record<string, string> = (() => {
@@ -119,25 +119,40 @@ interface MapItem {
 
 /* ─── Pure function: build markers and add them to the map ──────────────── */
 function addPropertyMarkers(
-  properties: PropertyDetail[],
+  properties: Map[],
   map: L.Map,
   layersCtrl: L.Control.Layers,
   addedOverlays: Set<string>,
 ) {
   // Build MapItems — prefer building coords, fall back to land coords
-  const items: MapItem[] = properties
-    .map((item): MapItem | null => {
-      const lat = Number(item.building_Latitude ?? item.land_Latitude);
-      const lng = Number(item.building_Longitude ?? item.land_Longitude);
-      if (!isFinite(lat) || !isFinite(lng) || (lat === 0 && lng === 0)) return null;
-      return {
-        type: String(item.propertyType || 'Unknown'),
-        name: item.name?.trim() || 'Unnamed Property',
-        lat,
-        lng,
-      };
-    })
-    .filter((x): x is MapItem => x !== null);
+const items: MapItem[] = properties
+  .map((item): MapItem | null => {
+    const lat = item.Latitude
+      ? parseFloat(String(item.Latitude))
+      : null;
+
+    const lng = item.Longitude
+      ? parseFloat(String(item.Longitude))
+      : null;
+
+    if (
+      lat === null ||
+      lng === null ||
+      Number.isNaN(lat) ||
+      Number.isNaN(lng)
+    ) {
+      console.log("Skipped:", item.Name);
+      return null;
+    }
+
+    return {
+      type: String(item.PropertyType || 'Unknown'),
+      name: item.Name?.trim() || 'Unnamed Property',
+      lat,
+      lng,
+    };
+  })
+  .filter((x): x is MapItem => x !== null);
 
   if (!items.length) {
     console.warn('[ProjectMap] No properties with valid coordinates.');
@@ -196,8 +211,8 @@ function addPropertyMarkers(
 }
 
 /* ─── Component ─────────────────────────────────────────────────────────── */
-export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
-  const { items: propertyResponse } = useFetchAll<PropertyDetail>('/api/property', ['property']);
+export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
+  const { items: propertyResponse } = useFetchAll<Map>('/api/generic-info', ['generic info']);
 
   const mapElRef      = useRef<HTMLDivElement>(null);
   const mapRef        = useRef<L.Map | null>(null);
@@ -210,11 +225,11 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
    * it from INSIDE the map-init effect once Leaflet is fully set up.
    * The property effect then only calls addPropertyMarkers when the map IS ready.
    */
-  const pendingPropertiesRef = useRef<PropertyDetail[]>([]);
+  const pendingPropertiesRef = useRef<Map[]>([]);
 
   // ── Store latest property data; render if map already exists ───────────
   useEffect(() => {
-    const raw: PropertyDetail[] = (propertyResponse as any)?.data ?? [];
+    const raw: Map[] = (propertyResponse as any)?.data ?? [];
     pendingPropertiesRef.current = raw;
 
     // Map already initialised → add markers immediately

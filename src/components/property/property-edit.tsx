@@ -47,7 +47,7 @@ const EditProperty: React.FC = () => {
 
   return (
     <div>
-      <PropertyForm mode="edit" initialData={property} onSuccess={() => window.location.href = "/property"} />
+      <PropertyForm mode="edit" initialData={property} onSuccess={() => window.location.href = "/app/property"} />
     </div>
   );
 };

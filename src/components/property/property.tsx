@@ -103,7 +103,7 @@ export default function PropertyList() {
     navigate(`/app/property/edit/${id}`);
   };
   const handleUpload = (id: number) => {
-    navigate(`/documentForm/add?propertyId=${id}`);
+    navigate(`/app/document-vault/add?propertyId=${id}`);
   };
 
   const handleAddNew = () => {

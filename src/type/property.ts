@@ -55,6 +55,7 @@ export interface PropertyDetail {
     userId: number;
     name: string;
     propertyTypeId: number;
+    propertyType: string;
     fiscalYearId: number;
     provinceId: number;
     districtId: number;
@@ -88,4 +89,10 @@ export interface PropertyDetail {
     daam?: number;
     landArea?: number; // used to calculate area fields
     landGeoCoordinate?: string; // same as geoCoordinates
+    building_Latitude: number,
+    building_Longitude:number,
+    land_Latitude: number,
+    land_Longitude:number
+    Latitude: number,
+    Longitude: number
 }

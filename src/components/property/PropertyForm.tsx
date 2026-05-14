@@ -76,8 +76,8 @@ const propertySchema = z.object({
   paisa: z.coerce.number().optional().nullable(),
   daam: z.coerce.number().optional().nullable(),
   // Coords
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  latitude: z.string().optional(),
+  longitude: z.string().optional(),
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
@@ -483,8 +483,8 @@ export default function PropertyForm({
       aana: 0,
       paisa: 0,
       daam: 0,
-      latitude: 0,
-      longitude: 0,
+      latitude: "",
+      longitude: "",
     },
   });
 
