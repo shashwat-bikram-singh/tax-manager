@@ -13,7 +13,9 @@
         "documentVault": "Document Vault",
         "taxCompliance": "Tax Compliance",
         "administration": "Administration",
-        "areaConverter": "Area Converter"
+        "areaConverter": "Area Converter",
+        "taxComplianceReport": "Tax Compliance Report",
+        "decisionLogic": "Decision Logic€"
     },
     "dashboard": {
         "totalProperties": "Total Properties",

@@ -154,19 +154,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
         {Role === "SuperAdmin" && (
           <>
             <div className="pt-6 pb-2 px-3">
-              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Reports</p>
+              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{t("sidebar.reports")}</p>
             </div>
             <NavItem
               to="/app/tax-compliance-report"
               icon="FileCheck"
-              label="Tax Compliance Report"
+              label={t("sidebar.taxComplianceReport")}
               isOpen={isOpen}
               iconMap={iconMap}
             />
             <NavItem
               to="/app/result"
               icon="Split"
-              label="Decision Logic"
+              label={t("sidebar.decisionLogic")}
               isOpen={isOpen}
               iconMap={iconMap}
             />

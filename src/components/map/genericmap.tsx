@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast } from 'sonner';
@@ -26,7 +26,6 @@ const GEO_ASSET_URLS: Record<string, string> = (() => {
 /* ─── Pin icon ──────────────────────────────────────────────────────────── */
 const pointIcon = L.divIcon({
   className: 'project-map-pin',
-  // Inline style so it works even without the Tailwind JIT classes in the shadow DOM
   html: `<span style="display:block;width:12px;height:12px;border-radius:50%;
     background:#dc2626;border:2px solid #fff;
     box-shadow:0 1px 4px rgba(0,0,0,0.4)"></span>`,
@@ -124,35 +123,29 @@ function addPropertyMarkers(
   layersCtrl: L.Control.Layers,
   addedOverlays: Set<string>,
 ) {
-  // Build MapItems — prefer building coords, fall back to land coords
-const items: MapItem[] = properties
-  .map((item): MapItem | null => {
-    const lat = item.Latitude
-      ? parseFloat(String(item.Latitude))
-      : null;
+  const items: MapItem[] = properties
+    .map((item): MapItem | null => {
+      const lat = item.Latitude ? parseFloat(String(item.Latitude)) : null;
+      const lng = item.Longitude ? parseFloat(String(item.Longitude)) : null;
 
-    const lng = item.Longitude
-      ? parseFloat(String(item.Longitude))
-      : null;
+      if (
+        lat === null ||
+        lng === null ||
+        Number.isNaN(lat) ||
+        Number.isNaN(lng)
+      ) {
+        console.log('Skipped (no coords):', item.Name);
+        return null;
+      }
 
-    if (
-      lat === null ||
-      lng === null ||
-      Number.isNaN(lat) ||
-      Number.isNaN(lng)
-    ) {
-      console.log("Skipped:", item.Name);
-      return null;
-    }
-
-    return {
-      type: String(item.PropertyType || 'Unknown'),
-      name: item.Name?.trim() || 'Unnamed Property',
-      lat,
-      lng,
-    };
-  })
-  .filter((x): x is MapItem => x !== null);
+      return {
+        type: String(item.PropertyType || 'Unknown'),
+        name: item.Name?.trim() || 'Unnamed Property',
+        lat,
+        lng,
+      };
+    })
+    .filter((x): x is MapItem => x !== null);
 
   if (!items.length) {
     console.warn('[ProjectMap] No properties with valid coordinates.');
@@ -163,7 +156,6 @@ const items: MapItem[] = properties
   const allLatLngs: L.LatLng[] = [];
 
   Object.entries(grouped).forEach(([typeKey, group]) => {
-    // Skip type groups already rendered (safe for re-runs)
     if (addedOverlays.has(typeKey)) return;
     addedOverlays.add(typeKey);
 
@@ -174,7 +166,6 @@ const items: MapItem[] = properties
 
         const gmaps = `https://www.google.com/maps/search/?api=1&query=${property.lat},${property.lng}`;
 
-        // ⚠️  Use inline styles, not Tailwind classes — Leaflet renders outside React's DOM
         return L.marker(ll, { icon: pointIcon }).bindPopup(
           `<div style="font-size:13px;line-height:1.5;min-width:160px;">
             <strong style="color:#b91c1c">${property.name}</strong>
@@ -197,11 +188,10 @@ const items: MapItem[] = properties
     if (!markers.length) return;
 
     const group_ = L.layerGroup(markers);
-    group_.addTo(map);                                         // ← visible immediately
+    group_.addTo(map);
     layersCtrl.addOverlay(group_, `${typeKey} (${markers.length})`);
   });
 
-  // Zoom to fit all markers (only if spread is reasonable — not entire country)
   if (allLatLngs.length) {
     const bounds = L.latLngBounds(allLatLngs);
     if (bounds.getNorthEast().distanceTo(bounds.getSouthWest()) < 500_000) {
@@ -212,32 +202,35 @@ const items: MapItem[] = properties
 
 /* ─── Component ─────────────────────────────────────────────────────────── */
 export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
-  const { items: propertyResponse } = useFetchAll<Map>('/api/generic-info', ['generic info']);
-
-  const mapElRef      = useRef<HTMLDivElement>(null);
-  const mapRef        = useRef<L.Map | null>(null);
-  const layersCtrlRef = useRef<L.Control.Layers | null>(null);
+const { items: propertyResponse } = useFetchAll<Map>('/api/generic-info', ['generic info']);
+  const mapElRef         = useRef<HTMLDivElement>(null);
+  const mapRef           = useRef<L.Map | null>(null);
+  const layersCtrlRef    = useRef<L.Control.Layers | null>(null);
   const addedOverlaysRef = useRef<Set<string>>(new Set());
 
-  /**
-   * KEY FIX — instead of a separate useEffect that bails out when the map
-   * isn't ready yet, we store the latest property data in a ref and process
-   * it from INSIDE the map-init effect once Leaflet is fully set up.
-   * The property effect then only calls addPropertyMarkers when the map IS ready.
-   */
+  // ── FIX 1: Parse the JSON string that comes back from the API ──────────
+const mapData: Map[] = useMemo(() => {
+  try {
+    const raw = (propertyResponse as any)?.data?.[0]?.mapData;
+    
+    if (!raw) return [];
+    return typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch (err) {
+    console.error('[ProjectMap] Failed to parse mapData JSON:', err);
+    return [];
+  }
+}, [propertyResponse]);
+
   const pendingPropertiesRef = useRef<Map[]>([]);
 
-  // ── Store latest property data; render if map already exists ───────────
+  // ── FIX 2: Use mapData (parsed array) instead of propertyResponse?.data ─
   useEffect(() => {
-    const raw: Map[] = (propertyResponse as any)?.data ?? [];
-    pendingPropertiesRef.current = raw;
+    pendingPropertiesRef.current = mapData;
 
-    // Map already initialised → add markers immediately
-    if (raw.length && mapRef.current && layersCtrlRef.current) {
-      addPropertyMarkers(raw, mapRef.current, layersCtrlRef.current, addedOverlaysRef.current);
+    if (mapData.length && mapRef.current && layersCtrlRef.current) {
+      addPropertyMarkers(mapData, mapRef.current, layersCtrlRef.current, addedOverlaysRef.current);
     }
-    // Map not ready yet → map-init effect reads pendingPropertiesRef on completion
-  }, [propertyResponse]);
+  }, [mapData]);
 
   // ── Map initialisation — runs exactly once ──────────────────────────────
   useEffect(() => {
@@ -411,9 +404,7 @@ export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
 
       map.invalidateSize();
 
-      // ✅ RACE CONDITION FIX:
-      // Property data may have arrived BEFORE the map was ready (mapRef was null).
-      // Now that the map is set up, flush any pending data immediately.
+      // Flush any property data that arrived before the map was ready
       if (pendingPropertiesRef.current.length) {
         addPropertyMarkers(
           pendingPropertiesRef.current,
@@ -433,7 +424,7 @@ export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
       layersCtrlRef.current = null;
       addedOverlaysRef.current.clear();
     };
-  }, []); // ✅ runs once only
+  }, []);
 
   return (
     <div

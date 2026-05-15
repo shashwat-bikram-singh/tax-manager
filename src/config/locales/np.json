@@ -13,7 +13,10 @@
         "documentVault": "दस्तावेज वॉल्ट",
         "taxCompliance": "कर अनुपालन",
         "administration": "प्रशासन",
-        "areaConverter": "क्षेत्र कनवर्टर"
+        "areaConverter": "क्षेत्र कनवर्टर",
+        "taxComplianceReport": "कर अनुपालन रिपोर्ट",
+        "decisionLogic": "निर्णय तर्क",
+        "reports": "रिपोर्टहरू"
     },
     "dashboard": {
         "totalProperties": "कुल संपत्ति",
