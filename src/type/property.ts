@@ -46,7 +46,8 @@ export interface Localbody {
     id: number,
     name: string,
     districtId: number,
-    isMunicipality: boolean
+    isMunicipality: boolean,
+    provinceId: number
 }
 
 
@@ -90,9 +91,10 @@ export interface PropertyDetail {
     landArea?: number; // used to calculate area fields
     landGeoCoordinate?: string; // same as geoCoordinates
     building_Latitude: number,
-    building_Longitude:number,
+    building_Longitude: number,
     land_Latitude: number,
-    land_Longitude:number
+    land_Longitude: number
     Latitude: number,
-    Longitude: number
+    Longitude: number,
+    buildingArea: number
 }

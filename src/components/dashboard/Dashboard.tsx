@@ -5,8 +5,9 @@ import type { ApexOptions } from "apexcharts";
 import { Link } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, X, MapPin } from "lucide-react";
 import { useRef } from "react";
+import { ProjectMap } from "@/components/map/ProjectMap";
 
 // ─── SEARCHABLE SELECT ────────────────────────────────────────────────────────
 interface SearchableSelectProps {
@@ -172,7 +173,6 @@ function HighRiskAuditTable() {
     return [];
   }, [rawPropertyData]);
 
-  // Only show litigation or encroached
   const highRiskProperties = useMemo(() =>
     properties.filter((p) => {
       const s = p.legalStatus?.toLowerCase() || "";
@@ -191,7 +191,6 @@ function HighRiskAuditTable() {
 
   return (
     <section className="bg-white rounded-2xl border border-surface-container shadow-sm overflow-hidden">
-      {/* Table Header */}
       <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
           <span
@@ -219,79 +218,42 @@ function HighRiskAuditTable() {
         <table className="w-full text-sm text-left">
           <thead>
             <tr className="border-b border-gray-100 bg-slate-50">
-              <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                Campus Name
-              </th>
-              <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                Location
-              </th>
-              <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                Issue Type
-              </th>
-              <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                Area (M²)
-              </th>
-              <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                Status
-              </th>
-              <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                Risk Level
-              </th>
+              <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">Campus Name</th>
+              <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">Location</th>
+              <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">Issue Type</th>
+              <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">Area (M²)</th>
+              <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">Status</th>
+              <th className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">Risk Level</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {highRiskProperties.length > 0 ? (
               highRiskProperties.map((property, index) => {
                 const risk = getRiskLevel(property.legalStatus);
-                const location = [property.municipality, property.province]
-                  .filter(Boolean)
-                  .join(", ");
+                const location = [property.municipality, property.province].filter(Boolean).join(", ");
                 const issueType = property.buildingArea ? "Building" : "Land";
                 const area = property.buildingArea || property.landArea;
 
                 return (
-                  <tr
-                    key={property.id ?? index}
-                    className="hover:bg-slate-50/60 transition-colors"
-                  >
-                    {/* Campus Name */}
-                    <td className="px-6 py-4 font-semibold text-slate-800">
-                      {property.name || "-"}
-                    </td>
-
-                    {/* Location */}
-                    <td className="px-6 py-4 text-slate-500">
-                      {location || "-"}
-                    </td>
-
-                    {/* Issue Type */}
+                  <tr key={property.id ?? index} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="px-6 py-4 font-semibold text-slate-800">{property.name || "-"}</td>
+                    <td className="px-6 py-4 text-slate-500">{location || "-"}</td>
                     <td className="px-6 py-4 text-slate-600">
                       <div className="flex items-center gap-2">
                         {issueType}
-                        {/* Red dot for notably large area */}
                         {Number(area) >= 10000 && (
                           <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
                         )}
                       </div>
                     </td>
-
-                    {/* Area */}
                     <td className="px-6 py-4 text-slate-700 font-mono font-medium">
                       {area ? Number(area).toLocaleString() : "-"}
                     </td>
-
-                    {/* Status Badge */}
-                    <td className="px-6 py-4">
-                      {getStatusBadge(property.legalStatus)}
-                    </td>
-
-                    {/* Risk Level */}
+                    <td className="px-6 py-4">{getStatusBadge(property.legalStatus)}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${risk.dot}`} />
-                        <span className={`font-semibold ${risk.color}`}>
-                          {risk.label}
-                        </span>
+                        <span className={`font-semibold ${risk.color}`}>{risk.label}</span>
                       </div>
                     </td>
                   </tr>
@@ -368,22 +330,48 @@ export default function Dashboard() {
   const unpaidProperty = (d?.totalProperty ?? 0) - (d?.totalPaidProperty ?? 0);
 
   const districtChartOptions: ApexOptions = useMemo(() => ({
-    chart: { type: "bar", toolbar: { show: false }, background: "transparent" },
-    plotOptions: { bar: { borderRadius: 6, horizontal: false, columnWidth: "40%" } },
-    dataLabels: { enabled: true, style: { fontSize: "11px", fontWeight: "700" } },
+    chart: {
+      type: "bar",
+      toolbar: { show: false },
+      background: "transparent",
+      stacked: false,
+    },
+    plotOptions: {
+      bar: {
+        borderRadius: 4,
+        horizontal: false,
+        columnWidth: "55%",
+      },
+    },
+    dataLabels: { enabled: false },
     xaxis: {
       categories: filteredDistricts.map((p) => `${p.Name}`),
       labels: { style: { fontSize: "11px", fontWeight: "600" } },
     },
     yaxis: { labels: { style: { fontSize: "11px" } }, tickAmount: 4 },
-    colors: ["#4f46e5"],
+    colors: ["#10b981", "#4f46e5"],
     grid: { borderColor: "#f0f0f0" },
+    legend: {
+      show: true,
+      position: "top",
+      horizontalAlign: "right",
+      fontSize: "11px",
+      fontFamily: "inherit",
+      fontWeight: 600,
+    },
     tooltip: { y: { formatter: (v) => `${v} Properties` } },
   }), [filteredDistricts]);
 
   const districtChartSeries = useMemo(() => [
-    { name: "Properties", data: filteredDistricts.map((p) => p.TotalProperty) }
-  ], [filteredDistricts]);
+    {
+      name: t("common.land") || "Land",
+      data: filteredDistricts.map((p) => p.TotalLand ?? 0),
+    },
+    {
+      name: t("common.building") || "Building",
+      data: filteredDistricts.map((p) => p.TotalBuilding ?? 0),
+    },
+  ], [filteredDistricts, t]);
 
   const radialOptions: ApexOptions = {
     chart: { type: "radialBar", background: "transparent" },
@@ -464,6 +452,27 @@ export default function Dashboard() {
           <p className="text-[10px] font-black uppercase tracking-widest text-on-error-container">{t("dashboard.unpaidProperties")}</p>
           <h3 className="font-headline text-4xl font-black text-on-error-container">{unpaidProperty}</h3>
           <p className="text-[11px] text-on-error-container/70 font-bold uppercase italic">{t("dashboard.pendingPayment")}</p>
+        </div>
+      </section>
+
+      {/* ── Property Location Map ── */}
+      <section
+        className="bg-white rounded-2xl border border-surface-container shadow-sm p-6 flex flex-col"
+        style={{ height: "calc(100vh - 300px)", minHeight: "500px" }}
+      >
+        <div className="flex items-center gap-3 mb-4 shrink-0">
+          <div className="p-2.5 bg-blue-50 rounded-lg">
+            <MapPin className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Property Location Map</h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Geographic distribution of assets across Nepal
+            </p>
+          </div>
+        </div>
+        <div className="flex-1 rounded-xl overflow-hidden min-h-0">
+          <ProjectMap className="h-full w-full" />
         </div>
       </section>
 

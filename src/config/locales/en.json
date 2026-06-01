@@ -15,7 +15,8 @@
         "administration": "Administration",
         "areaConverter": "Area Converter",
         "taxComplianceReport": "Tax Compliance Report",
-        "decisionLogic": "Decision Logic€"
+        "decisionLogic": "Decision Logic€",
+        "reports": "Reports"
     },
     "dashboard": {
         "totalProperties": "Total Properties",

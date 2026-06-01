@@ -23,16 +23,76 @@ const GEO_ASSET_URLS: Record<string, string> = (() => {
   return out;
 })();
 
-/* ─── Pin icon ──────────────────────────────────────────────────────────── */
-const pointIcon = L.divIcon({
-  className: 'project-map-pin',
-  // Inline style so it works even without the Tailwind JIT classes in the shadow DOM
-  html: `<span style="display:block;width:12px;height:12px;border-radius:50%;
-    background:#dc2626;border:2px solid #fff;
-    box-shadow:0 1px 4px rgba(0,0,0,0.4)"></span>`,
-  iconSize: [12, 12],
-  iconAnchor: [6, 6],
-});
+/* ─── Area thresholds for marker sizing ─────────────────────────────────── */
+// Returns size in px based on landArea or buildingArea
+function getMarkerSize(area: number): number {
+  if (area >= 50000) return 22;
+  if (area >= 20000) return 18;
+  if (area >= 10000) return 15;
+  if (area >= 5000) return 13;
+  if (area >= 1000) return 11;
+  return 9;
+}
+
+/* ─── Dynamic Pin Icons based on Type + Area ────────────────────────────── */
+function getMarkerIcon(type: string, area: number = 0) {
+  const normalizedType = type.toLowerCase();
+
+  // Land: green shades; Building: blue shades; unknown: gray
+  let markerColor = '#6b7280';
+  let borderColor = '#fff';
+  let glowColor = 'rgba(107,114,128,0.3)';
+
+  if (normalizedType === 'land') {
+    markerColor = '#10b981';   // emerald-500
+    borderColor = '#fff';
+    glowColor = 'rgba(16,185,129,0.35)';
+  } else if (normalizedType === 'building') {
+    markerColor = '#3b82f6';   // blue-500
+    borderColor = '#fff';
+    glowColor = 'rgba(59,130,246,0.35)';
+  }
+
+  const size = getMarkerSize(area);
+  const borderWidth = size >= 15 ? 3 : 2;
+
+  // Large markers get a subtle pulse ring
+  const pulse = size >= 15
+    ? `<span style="
+        position:absolute;top:50%;left:50%;
+        transform:translate(-50%,-50%);
+        width:${size + 10}px;height:${size + 10}px;
+        border-radius:50%;
+        background:${glowColor};
+        animation:pulse-ring 2s ease-out infinite;
+      "></span>`
+    : '';
+
+  return L.divIcon({
+    className: 'project-map-pin',
+    html: `
+      <span style="
+        position:relative;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        width:${size}px;height:${size}px;
+      ">
+        ${pulse}
+        <span style="
+          position:relative;z-index:1;
+          display:block;
+          width:${size}px;height:${size}px;
+          border-radius:50%;
+          background:${markerColor};
+          border:${borderWidth}px solid ${borderColor};
+          box-shadow:0 2px 6px rgba(0,0,0,0.35), 0 0 0 1px ${glowColor};
+        "></span>
+      </span>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
 
 /* ─── Helpers ───────────────────────────────────────────────────────────── */
 async function fetchBundledGeoJson(relPath: string): Promise<unknown | null> {
@@ -89,7 +149,7 @@ function getProvinceHoverStyle(feature: GeoJSON.Feature): L.PathOptions {
   return { ...base, color: '#0f172a', weight: 2, fillOpacity: Math.min(0.78, (base.fillOpacity ?? 0.45) + 0.22) };
 }
 
-const hoverStyle:    L.PathOptions = { color: '#0f172a', fillColor: '#93c5fd', weight: 2, fillOpacity: 0.35 };
+const hoverStyle: L.PathOptions = { color: '#0f172a', fillColor: '#93c5fd', weight: 2, fillOpacity: 0.35 };
 const selectedStyle: L.PathOptions = { color: '#dc2626', fillColor: '#fca5a5', weight: 3, fillOpacity: 0.22 };
 
 function hideTooltips(layers: L.Layer[]) {
@@ -102,7 +162,7 @@ function districtGeoPaths(feature: GeoJSON.Feature): string[] {
   const p = feature.properties as Record<string, string | undefined> | undefined;
   if (!p) return [];
   const nameEn = p.name_en?.trim();
-  const name   = p.name?.trim();
+  const name = p.name?.trim();
   const paths: string[] = [];
   if (nameEn) paths.push(`districts/${nameEn}.geojson`);
   if (name && name !== nameEn) paths.push(`districts/${name}.geojson`);
@@ -115,6 +175,106 @@ interface MapItem {
   name: string;
   lat: number;
   lng: number;
+  area: number;
+}
+
+/* ─── Reset Control ─────────────────────────────────────────────────────── */
+function createResetControl(onReset: () => void): L.Control {
+  const ResetControl = L.Control.extend({
+    options: { position: 'topleft' as L.ControlPosition },
+    onAdd() {
+      const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-control');
+      btn.title = 'Reset to Nepal view';
+      btn.setAttribute('aria-label', 'Reset map view');
+      btn.style.cssText = `
+        display:flex;align-items:center;justify-content:center;
+        width:34px;height:34px;cursor:pointer;
+        background:#fff;border:none;border-radius:4px;
+        box-shadow:0 1px 5px rgba(0,0,0,0.25);
+        font-size:16px;color:#374151;
+        transition:background 0.15s,color 0.15s;
+      `;
+      btn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+      `;
+      btn.onmouseenter = () => { btn.style.background = '#eff6ff'; btn.style.color = '#2563eb'; };
+      btn.onmouseleave = () => { btn.style.background = '#fff'; btn.style.color = '#374151'; };
+      L.DomEvent.on(btn, 'click', (e) => { L.DomEvent.stopPropagation(e); onReset(); });
+      return btn;
+    },
+    onRemove() { },
+  });
+  return new ResetControl();
+}
+
+/* ─── Legend Control ────────────────────────────────────────────────────── */
+function createLegendControl(): L.Control {
+  const LegendControl = L.Control.extend({
+    options: { position: 'bottomleft' as L.ControlPosition },
+    onAdd() {
+      const div = L.DomUtil.create('div');
+      div.style.cssText = `
+        background:#fff;border-radius:8px;
+        padding:10px 14px;
+        box-shadow:0 2px 8px rgba(0,0,0,0.18);
+        font-family:inherit;font-size:11px;color:#374151;
+        line-height:1.6;min-width:150px;
+      `;
+      div.innerHTML = `
+        <div style="font-weight:800;font-size:10px;text-transform:uppercase;
+                    letter-spacing:0.08em;color:#64748b;margin-bottom:8px;">
+          Legend
+        </div>
+
+        <div style="font-weight:700;font-size:10px;text-transform:uppercase;
+                    letter-spacing:0.07em;color:#94a3b8;margin-bottom:4px;margin-top:2px;">
+          Property Type
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+          <span style="display:inline-block;width:11px;height:11px;border-radius:50%;
+                       background:#10b981;border:2px solid #fff;
+                       box-shadow:0 1px 4px rgba(0,0,0,0.25);flex-shrink:0;"></span>
+          Land
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px;">
+          <span style="display:inline-block;width:11px;height:11px;border-radius:50%;
+                       background:#3b82f6;border:2px solid #fff;
+                       box-shadow:0 1px 4px rgba(0,0,0,0.25);flex-shrink:0;"></span>
+          Building
+        </div>
+
+        <div style="font-weight:700;font-size:10px;text-transform:uppercase;
+                    letter-spacing:0.07em;color:#94a3b8;margin-bottom:5px;">
+          Marker Size (Area m²)
+        </div>
+        ${[
+          { size: 9, label: '< 1,000' },
+          { size: 11, label: '1,000 – 4,999' },
+          { size: 15, label: '5,000 – 19,999' },
+          { size: 22, label: '≥ 50,000' },
+        ].map(({ size, label }) => `
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+            <span style="display:flex;align-items:center;justify-content:center;
+                         width:22px;flex-shrink:0;">
+              <span style="display:inline-block;
+                           width:${size}px;height:${size}px;border-radius:50%;
+                           background:#94a3b8;border:2px solid #fff;
+                           box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+            </span>
+            <span>${label}</span>
+          </div>
+        `).join('')}
+      `;
+      return div;
+    },
+    onRemove() { },
+  });
+  return new LegendControl();
 }
 
 /* ─── Pure function: build markers and add them to the map ──────────────── */
@@ -124,17 +284,22 @@ function addPropertyMarkers(
   layersCtrl: L.Control.Layers,
   addedOverlays: Set<string>,
 ) {
-  // Build MapItems — prefer building coords, fall back to land coords
   const items: MapItem[] = properties
     .map((item): MapItem | null => {
       const lat = Number(item.building_Latitude ?? item.land_Latitude);
       const lng = Number(item.building_Longitude ?? item.land_Longitude);
       if (!isFinite(lat) || !isFinite(lng) || (lat === 0 && lng === 0)) return null;
+
+      // Compute area: prefer buildingArea for buildings, landArea for land
+      const rawArea = Number(item.buildingArea ?? item.landArea ?? 0);
+      const area = isFinite(rawArea) ? rawArea : 0;
+
       return {
-        type: String(item.propertyType || 'Unknown'),
+        type: item.propertyType ? String(item.propertyType).trim() : 'Unknown',
         name: item.name?.trim() || 'Unnamed Property',
         lat,
         lng,
+        area,
       };
     })
     .filter((x): x is MapItem => x !== null);
@@ -148,7 +313,6 @@ function addPropertyMarkers(
   const allLatLngs: L.LatLng[] = [];
 
   Object.entries(grouped).forEach(([typeKey, group]) => {
-    // Skip type groups already rendered (safe for re-runs)
     if (addedOverlays.has(typeKey)) return;
     addedOverlays.add(typeKey);
 
@@ -157,16 +321,26 @@ function addPropertyMarkers(
         const ll = L.latLng(property.lat, property.lng);
         allLatLngs.push(ll);
 
-        const gmaps = `https://www.google.com/maps/search/?api=1&query=${property.lat},${property.lng}`;
+        const icon = getMarkerIcon(property.type, property.area);
+        const gmaps = `http://maps.google.com/?q=${property.lat},${property.lng}`;
+        const areaLabel = property.area > 0
+          ? `<div style="margin-top:3px;font-size:11px;color:#64748b;">
+               Area: <strong>${property.area.toLocaleString()} m²</strong>
+             </div>`
+          : '';
 
-        // ⚠️  Use inline styles, not Tailwind classes — Leaflet renders outside React's DOM
-        return L.marker(ll, { icon: pointIcon }).bindPopup(
-          `<div style="font-size:13px;line-height:1.5;min-width:160px;">
-            <strong style="color:#b91c1c">${property.name}</strong>
-            <div style="margin-top:4px;">
+        return L.marker(ll, { icon }).bindPopup(
+          `<div style="font-size:13px;line-height:1.5;min-width:180px;">
+            <strong style="color:#1e293b">${property.name}</strong>
+            <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
+              <span style="
+                display:inline-block;width:8px;height:8px;border-radius:50%;
+                background:${property.type.toLowerCase() === 'land' ? '#10b981' : property.type.toLowerCase() === 'building' ? '#3b82f6' : '#6b7280'};
+              "></span>
               <span style="background:#f1f5f9;border-radius:4px;padding:2px 6px;
-                           font-size:11px;color:#475569;">${typeKey}</span>
+                           font-size:11px;color:#475569;font-weight:600;">${typeKey}</span>
             </div>
+            ${areaLabel}
             <div style="margin-top:6px;">
               <a href="${gmaps}" target="_blank" rel="noreferrer"
                  style="color:#2563eb;font-size:11px;text-decoration:underline;">
@@ -182,11 +356,21 @@ function addPropertyMarkers(
     if (!markers.length) return;
 
     const group_ = L.layerGroup(markers);
-    group_.addTo(map);                                         // ← visible immediately
-    layersCtrl.addOverlay(group_, `${typeKey} (${markers.length})`);
+    group_.addTo(map);
+
+    const norm = typeKey.toLowerCase();
+    const legendColor = norm === 'land' ? '#10b981' : norm === 'building' ? '#3b82f6' : '#6b7280';
+
+    const labelWithLegend = `
+      <span style="display:inline-flex;align-items:center;gap:6px;">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${legendColor};"></span>
+        <span>${typeKey} (${markers.length})</span>
+      </span>
+    `;
+
+    layersCtrl.addOverlay(group_, labelWithLegend);
   });
 
-  // Zoom to fit all markers (only if spread is reasonable — not entire country)
   if (allLatLngs.length) {
     const bounds = L.latLngBounds(allLatLngs);
     if (bounds.getNorthEast().distanceTo(bounds.getSouthWest()) < 500_000) {
@@ -199,32 +383,29 @@ function addPropertyMarkers(
 export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
   const { items: propertyResponse } = useFetchAll<PropertyDetail>('/api/property', ['property']);
 
-  const mapElRef      = useRef<HTMLDivElement>(null);
-  const mapRef        = useRef<L.Map | null>(null);
+  const mapElRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
   const layersCtrlRef = useRef<L.Control.Layers | null>(null);
   const addedOverlaysRef = useRef<Set<string>>(new Set());
-
-  /**
-   * KEY FIX — instead of a separate useEffect that bails out when the map
-   * isn't ready yet, we store the latest property data in a ref and process
-   * it from INSIDE the map-init effect once Leaflet is fully set up.
-   * The property effect then only calls addPropertyMarkers when the map IS ready.
-   */
   const pendingPropertiesRef = useRef<PropertyDetail[]>([]);
 
-  // ── Store latest property data; render if map already exists ───────────
+  // Refs for drill-down layers so reset can remove them
+  const provinceLayerRef = useRef<L.GeoJSON | null>(null);
+  const districtLayerRef = useRef<L.GeoJSON | null>(null);
+  const localBodyLayerRef = useRef<L.GeoJSON | null>(null);
+
+  const HOME_CENTER: L.LatLngExpression = [28.3949, 84.124];
+  const HOME_ZOOM = 7;
+
   useEffect(() => {
     const raw: PropertyDetail[] = (propertyResponse as any)?.data ?? [];
     pendingPropertiesRef.current = raw;
 
-    // Map already initialised → add markers immediately
     if (raw.length && mapRef.current && layersCtrlRef.current) {
       addPropertyMarkers(raw, mapRef.current, layersCtrlRef.current, addedOverlaysRef.current);
     }
-    // Map not ready yet → map-init effect reads pendingPropertiesRef on completion
   }, [propertyResponse]);
 
-  // ── Map initialisation — runs exactly once ──────────────────────────────
   useEffect(() => {
     const el = mapElRef.current;
     if (!el) return;
@@ -232,12 +413,9 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
     let cancelled = false;
 
     const provinceTooltipLayers: L.Layer[] = [];
-    let districtTooltipLayers: L.Layer[]   = [];
-    let localBodyTooltipLayers: L.Layer[]  = [];
-    let provinceLayer:  L.GeoJSON | null   = null;
-    let districtLayer:  L.GeoJSON | null   = null;
-    let localBodyLayer: L.GeoJSON | null   = null;
-    let selectedLayer:  L.Path   | null    = null;
+    let districtTooltipLayers: L.Layer[] = [];
+    let localBodyTooltipLayers: L.Layer[] = [];
+    let selectedLayer: L.Path | null = null;
 
     const districtRestyle: L.PathOptions = {
       color: '#334155', fillColor: '#cbd5e1', weight: 1, fillOpacity: 0.65,
@@ -250,19 +428,19 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
 
       const osmLayer = L.tileLayer(
         'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        { maxZoom: 20, attribution: '&copy; OpenStreetMap &copy; CARTO' },
+        { maxZoom: 20, attribution: '© OpenStreetMap © CARTO' },
       );
       const esriImagery = L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { maxZoom: 19, attribution: 'Tiles &copy; Esri' },
+        { maxZoom: 19, attribution: 'Tiles © Esri' },
       );
 
       const map = L.map(el, {
         scrollWheelZoom: true,
         dragging: true,
         doubleClickZoom: false,
-        center: [28.3949, 84.124],
-        zoom: 7,
+        center: HOME_CENTER,
+        zoom: HOME_ZOOM,
         zoomControl: true,
         attributionControl: true,
       });
@@ -277,6 +455,29 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
       layersCtrl.addTo(map);
       layersCtrlRef.current = layersCtrl;
 
+      /* ── Reset Control ── */
+      const resetControl = createResetControl(() => {
+        // Remove all drill-down layers
+        provinceLayerRef.current?.remove();
+        districtLayerRef.current?.remove();
+        localBodyLayerRef.current?.remove();
+        provinceLayerRef.current = null;
+        districtLayerRef.current = null;
+        localBodyLayerRef.current = null;
+        selectedLayer = null;
+        districtTooltipLayers = [];
+        localBodyTooltipLayers = [];
+
+        // Fly back to Nepal overview
+        map.flyTo(HOME_CENTER, HOME_ZOOM, { animate: true, duration: 0.8 });
+
+        toast.success('Map reset to Nepal overview');
+      });
+      resetControl.addTo(map);
+
+      /* ── Legend Control ── */
+      createLegendControl().addTo(map);
+
       /* Province boundaries */
       L.geoJSON(raw as GeoJSON.GeoJsonObject, {
         style: (feat) => getProvinceBaseStyle(feat as GeoJSON.Feature),
@@ -288,7 +489,7 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
 
           path.on({
             mouseover: () => path.setStyle(getProvinceHoverStyle(feature)),
-            mouseout:  () => path.setStyle(getProvinceBaseStyle(feature)),
+            mouseout: () => path.setStyle(getProvinceBaseStyle(feature)),
             click: async () => {
               const provinceName = (feature.properties as { name_en?: string })?.name_en;
               if (!provinceName) {
@@ -300,13 +501,13 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
               if (cancelled) return;
               if (!provinceData) { toast.error(`Missing asset: provinces/${provinceName}.geojson`); return; }
 
-              provinceLayer?.remove();
-              districtLayer?.remove();
-              localBodyLayer?.remove();
-              districtTooltipLayers  = [];
+              provinceLayerRef.current?.remove();
+              districtLayerRef.current?.remove();
+              localBodyLayerRef.current?.remove();
+              districtTooltipLayers = [];
               localBodyTooltipLayers = [];
 
-              provinceLayer = L.geoJSON(provinceData as GeoJSON.GeoJsonObject, {
+              provinceLayerRef.current = L.geoJSON(provinceData as GeoJSON.GeoJsonObject, {
                 style: { color: '#475569', fillColor: '#cbd5e1', weight: 1, fillOpacity: 0.55 },
                 onEachFeature(dFeature: GeoJSON.Feature, dLayer) {
                   const dPath = dLayer as L.Path;
@@ -315,12 +516,12 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
                   districtTooltipLayers.push(dLayer);
                   dPath.on({
                     mouseover: () => dPath.setStyle(hoverStyle),
-                    mouseout:  () => dPath.setStyle(districtRestyle),
-                    click:     () => { hideTooltips(districtTooltipLayers); void loadDistrict(dFeature); },
+                    mouseout: () => dPath.setStyle(districtRestyle),
+                    click: () => { hideTooltips(districtTooltipLayers); void loadDistrict(dFeature); },
                   });
                 },
               }).addTo(map);
-              map.fitBounds(provinceLayer.getBounds(), { padding: [20, 20] });
+              map.fitBounds(provinceLayerRef.current.getBounds(), { padding: [20, 20] });
             },
           });
         },
@@ -335,11 +536,11 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
           toast.error(candidates.length ? `No district GeoJSON for: ${candidates.join(' / ')}` : 'No district name.');
           return;
         }
-        districtLayer?.remove();
-        localBodyLayer?.remove();
+        districtLayerRef.current?.remove();
+        localBodyLayerRef.current?.remove();
         localBodyTooltipLayers = [];
 
-        districtLayer = L.geoJSON(districtData as GeoJSON.GeoJsonObject, {
+        districtLayerRef.current = L.geoJSON(districtData as GeoJSON.GeoJsonObject, {
           style: { color: '#0f172a', fillColor: '#94a3b8', weight: 1, fillOpacity: 0.55 },
           onEachFeature(lFeature: GeoJSON.Feature, lLayer) {
             const lPath = lLayer as L.Path;
@@ -350,9 +551,9 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
             localBodyTooltipLayers.push(lLayer);
             lPath.on({
               mouseover: () => lPath.setStyle(hoverStyle),
-              mouseout:  () => { if (selectedLayer !== lPath) districtLayer?.resetStyle(lPath); },
-              click:     () => {
-                if (selectedLayer) districtLayer?.resetStyle(selectedLayer);
+              mouseout: () => { if (selectedLayer !== lPath) districtLayerRef.current?.resetStyle(lPath); },
+              click: () => {
+                if (selectedLayer) districtLayerRef.current?.resetStyle(selectedLayer);
                 selectedLayer = lPath;
                 lPath.setStyle(selectedStyle);
                 void loadLocalBody(lFeature);
@@ -360,7 +561,7 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
             });
           },
         }).addTo(map);
-        map.fitBounds(districtLayer.getBounds(), { padding: [20, 20] });
+        map.fitBounds(districtLayerRef.current.getBounds(), { padding: [20, 20] });
       }
 
       async function loadLocalBody(lFeature: GeoJSON.Feature) {
@@ -373,8 +574,8 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
           toast.message('Ward-level GeoJSON not bundled; selection is highlighted only.');
           return;
         }
-        localBodyLayer?.remove();
-        localBodyLayer = L.geoJSON(localData as GeoJSON.GeoJsonObject, {
+        localBodyLayerRef.current?.remove();
+        localBodyLayerRef.current = L.geoJSON(localData as GeoJSON.GeoJsonObject, {
           style: { color: '#0f172a', fillColor: '#cbd5e1', weight: 1, fillOpacity: 0.45 },
           onEachFeature(f: GeoJSON.Feature, l) {
             const path = l as L.Path;
@@ -382,23 +583,20 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
             path.bindTooltip(nm, { permanent: true, direction: 'center', className: 'map-label' });
             path.on({
               mouseover: () => path.setStyle(hoverStyle),
-              mouseout:  () => { if (selectedLayer !== path) localBodyLayer?.resetStyle(path); },
-              click:     () => {
-                if (selectedLayer) localBodyLayer?.resetStyle(selectedLayer);
+              mouseout: () => { if (selectedLayer !== path) localBodyLayerRef.current?.resetStyle(path); },
+              click: () => {
+                if (selectedLayer) localBodyLayerRef.current?.resetStyle(selectedLayer);
                 selectedLayer = path;
                 path.setStyle(selectedStyle);
               },
             });
           },
         }).addTo(map);
-        map.fitBounds(localBodyLayer.getBounds(), { padding: [20, 20] });
+        map.fitBounds(localBodyLayerRef.current.getBounds(), { padding: [20, 20] });
       }
 
       map.invalidateSize();
 
-      // ✅ RACE CONDITION FIX:
-      // Property data may have arrived BEFORE the map was ready (mapRef was null).
-      // Now that the map is set up, flush any pending data immediately.
       if (pendingPropertiesRef.current.length) {
         addPropertyMarkers(
           pendingPropertiesRef.current,
@@ -414,11 +612,11 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
     return () => {
       cancelled = true;
       mapRef.current?.remove();
-      mapRef.current        = null;
+      mapRef.current = null;
       layersCtrlRef.current = null;
       addedOverlaysRef.current.clear();
     };
-  }, []); // ✅ runs once only
+  }, []);
 
   return (
     <div
@@ -427,6 +625,14 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
         className,
       )}
     >
+      {/* Pulse animation for large markers */}
+      <style>{`
+        @keyframes pulse-ring {
+          0%   { opacity: 0.7; transform: translate(-50%, -50%) scale(0.85); }
+          70%  { opacity: 0;   transform: translate(-50%, -50%) scale(1.6); }
+          100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.6); }
+        }
+      `}</style>
       <div
         ref={mapElRef}
         className="relative z-0 min-h-0 min-w-0 flex-1"

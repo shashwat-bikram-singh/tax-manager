@@ -9,6 +9,8 @@ export interface DistrictData {
   DistrictId: number;
   ProvinceId: number;
   TotalProperty: number;
+  TotalLand: number;
+  TotalBuilding: number;
 }
 
 export interface LocalBodyData {

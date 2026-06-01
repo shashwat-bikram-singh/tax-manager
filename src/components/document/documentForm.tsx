@@ -30,6 +30,7 @@ import React from "react";
 // ─── Zod Schema ───────────────────────────────────────────────────────────────
 const documentRowSchema = z.object({
   propertyId: z.string().min(1, "Required"),
+  kittaNo: z.string().optional(),
   documentType: z.string().min(1, "Required"),
   fiscalYearId: z.string().min(1, "Required"),
   fileTagId: z.string().min(1, "Required"),
@@ -42,7 +43,11 @@ const documentRowSchema = z.object({
         files instanceof FileList &&
         files.length > 0,
       "Select a file"
-    ),
+    )
+    .refine((files) => {
+      if (typeof window === "undefined" || !(files instanceof FileList)) return false;
+      return Array.from(files).every((file) => file.type === "application/pdf");
+    }, "Only PDF files are allowed"),
 });
 
 const documentSchema = z.object({
@@ -67,7 +72,7 @@ function getDuplicateKey(row: {
   return `${row.propertyId}-${row.documentType}-${row.fiscalYearId}-${row.fileTagId}`;
 }
 
-// ─── Pure validation helper (sync, no state) ─────────────────────────────────
+// ─── Pure validation helper ──────────────────────────────────────────────────
 function computeValidation(
   rows: DocumentFormValues["documents"],
   existingDocs: any[]
@@ -85,7 +90,6 @@ function computeValidation(
 
     const key = getDuplicateKey(row);
 
-    // Duplicate within the same form
     if (seenKeys.has(key)) {
       rowErrors[index] =
         "Duplicate entry: same property, document type, fiscal year and tag already added in this form.";
@@ -93,7 +97,6 @@ function computeValidation(
     }
     seenKeys.set(key, index);
 
-    // Existing active doc in DB → will be archived
     const existingMatch = existingDocs.find(
       (doc) =>
         doc.propertyId?.toString() === row.propertyId &&
@@ -111,10 +114,7 @@ function computeValidation(
   return { archiveWarnings, rowErrors };
 }
 
-// ─── Today in BS (Nepali) — used for maxDate ─────────────────────────────────
 function getTodayBS(): string {
-  // Returns today as YYYY-MM-DD in AD; NepaliDatePicker converts internally.
-  // Pass as a plain ISO string — adjust if your picker expects BS format.
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, "0");
@@ -122,7 +122,6 @@ function getTodayBS(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-// ─── Main Form ────────────────────────────────────────────────────────────────
 export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -159,7 +158,6 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
     useFetchAll<any>("/api/documenttype", ["documenttype"]);
   const documentTypeData = rawDocumentTypeData?.data || [];
 
-  // ── Existing documents — stable reference ─────────────────────────────────
   const { items: rawExistingDocs } = useFetchAll<any>("/api/document", ["document"]);
   const existingDocs = useMemo<any[]>(() => {
     const d = rawExistingDocs?.data;
@@ -175,6 +173,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
       documents: [
         {
           propertyId: defaultPropertyId,
+          kittaNo: "",
           documentType: "",
           fileTagId: "",
           fiscalYearId: "",
@@ -192,7 +191,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
 
   const watchedDocuments = form.watch("documents");
 
-  // ── Sync validation state (display only) ──────────────────────────────────
+  // ── Sync validation state ──────────────────────────────────────────────────
   useEffect(() => {
     const { archiveWarnings: newAW, rowErrors: newRE } = computeValidation(
       watchedDocuments,
@@ -207,10 +206,25 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
     );
   }, [watchedDocuments, existingDocs]);
 
+  // ── Fetch and auto-populate Kitta values for matching rows dynamically ─────
+  useEffect(() => {
+    watchedDocuments.forEach((row, index) => {
+      if (row.propertyId && propertyData.length > 0) {
+        const selectedProp = propertyData.find(
+          (p: any) => p.id.toString() === row.propertyId.toString()
+        );
+        if (selectedProp && selectedProp.kittaNo) {
+          const currentKitta = form.getValues(`documents.${index}.kittaNo`);
+          if (currentKitta !== selectedProp.kittaNo) {
+            form.setValue(`documents.${index}.kittaNo`, selectedProp.kittaNo);
+          }
+        }
+      }
+    });
+  }, [watchedDocuments, propertyData, form]);
+
   // ── Submit ─────────────────────────────────────────────────────────────────
   const onSubmit = async (values: DocumentFormValues) => {
-    // FIX: Re-compute validation synchronously from current form values
-    // instead of relying on potentially-stale rowErrors state
     const { rowErrors: currentErrors } = computeValidation(
       values.documents,
       existingDocs
@@ -220,7 +234,6 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
       toast.error("Please fix duplicate entries before submitting.", {
         style: { background: "#c6212d", color: "white" },
       });
-      // Sync state so UI shows errors too
       setRowErrors(currentErrors);
       return;
     }
@@ -228,7 +241,6 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
     setLoading(true);
     try {
       for (const row of values.documents) {
-        // Archive existing active document first
         const existingMatch = existingDocs.find(
           (doc) =>
             doc.propertyId?.toString() === row.propertyId &&
@@ -242,9 +254,9 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
           await update.mutateAsync({ id: existingMatch.id, isArchived: true } as any);
         }
 
-        // Upload new document
         const formData = new FormData();
         formData.append("propertyId", row.propertyId);
+        if (row.kittaNo) formData.append("kittaNo", row.kittaNo);
         formData.append("documentType", row.documentType);
         formData.append("fiscalYearId", row.fiscalYearId);
         formData.append("fileTagId", row.fileTagId);
@@ -270,8 +282,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
       toast.error(
         Array.isArray(error?.response?.data?.errors)
           ? error.response.data.errors.join(", ")
-          : error?.response?.data?.errors ||
-              `${t("property.documentUploadFailed")} ❌`,
+          : error?.response?.data?.errors || `${t("property.documentUploadFailed")} ❌`,
         { style: { background: "#c6212d", color: "white" } }
       );
     } finally {
@@ -320,6 +331,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                 onClick={() =>
                   append({
                     propertyId: "",
+                    kittaNo: "",
                     documentType: "",
                     fileTagId: "",
                     issueDate: "",
@@ -327,7 +339,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                     files: undefined,
                   })
                 }
-                className="bg-blue-600 text-white hover:bg-indigo-100 border border-indigo-200 shadow-sm flex items-center gap-2 h-9 px-4 rounded-xl text-sm transition-all"
+                className="bg-blue-600 text-white hover:bg-blue-700 shadow-sm flex items-center gap-2 h-9 px-4 rounded-xl text-sm transition-all"
               >
                 <Plus className="w-4 h-4" /> {t("property.addRow")}
               </Button>
@@ -338,22 +350,26 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200 text-gray-500">
-                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest">
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest min-w-[200px]">
                       {t("property.property")}
                     </th>
-                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest">
+                    {/* Added Kitta No Column Header */}
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest min-w-[120px]">
+                      Kitta No.
+                    </th>
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest min-w-[180px]">
                       {t("property.documentType")}
                     </th>
-                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest">
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest min-w-[150px]">
                       {t("property.fiscalYear")}
                     </th>
-                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest">
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest min-w-[150px]">
                       {t("property.fileTag")}
                     </th>
-                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest">
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest min-w-[150px]">
                       {t("property.issueDate")}
                     </th>
-                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest">
+                    <th className="pb-3 px-2 text-[10px] uppercase font-bold tracking-widest min-w-[200px]">
                       {t("property.fileUpload")}
                     </th>
                     <th className="pb-3 px-2 text-center text-[10px] uppercase font-bold tracking-widest w-12">
@@ -365,16 +381,15 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                   {fields.map((field, index) => (
                     <React.Fragment key={field.id}>
                       <tr
-                        className={`transition-colors ${
-                          rowErrors[index]
+                        className={`transition-colors ${rowErrors[index]
                             ? "bg-red-50"
                             : archiveWarnings[index]
-                            ? "bg-amber-50"
-                            : "hover:bg-slate-50/50"
-                        }`}
+                              ? "bg-amber-50"
+                              : "hover:bg-slate-50/50"
+                          }`}
                       >
-                        {/* Property */}
-                        <td className="py-4 px-2 min-w-[200px]">
+                        {/* 1. Property Select Column */}
+                        <td className="py-4 px-2">
                           <FormField
                             control={form.control}
                             name={`documents.${index}.propertyId`}
@@ -387,7 +402,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                                 >
                                   <FormControl>
                                     <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-11 rounded-xl">
-                                      <SelectValue placeholder="" />
+                                      <SelectValue placeholder="Select Property" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
@@ -404,8 +419,30 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                           />
                         </td>
 
-                        {/* Document Type */}
-                        <td className="py-4 px-2 min-w-[180px]">
+                        {/* 2. Kitta Number Input Column (Placed right after property field) */}
+                        <td className="py-4 px-2">
+                          <FormField
+                            control={form.control}
+                            name={`documents.${index}.kittaNo`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input
+                                    type="text"
+                                    placeholder="e.g. 102"
+                                    {...field}
+                                    disabled={loading}
+                                    className="w-full bg-white border-gray-200 h-11 rounded-xl focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                  />
+                                </FormControl>
+                                <FormMessage className="text-[11px]" />
+                              </FormItem>
+                            )}
+                          />
+                        </td>
+
+                        {/* 3. Document Type Column */}
+                        <td className="py-4 px-2">
                           <FormField
                             control={form.control}
                             name={`documents.${index}.documentType`}
@@ -418,7 +455,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                                 >
                                   <FormControl>
                                     <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-11 rounded-xl">
-                                      <SelectValue placeholder="" />
+                                      <SelectValue placeholder="Select Type" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
@@ -435,8 +472,8 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                           />
                         </td>
 
-                        {/* Fiscal Year */}
-                        <td className="py-4 px-2 min-w-[180px]">
+                        {/* 4. Fiscal Year Column */}
+                        <td className="py-4 px-2">
                           <FormField
                             control={form.control}
                             name={`documents.${index}.fiscalYearId`}
@@ -449,7 +486,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                                 >
                                   <FormControl>
                                     <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-11 rounded-xl">
-                                      <SelectValue placeholder="" />
+                                      <SelectValue placeholder="Select Year" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
@@ -466,8 +503,8 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                           />
                         </td>
 
-                        {/* File Tag */}
-                        <td className="py-4 px-2 min-w-[180px]">
+                        {/* 5. File Tag Column */}
+                        <td className="py-4 px-2">
                           <FormField
                             control={form.control}
                             name={`documents.${index}.fileTagId`}
@@ -480,7 +517,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                                 >
                                   <FormControl>
                                     <SelectTrigger className="w-full bg-gray-50 border-gray-200 h-11 rounded-xl">
-                                      <SelectValue placeholder="" />
+                                      <SelectValue placeholder="Select Tag" />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
@@ -500,8 +537,8 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                           />
                         </td>
 
-                        {/* Issue Date — max today */}
-                        <td className="py-4 px-2 min-w-[150px]">
+                        {/* 6. Issue Date Column */}
+                        <td className="py-4 px-2">
                           <FormField
                             control={form.control}
                             name={`documents.${index}.issueDate`}
@@ -514,7 +551,6 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                                       name={`issueDate_${index}`}
                                       value={field.value ?? ""}
                                       onSelect={(value: any) => field.onChange(value.value)}
-                                      // FIX: restrict future dates
                                       maxDate={todayAD}
                                     />
                                   </div>
@@ -525,8 +561,8 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                           />
                         </td>
 
-                        {/* File Upload */}
-                        <td className="py-4 px-2 min-w-[200px]">
+                        {/* 7. File Upload Column */}
+                        <td className="py-4 px-2">
                           <FormField
                             control={form.control}
                             name={`documents.${index}.files`}
@@ -537,6 +573,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                                     {...fieldProps}
                                     type="file"
                                     multiple
+                                    accept=".pdf"
                                     disabled={loading}
                                     onChange={(e) => onChange(e.target.files)}
                                     className="w-full bg-gray-50 border-gray-200 h-11 rounded-xl text-xs py-2 file:mr-3 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all shadow-none"
@@ -548,7 +585,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                           />
                         </td>
 
-                        {/* Delete */}
+                        {/* Action Column */}
                         <td className="py-4 px-2 text-center text-gray-400">
                           <Button
                             type="button"
@@ -563,16 +600,15 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
                         </td>
                       </tr>
 
-                      {/* Inline warning/error banner */}
+                      {/* Warnings / Error Banners */}
                       {(archiveWarnings[index] || rowErrors[index]) && (
                         <tr>
-                          <td colSpan={7} className="px-3 pb-3 pt-0">
+                          <td colSpan={8} className="px-3 pb-3 pt-0">
                             <div
-                              className={`flex items-start gap-2 text-xs px-4 py-2.5 rounded-xl border ${
-                                rowErrors[index]
+                              className={`flex items-start gap-2 text-xs px-4 py-2.5 rounded-xl border ${rowErrors[index]
                                   ? "bg-red-50 border-red-200 text-red-700"
                                   : "bg-amber-50 border-amber-200 text-amber-700"
-                              }`}
+                                }`}
                             >
                               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                               <span>
@@ -589,7 +625,7 @@ export default function DocumentForm({ onSuccess, onCancel }: DocumentFormProps)
 
                   {fields.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="text-center py-6 text-sm text-gray-500">
+                      <td colSpan={8} className="text-center py-6 text-sm text-gray-500">
                         No documents added. Click "Add Row" to start.
                       </td>
                     </tr>

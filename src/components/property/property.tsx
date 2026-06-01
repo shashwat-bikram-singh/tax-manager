@@ -110,7 +110,8 @@ export default function PropertyList() {
     navigate("/app/property/add");
   };
   const handleCancel = () => {
-    navigate("/app/property")
+    setDeleteDialogOpen(false);
+    setPropertyToDelete(null);
   }
 
   const filteredProperties = properties.filter((item) => {
