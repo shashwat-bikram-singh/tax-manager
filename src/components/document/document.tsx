@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { useFetchAll } from "@/hooks/useFetchAll";
 
 import { Search, Download, X, ChevronDown } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
 import axiosInstance from '@/config/axios';
 import { useAuthStore } from '@/store/authStore';
 import { jwtDecode } from 'jwt-decode';
@@ -153,6 +152,7 @@ export default function DocumentSearchForm() {
 
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showTable, setShowTable] = useState(false);
+  const [activeSearchParams, setActiveSearchParams] = useState<Record<string, string> | null>(null);
 
   // --- Data Fetching ---
   const { items: rawDocumentData, isLoadingItems: isLoadingDocument } = useFetchAll<any>("/api/documenttype", ["document type"]);
@@ -173,47 +173,52 @@ export default function DocumentSearchForm() {
   const { items: rawPropertyData, isLoadingItems: isLoadingProperty } = useFetchAll<any>("/api/property", ["property"]);
   const propertyData = rawPropertyData?.data || [];
 
-  const { mutate: performSearch, isPending } = useMutation({
-    mutationFn: async (params: any) => {
-      const queryString = new URLSearchParams(params).toString();
-      const { data } = await axiosInstance.get(`/api/document?${queryString}`);
-      return data;
-    },
-    onSuccess: (data) => {
-      const results = data?.data || data || [];
+  const documentSearchUrl = activeSearchParams
+    ? `/api/document?${new URLSearchParams(activeSearchParams).toString()}`
+    : "";
 
-      // --- LOGIC TO SHOW ONLY LATEST DOCUMENTS ---
-      // 1. Sort by ID descending (Higher ID = Newer Document)
-      const sortedResults = results.sort((a: any, b: any) => b.id - a.id);
+  const {
+    items: searchResponse,
+    isLoadingItems: isSearchLoading,
+    error: searchError,
+    refetchItems: refetchSearch,
+  } = useFetchAll<any>(documentSearchUrl, ["document-search", documentSearchUrl]);
 
-      // 2. Deduplicate using a Map
-      // Key: Property + Doc Type + Fiscal Year
-      // This ensures we keep the latest (first) entry for this specific combination
-      const uniqueMap = new Map<string, any>();
-
-      sortedResults.forEach((doc: any) => {
-        // Define what constitutes a "duplicate" group here.
-        // We group by Property Name, Document Type, and Fiscal Year.
-        // If you want a broader "duplicate" definition (e.g., just Property), remove fiscalYear from the key.
-        const key = `${doc.property}_${doc.documentTypeName}_${doc.fiscalYear}`.trim();
-
-        // If this key hasn't been added yet, add it.
-        // Since we sorted descending, the first one is the latest.
-        if (!uniqueMap.has(key)) {
-          uniqueMap.set(key, doc);
-        }
-      });
-
-      // Convert back to array
-      setSearchResults(Array.from(uniqueMap.values()));
-
-      setShowTable(true);
-    },
-    onError: (error) => {
-      console.error(error);
-      setShowTable(false);
+  function dedupeLatestDocuments(data: unknown): any[] {
+    const res = data as Record<string, unknown> | unknown[] | null;
+    let results: any[] = [];
+    if (Array.isArray(res)) {
+      results = res;
+    } else if (res && typeof res === "object") {
+      const nested = (res as Record<string, unknown>).data ?? (res as Record<string, unknown>).Data;
+      results = Array.isArray(nested) ? nested : [];
     }
-  });
+
+    const sortedResults = [...results].sort((a: any, b: any) => b.id - a.id);
+    const uniqueMap = new Map<string, any>();
+
+    sortedResults.forEach((doc: any) => {
+      const key = `${doc.property}_${doc.documentTypeName}_${doc.fiscalYear}`.trim();
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, doc);
+      }
+    });
+
+    return Array.from(uniqueMap.values());
+  }
+
+  useEffect(() => {
+    if (!activeSearchParams || isSearchLoading) return;
+
+    if (searchError) {
+      console.error(searchError);
+      setShowTable(false);
+      return;
+    }
+
+    setSearchResults(dedupeLatestDocuments(searchResponse));
+    setShowTable(true);
+  }, [activeSearchParams, isSearchLoading, searchResponse, searchError]);
 
   // --- File View Handler ---
   const handleViewFile = async (id: string) => {
@@ -274,8 +279,17 @@ export default function DocumentSearchForm() {
     e.preventDefault();
     const activeParams = Object.fromEntries(
       Object.entries(searchParams).filter(([_, value]) => value !== "")
-    );
-    performSearch(activeParams);
+    ) as Record<string, string>;
+    const queryString = new URLSearchParams(activeParams).toString();
+    const currentQuery = activeSearchParams
+      ? new URLSearchParams(activeSearchParams).toString()
+      : "";
+
+    if (activeSearchParams && queryString === currentQuery) {
+      refetchSearch();
+    } else {
+      setActiveSearchParams(activeParams);
+    }
   };
 
   const handleReset = () => {
@@ -288,6 +302,7 @@ export default function DocumentSearchForm() {
       documenttypeid: '',
       officeId: ''
     });
+    setActiveSearchParams(null);
     setShowTable(false);
     setSearchResults([]);
     setIsModalOpen(false);
@@ -404,10 +419,10 @@ export default function DocumentSearchForm() {
             </button>
             <button
               type="submit"
-              disabled={isPending}
+              disabled={isSearchLoading}
               className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50"
             >
-              {isPending ? (
+              {isSearchLoading ? (
                 <>
                   <Search className="h-4 w-4 animate-spin" />
                   Searching...
