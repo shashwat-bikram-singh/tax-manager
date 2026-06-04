@@ -28,7 +28,6 @@ export default function Report() {
       return [];
     }
   }, [firstRecord]);
-
   // --- Calculate Totals ---
   const litigationTotal = useMemo(
     () =>
@@ -311,7 +310,7 @@ export default function Report() {
         {missingDocuments.length > 0 ? (
           <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
             {missingDocuments.map((doc: any, index: number) => {
-              const assetName = doc.OwnershipName || "Unnamed Asset";
+              const assetName = doc.Name || "Unnamed Asset";
               const campus = doc.Office || "";
 
               return (

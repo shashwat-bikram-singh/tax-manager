@@ -232,7 +232,6 @@ export default function PaymentList() {
     setPropertyPopupOpen(true);
     setPopupPropertyName(propertyName);
     try {
-      // Fetching by propertyId only ensures we get records for all fiscal years (assuming API supports filtering by propertyId without restricting FY)
       const response = await axiosInstance.get(`/api/payment?propertyId=${propertyId}`);
       const data = response.data;
       const arr = Array.isArray(data) ? data : data.data || [];
@@ -272,7 +271,6 @@ export default function PaymentList() {
         receiptNo: item.receiptNo ?? item.ReceiptNo,
         paymentMiti: item.paymentMiti ?? item.PaymentMiti,
         isPaid: item.isPaid ?? item.IsPaid,
-        // Extract Fiscal Year Name to distinguish payments from different years in the popup
         fiscalYearName: item.fiscalYear?.fiscalYear ?? item.fiscalYearName ?? item.FiscalYear ?? "-",
       };
     });
@@ -442,7 +440,7 @@ export default function PaymentList() {
       {/* Controls Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex flex-1 sm:flex-none items-center gap-3 w-full">
-          {/* Fiscal Year Selector (Using SearchableSelect) */}
+          {/* Fiscal Year Selector */}
           <div className="w-full sm:w-48 shrink-0">
             <SearchableSelect
               options={fiscalYears}
@@ -533,7 +531,6 @@ export default function PaymentList() {
               {columnVisibility.file && (
                 <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.file")}</TableHead>
               )}
-
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -578,7 +575,6 @@ export default function PaymentList() {
                       )}
                     </TableCell>
                   )}
-
                   {columnVisibility.file && (
                     <TableCell className="text-center text-sm font-semibold py-2">
                       {item.isPaid === 1 ? (
@@ -594,19 +590,6 @@ export default function PaymentList() {
                       ) : (
                         <span className="text-slate-400">-</span>
                       )}
-                    </TableCell>
-                  )}
-                  {columnVisibility.action && (
-                    <TableCell className="text-center text-sm font-semibold py-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-green-600"
-                        onClick={() => setEditingPayment(item.id)}
-                        disabled={!item.id}
-                        title="Edit Payment"
-                      >
-                      </Button>
                     </TableCell>
                   )}
                 </TableRow>
@@ -639,7 +622,6 @@ export default function PaymentList() {
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
             <p className="text-sm font-medium text-slate-700">Rows per page</p>
-            {/* Using standard Shadcn Select for static list */}
             <Select value={entriesPerPage.toString()} onValueChange={(v) => { setEntriesPerPage(Number(v)); setCurrentPage(1); }}>
               <SelectTrigger className="h-8 w-[70px] rounded-lg">
                 <SelectValue placeholder={entriesPerPage} />
@@ -707,12 +689,25 @@ export default function PaymentList() {
 
             <div className="flex-grow bg-slate-200 flex flex-col overflow-hidden relative">
               {selectedFileUrl.toLowerCase().includes('.pdf') ? (
-                <div className="w-full h-full">
-                  <iframe
-                    src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(selectedFileUrl)}`}
+                <div className="w-full h-full bg-white">
+                  {/* Changed from unsecure iframe wrapper to standard Object layout to allow browser rendering */}
+                  <object
+                    data={selectedFileUrl}
+                    type="application/pdf"
                     className="w-full h-full border-none shadow-inner"
-                    title="Secure PDF Viewer"
-                  />
+                  >
+                    <div className="flex flex-col items-center justify-center h-full p-4 text-slate-600 bg-slate-50">
+                      <p className="mb-4 font-semibold text-sm">Your browser doesn't support embedded PDFs.</p>
+                      <a
+                        href={selectedFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold text-xs shadow transition-all"
+                      >
+                        Open PDF in New Tab
+                      </a>
+                    </div>
+                  </object>
                 </div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center p-4 bg-slate-300 overflow-auto">
@@ -730,7 +725,7 @@ export default function PaymentList() {
 
             <div className="px-6 py-2 bg-white border-t border-gray-100 flex justify-between items-center">
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => { setIsModalOpen(false); setSelectedFileUrl(null); }}
                 className="px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-50 rounded-lg transition"
               >
                 Close
@@ -811,7 +806,6 @@ export default function PaymentList() {
                           >
                             <Eye size={16} strokeWidth={2} />
                           </Button>
-
                         </TableCell>
                       </TableRow>
                     ))}

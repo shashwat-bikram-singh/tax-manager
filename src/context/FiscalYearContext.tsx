@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { useFetchAll } from '@/hooks/useFetchAll';
 import type { FiscalYear } from '@/type/fiscalyear';
 import { useLocation } from 'react-router-dom';
@@ -8,6 +8,8 @@ interface FiscalYearContextType {
   selectedFiscalYear: FiscalYear | null;
   serverActiveFiscalYearId: number | null;
   serverActiveFiscalYear: FiscalYear | null;
+  activeFiscalYearId: number | null;
+  activeFiscalYear: FiscalYear | null;
   fiscalYears: FiscalYear[];
   isLoading: boolean;
   setSelectedFiscalYear: (id: number) => void;
@@ -18,9 +20,11 @@ const FiscalYearContext = createContext<FiscalYearContextType>({
   selectedFiscalYear: null,
   serverActiveFiscalYearId: null,
   serverActiveFiscalYear: null,
+  activeFiscalYearId: null,
+  activeFiscalYear: null,
   fiscalYears: [],
   isLoading: true,
-  setSelectedFiscalYear: () => {},
+  setSelectedFiscalYear: () => { },
 });
 
 export const useFiscalYear = () => {
@@ -66,6 +70,8 @@ export function FiscalYearProvider({ children }: FiscalYearProviderProps) {
         selectedFiscalYear,
         serverActiveFiscalYearId,
         serverActiveFiscalYear: serverActiveFiscalYear || null,
+        activeFiscalYearId: currentSelectedId,
+        activeFiscalYear: selectedFiscalYear,
         fiscalYears,
         isLoading: isLoadingItems,
         setSelectedFiscalYear,

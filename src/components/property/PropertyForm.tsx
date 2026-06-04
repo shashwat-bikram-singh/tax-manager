@@ -50,7 +50,7 @@ const propertySchema = z.object({
   kittaNumber: z.string(),
   sheetNumber: z.string().optional().nullable(),
   groundCode: z.string().optional().nullable(),
-  constructionYear: z.string().min(1, { message: "Construction year is required" }),
+  constructionYear: z.string().optional().nullable(),
   areaInSqMeters: z.coerce
     .number({ required_error: "Area in square meters is required" })
     .min(0, { message: "Area must be 0 or greater" }),
@@ -65,18 +65,15 @@ const propertySchema = z.object({
     .min(0, { message: "Must be 0 or more" }),
   ownershipTransferMiti: z.string().min(1, { message: "Ownership transfer date is required" }),
   measurementUnit: z.string().min(1, { message: "Measurement unit is required" }),
-  // Terai
   bigha: z.coerce.number().optional().nullable(),
   kattha: z.coerce.number().optional().nullable(),
   dhur: z.coerce.number().optional().nullable(),
-  // Hilly
   ropani: z.coerce.number().optional().nullable(),
   aana: z.coerce.number().optional().nullable(),
   paisa: z.coerce.number().optional().nullable(),
   daam: z.coerce.number().optional().nullable(),
-  // Coords
-  latitude: z.string().optional(),
-  longitude: z.string().optional(),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
@@ -92,12 +89,10 @@ interface PropertyFormProps {
 const TERAI_BIGHA_TO_SQM = 6772.63;
 const TERAI_KATTHA_TO_SQM = TERAI_BIGHA_TO_SQM / 20;
 const TERAI_DHUR_TO_SQM = TERAI_KATTHA_TO_SQM / 20;
-
 const HILLY_ROPANI_TO_SQM = 508.72;
 const HILLY_AANA_TO_SQM = HILLY_ROPANI_TO_SQM / 16;
 const HILLY_PAISA_TO_SQM = HILLY_AANA_TO_SQM / 4;
 const HILLY_DAAM_TO_SQM = HILLY_PAISA_TO_SQM / 4;
-
 const SQM_TO_SQFT = 10.7639;
 
 // ─── Conversion Helpers ───────────────────────────────────────────────────────
@@ -108,7 +103,6 @@ function calcTeraiToSqm(bigha = 0, kattha = 0, dhur = 0): number {
     dhur * TERAI_DHUR_TO_SQM
   );
 }
-
 function calcHillyToSqm(ropani = 0, aana = 0, paisa = 0, daam = 0): number {
   return (
     ropani * HILLY_ROPANI_TO_SQM +
@@ -117,8 +111,7 @@ function calcHillyToSqm(ropani = 0, aana = 0, paisa = 0, daam = 0): number {
     daam * HILLY_DAAM_TO_SQM
   );
 }
-
-function sqmToTerai(sqm: number): { bigha: number; kattha: number; dhur: number } {
+function sqmToTerai(sqm: number) {
   let rem = sqm;
   const bigha = Math.floor(rem / TERAI_BIGHA_TO_SQM);
   rem -= bigha * TERAI_BIGHA_TO_SQM;
@@ -127,8 +120,7 @@ function sqmToTerai(sqm: number): { bigha: number; kattha: number; dhur: number 
   const dhur = Math.round((rem / TERAI_DHUR_TO_SQM) * 100) / 100;
   return { bigha, kattha, dhur };
 }
-
-function sqmToHilly(sqm: number): { ropani: number; aana: number; paisa: number; daam: number } {
+function sqmToHilly(sqm: number) {
   let rem = sqm;
   const ropani = Math.floor(rem / HILLY_ROPANI_TO_SQM);
   rem -= ropani * HILLY_ROPANI_TO_SQM;
@@ -139,9 +131,19 @@ function sqmToHilly(sqm: number): { ropani: number; aana: number; paisa: number;
   const daam = Math.round((rem / HILLY_DAAM_TO_SQM) * 100) / 100;
   return { ropani, aana, paisa, daam };
 }
-
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+// ─── Helper: safely unwrap useFetchAll items ──────────────────────────────────
+// useFetchAll returns the raw API response in `items`. APIs may wrap the array
+// under .data, .Data, or return the array directly.
+function unwrapList<T>(raw: any): T[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw as T[];
+  if (Array.isArray(raw.data)) return raw.data as T[];
+  if (Array.isArray(raw.Data)) return raw.Data as T[];
+  return [];
 }
 
 // ─── Reusable Searchable Select ───────────────────────────────────────────────
@@ -170,30 +172,46 @@ const SearchableSelect = ({
   const [showOptions, setShowOptions] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Sync display label when controlled value or options change
   useEffect(() => {
     if (value) {
-      const selected = options.find((item) => item.id.toString() === value.toString());
-      if (selected) setInputValue(getLabel(selected));
+      const selected = options.find(
+        (item) => String(item.id) === String(value)
+      );
+      setInputValue(selected ? getLabel(selected) : "");
     } else {
       setInputValue("");
     }
-  }, [value, options]);
+  }, [value, options, getLabel]);
 
+  // Close on outside click, restore label if user typed but didn't pick
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setShowOptions(false);
+        if (value) {
+          const selected = options.find(
+            (item) => String(item.id) === String(value)
+          );
+          setInputValue(selected ? getLabel(selected) : "");
+        }
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [value, options, getLabel]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setInputValue(val);
-    setShowOptions(val.length > 0);
-    if (val.length === 0 && onClear) onClear();
+    setShowOptions(true);
+    if (val.length === 0) {
+      onChange("");
+      if (onClear) onClear();
+    }
   };
 
   const handleSelect = (item: any) => {
@@ -202,9 +220,21 @@ const SearchableSelect = ({
     setShowOptions(false);
   };
 
-  const filtered = options.filter((item) =>
-    getLabel(item).toLowerCase().includes(inputValue.toLowerCase())
-  );
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setInputValue("");
+    setShowOptions(false);
+    onChange("");
+    if (onClear) onClear();
+  };
+
+  // Show all options when input is empty, otherwise filter
+  const filtered =
+    inputValue.trim() === ""
+      ? options
+      : options.filter((item) =>
+        getLabel(item).toLowerCase().includes(inputValue.toLowerCase())
+      );
 
   return (
     <div className="relative w-full" ref={containerRef}>
@@ -213,37 +243,40 @@ const SearchableSelect = ({
           type="text"
           value={inputValue}
           onChange={handleInputChange}
-          onFocus={() => { if (!disabled) setShowOptions(true); }}
-          placeholder={placeholder}
+          onFocus={() => {
+            if (!disabled) setShowOptions(true);
+          }}
+          placeholder={isLoading ? "Loading..." : placeholder}
           disabled={disabled || isLoading}
           className="w-full h-12 px-4 bg-gray-50 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
         />
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-          <ChevronDown size={16} />
-        </div>
-        {value && inputValue && !disabled && (
+        {/* Clear button */}
+        {value && !disabled && (
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setInputValue("");
-              onChange("");
-              if (onClear) onClear();
-            }}
+            onClick={handleClear}
+            tabIndex={-1}
             className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
           >
             <X size={14} />
           </button>
         )}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+          <ChevronDown size={16} />
+        </div>
       </div>
+
       {showOptions && !disabled && (
         <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-auto">
           {isLoading ? (
-            <li className="p-4 text-center text-sm text-gray-500">Loading...</li>
+            <li className="p-4 text-center text-sm text-gray-500">
+              Loading...
+            </li>
           ) : filtered.length > 0 ? (
             filtered.map((item, index) => (
               <li
-                key={index}
+                key={item.id ?? index}
+                onMouseDown={(e) => e.preventDefault()} // keep focus so onClick fires
                 onClick={() => handleSelect(item)}
                 className="px-4 py-2.5 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors border-b border-gray-50 last:border-0"
               >
@@ -251,7 +284,9 @@ const SearchableSelect = ({
               </li>
             ))
           ) : (
-            <li className="p-4 text-center text-sm text-gray-400 italic">No matches found</li>
+            <li className="p-4 text-center text-sm text-gray-400 italic">
+              No matches found
+            </li>
           )}
         </ul>
       )}
@@ -296,7 +331,6 @@ export function MeasurementConverter() {
       ? calcTeraiToSqm(Number(terai.bigha), Number(terai.kattha), Number(terai.dhur))
       : calcHillyToSqm(Number(hilly.ropani), Number(hilly.aana), Number(hilly.paisa), Number(hilly.daam));
   const sqft = sqm * SQM_TO_SQFT;
-
   const reverseTerai = sqmToTerai(Number(sqmInput) || 0);
   const reverseHilly = sqmToHilly(Number(sqmInput) || 0);
 
@@ -308,17 +342,14 @@ export function MeasurementConverter() {
         </div>
         <h3 className="text-sm font-bold text-gray-900 tracking-tight">Measurement Converter</h3>
       </div>
-
       <div className="flex gap-1 bg-gray-100 p-1 rounded-lg text-xs font-medium">
         <button type="button" onClick={() => setMeasureType("terai")} className={`flex-1 py-1.5 rounded-md transition-all ${measureType === "terai" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Terai (B·K·D)</button>
         <button type="button" onClick={() => setMeasureType("hilly")} className={`flex-1 py-1.5 rounded-md transition-all ${measureType === "hilly" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Hilly (R·A·P·D)</button>
       </div>
-
       <div className="flex gap-1 bg-indigo-50 border border-indigo-100 p-1 rounded-lg text-xs font-medium">
         <button type="button" onClick={() => setMode("forward")} className={`flex-1 py-1.5 rounded-md transition-all ${mode === "forward" ? "bg-indigo-600 text-white shadow-sm" : "text-indigo-500 hover:text-indigo-700"}`}>Standard → m²</button>
         <button type="button" onClick={() => setMode("reverse")} className={`flex-1 py-1.5 rounded-md transition-all ${mode === "reverse" ? "bg-indigo-600 text-white shadow-sm" : "text-indigo-500 hover:text-indigo-700"}`}>m² → Standard</button>
       </div>
-
       {mode === "forward" && (
         <>
           {measureType === "terai" ? (
@@ -351,7 +382,6 @@ export function MeasurementConverter() {
           </div>
         </>
       )}
-
       {mode === "reverse" && (
         <div className="space-y-3">
           <div>
@@ -382,7 +412,6 @@ export function MeasurementConverter() {
           </div>
         </div>
       )}
-
       <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
         <p className="text-[11px] text-amber-800 leading-snug">
           <span className="font-bold">Note:</span>{" "}
@@ -425,27 +454,34 @@ export default function PropertyForm({
 
   const { create, update } = useMutate<PropertyDetail>("/api/property", "property");
 
-  const { items: rawpropertyTypeData, isLoadingItems } = useFetchAll<PropertyType>("/api/propertytype", ["propertytype"]);
-  const PropertyData = rawpropertyTypeData?.data;
+  // ── Fix: unwrap each list correctly via the helper ──
+  const { items: rawPropertyTypeData, isLoadingItems: isLoadingPropertyType } =
+    useFetchAll<PropertyType>("/api/propertytype", ["propertytype"]);
+  const propertyTypeList = unwrapList<PropertyType>(rawPropertyTypeData);
 
-  const { items: rawlegalstatusData } = useFetchAll<LegalStatus>("/api/legalstatus", ["legalstatus"]);
-  const legalstatusData = rawlegalstatusData?.data;
+  const { items: rawLegalStatusData } = useFetchAll<LegalStatus>("/api/legalstatus", ["legalstatus"]);
+  const legalStatusList = unwrapList<LegalStatus>(rawLegalStatusData);
 
-  const { items: rawusagerightData } = useFetchAll<UsageRights>("/api/usageright", ["usageright"]);
-  const usageRightsData = rawusagerightData?.data;
+  const { items: rawUsageRightData } = useFetchAll<UsageRights>("/api/usageright", ["usageright"]);
+  const usageRightsList = unwrapList<UsageRights>(rawUsageRightData);
 
-  const { items: rawusageTypeData } = useFetchAll<UsageType>("/api/usagetype", ["usagetype"]);
-  const usageTypeData = rawusageTypeData?.data;
+  const { items: rawUsageTypeData } = useFetchAll<UsageType>("/api/usagetype", ["usagetype"]);
+  const usageTypeList = unwrapList<UsageType>(rawUsageTypeData);
 
-  const { items: rawgeographicRegionData, isLoadingItems: isLoadingGeographicRegion } = useFetchAll<GeographicRegion>("/api/geographic-region", ["geographicregion"]);
-  const geographicRegionData = rawgeographicRegionData?.data;
+  const { items: rawGeographicRegionData, isLoadingItems: isLoadingGeographicRegion } =
+    useFetchAll<GeographicRegion>("/api/geographic-region", ["geographicregion"]);
+  const geographicRegionList = unwrapList<GeographicRegion>(rawGeographicRegionData);
 
-  const { items: rawownershipTypeData } = useFetchAll<OwnershipType>("/api/ownershiptype", ["ownershiptype"]);
-  const ownershipTypeData = rawownershipTypeData?.data;
+  const { items: rawOwnershipTypeData } = useFetchAll<OwnershipType>("/api/ownershiptype", ["ownershiptype"]);
+  const ownershipTypeList = unwrapList<OwnershipType>(rawOwnershipTypeData);
 
-  const { items: rawOfficeData } = useFetchAll<Office>(`/api/office?id=${officeId}`, ["office"]);
-  const officeData = rawOfficeData?.data;
-  const officeMeasurementUnit = officeData?.[0]?.measurementUnit;
+  // ── Fix: office measurement unit correctly unwrapped ──
+  const { items: rawOfficeData } = useFetchAll<Office>(
+    `/api/office?id=${officeId}`,
+    ["office"]
+  );
+  const officeList = unwrapList<Office>(rawOfficeData);
+  const officeMeasurementUnit = officeList[0]?.measurementUnit;
 
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema) as any,
@@ -482,76 +518,74 @@ export default function PropertyForm({
       aana: 0,
       paisa: 0,
       daam: 0,
-      latitude: "",
-      longitude: "",
+      latitude: 0,
+      longitude: 0,
     },
   });
 
-  const { items: rawProvinceData, isLoadingItems: isLoadingProvince } = useFetchAll("/api/province", ["province"]);
-  const provinceData = rawProvinceData?.data;
+  const { items: rawProvinceData, isLoadingItems: isLoadingProvince } =
+    useFetchAll("/api/province", ["province"]);
+  const provinceList = unwrapList<any>(rawProvinceData);
+
   const selectedProvinceId = form.watch("province");
   const selectedDistrictId = form.watch("district");
   const selectedLocalbodyId = form.watch("localbody");
 
-  // Fetching districts.
   const { items: rawDistrictData, isLoadingItems: isLoadingDistrict } = useFetchAll<District>(
-    selectedProvinceId ? `/api/district?provinceId=${selectedProvinceId}` : "/api/district",
+    selectedProvinceId
+      ? `/api/district?provinceId=${selectedProvinceId}`
+      : "/api/district",
     ["district", selectedProvinceId || "all"]
   );
-  const districtData = rawDistrictData?.data;
+  const districtList = unwrapList<District>(rawDistrictData);
 
-  // Fetching local bodies.
   const { items: rawLocalbodyData, isLoadingItems: isLoadingLocalbody } = useFetchAll<Localbody>(
-    selectedDistrictId ? `/api/localbody?districtId=${selectedDistrictId}` : "/api/localbody",
+    selectedDistrictId
+      ? `/api/localbody?districtId=${selectedDistrictId}`
+      : "/api/localbody",
     ["localbody", selectedDistrictId || "all"]
   );
-  const localbodyData = rawLocalbodyData?.data;
+  const localbodyList = unwrapList<Localbody>(rawLocalbodyData);
 
-  // ─── Lease Management Watch Logic (FIXED: Moved Inside Component Scope) ───
+  // ── Lease-out rights detection ──
   const selectedUsageRights = form.watch("usageRights");
-
-  const selectedUsageRightObj = usageRightsData?.find(
-    (item) => item.id.toString() === selectedUsageRights
+  const selectedUsageRightObj = usageRightsList.find(
+    (item) => String(item.id) === String(selectedUsageRights)
   );
-
   const isLeasedOutRights =
     selectedUsageRightObj?.name?.toLowerCase() === "leased-out rights" ||
-    selectedUsageRightObj?.usageRight?.toLowerCase() === "leased-out rights";
+    (selectedUsageRightObj as any)?.usageRight?.toLowerCase() === "leased-out rights";
 
   useEffect(() => {
     if (isLeasedOutRights) {
       form.setValue("usageTypes", "");
     }
-  }, [isLeasedOutRights, form]);
+  }, [isLeasedOutRights]);
 
-  // ─── Location Bottom-Up Auto Selection Logic ─────────────────────────────────
+  // ── Bottom-up auto-select province/district from localbody ──
   useEffect(() => {
-    if (!selectedLocalbodyId || !localbodyData) return;
-    const matchedLocalBody = localbodyData.find(
-      (lb: any) => lb.id.toString() === selectedLocalbodyId.toString()
+    if (!selectedLocalbodyId || !localbodyList.length) return;
+    const matched = localbodyList.find(
+      (lb: any) => String(lb.id) === String(selectedLocalbodyId)
     );
-    if (matchedLocalBody) {
-      if (matchedLocalBody.districtId) {
-        form.setValue("district", matchedLocalBody.districtId.toString(), { shouldValidate: true });
-      }
-      if (matchedLocalBody.provinceId) {
-        form.setValue("province", matchedLocalBody.provinceId.toString(), { shouldValidate: true });
-      }
+    if (matched) {
+      if ((matched as any).districtId)
+        form.setValue("district", String((matched as any).districtId), { shouldValidate: true });
+      if ((matched as any).provinceId)
+        form.setValue("province", String((matched as any).provinceId), { shouldValidate: true });
     }
-  }, [selectedLocalbodyId, localbodyData]);
+  }, [selectedLocalbodyId, localbodyList]);
 
   useEffect(() => {
-    if (!selectedDistrictId || !districtData) return;
-    const matchedDistrict = districtData.find(
-      (d: any) => d.id.toString() === selectedDistrictId.toString()
+    if (!selectedDistrictId || !districtList.length) return;
+    const matched = districtList.find(
+      (d: any) => String(d.id) === String(selectedDistrictId)
     );
-    if (matchedDistrict && matchedDistrict.provinceId) {
-      form.setValue("province", matchedDistrict.provinceId.toString(), { shouldValidate: true });
-    }
-  }, [selectedDistrictId, districtData]);
+    if (matched && (matched as any).provinceId)
+      form.setValue("province", String((matched as any).provinceId), { shouldValidate: true });
+  }, [selectedDistrictId, districtList]);
 
-
-  // ─── Bidirectional Sync Logic ─────────────────────────────────────────────
+  // ── Bidirectional area sync ──
   const lastEdited = useRef<"terai" | "hilly" | "sqm" | null>(null);
   const isUpdating = useRef(false);
 
@@ -566,72 +600,65 @@ export default function PropertyForm({
 
   useEffect(() => {
     if (isUpdating.current || lastEdited.current !== "terai") return;
-
     const sqm = calcTeraiToSqm(Number(bigha) || 0, Number(kattha) || 0, Number(dhur) || 0);
-    const hilly = sqmToHilly(sqm);
-    const sqft = round2(sqm * SQM_TO_SQFT);
-
+    const hillyVals = sqmToHilly(sqm);
     isUpdating.current = true;
     form.setValue("areaInSqMeters", round2(sqm));
-    form.setValue("areaInSqft", sqft);
-    form.setValue("ropani", hilly.ropani);
-    form.setValue("aana", hilly.aana);
-    form.setValue("paisa", hilly.paisa);
-    form.setValue("daam", hilly.daam);
+    form.setValue("areaInSqft", round2(sqm * SQM_TO_SQFT));
+    form.setValue("ropani", hillyVals.ropani);
+    form.setValue("aana", hillyVals.aana);
+    form.setValue("paisa", hillyVals.paisa);
+    form.setValue("daam", hillyVals.daam);
     setTimeout(() => { isUpdating.current = false; }, 0);
   }, [bigha, kattha, dhur]);
 
   useEffect(() => {
     if (isUpdating.current || lastEdited.current !== "hilly") return;
-
     const sqm = calcHillyToSqm(Number(ropani) || 0, Number(aana) || 0, Number(paisa) || 0, Number(daam) || 0);
-    const terai = sqmToTerai(sqm);
-    const sqft = round2(sqm * SQM_TO_SQFT);
-
+    const teraiVals = sqmToTerai(sqm);
     isUpdating.current = true;
     form.setValue("areaInSqMeters", round2(sqm));
-    form.setValue("areaInSqft", sqft);
-    form.setValue("bigha", terai.bigha);
-    form.setValue("kattha", terai.kattha);
-    form.setValue("dhur", terai.dhur);
+    form.setValue("areaInSqft", round2(sqm * SQM_TO_SQFT));
+    form.setValue("bigha", teraiVals.bigha);
+    form.setValue("kattha", teraiVals.kattha);
+    form.setValue("dhur", teraiVals.dhur);
     setTimeout(() => { isUpdating.current = false; }, 0);
   }, [ropani, aana, paisa, daam]);
 
   useEffect(() => {
     if (isUpdating.current || lastEdited.current !== "sqm") return;
-
     const sqm = Number(areaInSqMeters) || 0;
-    const terai = sqmToTerai(sqm);
-    const hilly = sqmToHilly(sqm);
-    const sqft = round2(sqm * SQM_TO_SQFT);
-
+    const teraiVals = sqmToTerai(sqm);
+    const hillyVals = sqmToHilly(sqm);
     isUpdating.current = true;
-    form.setValue("areaInSqft", sqft);
-    form.setValue("bigha", terai.bigha);
-    form.setValue("kattha", terai.kattha);
-    form.setValue("dhur", terai.dhur);
-    form.setValue("ropani", hilly.ropani);
-    form.setValue("aana", hilly.aana);
-    form.setValue("paisa", hilly.paisa);
-    form.setValue("daam", hilly.daam);
+    form.setValue("areaInSqft", round2(sqm * SQM_TO_SQFT));
+    form.setValue("bigha", teraiVals.bigha);
+    form.setValue("kattha", teraiVals.kattha);
+    form.setValue("dhur", teraiVals.dhur);
+    form.setValue("ropani", hillyVals.ropani);
+    form.setValue("aana", hillyVals.aana);
+    form.setValue("paisa", hillyVals.paisa);
+    form.setValue("daam", hillyVals.daam);
     setTimeout(() => { isUpdating.current = false; }, 0);
   }, [areaInSqMeters]);
 
-  // ─── Reset form when initialData loads ─────────────────────────────────────
+  // ── Populate form on edit ──
+  // Fix: removed `form` from deps (changes every render → infinite loop)
+  // Fix: valuation/taxAmount passed as numbers, not strings
   useEffect(() => {
     if (!initialData) return;
     const d = initialData as any;
-
     const sqm = d.landArea ?? 0;
-    const sqft = round2(sqm * SQM_TO_SQFT);
 
-    const terai = (d.bigha !== undefined && d.bigha !== null)
-      ? { bigha: d.bigha ?? 0, kattha: d.kattha ?? 0, dhur: d.dhur ?? 0 }
-      : sqmToTerai(sqm);
+    const teraiVals =
+      d.bigha != null
+        ? { bigha: d.bigha ?? 0, kattha: d.kattha ?? 0, dhur: d.dhur ?? 0 }
+        : sqmToTerai(sqm);
 
-    const hilly = (d.ropani !== undefined && d.ropani !== null)
-      ? { ropani: d.ropani ?? 0, aana: d.aana ?? 0, paisa: d.paisa ?? 0, daam: d.daam ?? 0 }
-      : sqmToHilly(sqm);
+    const hillyVals =
+      d.ropani != null
+        ? { ropani: d.ropani ?? 0, aana: d.aana ?? 0, paisa: d.paisa ?? 0, daam: d.daam ?? 0 }
+        : sqmToHilly(sqm);
 
     form.reset({
       propertytype: d.propertyTypeId?.toString() ?? "",
@@ -646,42 +673,41 @@ export default function PropertyForm({
       groundCode: (d.landGeoCoordinate || d.geoCoordinates) ?? "",
       constructionYear: d.constructionYear ?? "",
       legalstatus: d.legalStatusId?.toString() ?? "",
-      areaInSqMeters: d.landArea ?? d.areaInSqMeters ?? 0,
-      areaInSqft: sqft,
+      areaInSqMeters: d.landArea ?? d.buildingArea ?? d.areaInSqMeters ?? 0,
+      areaInSqft: round2((d.landArea ?? 0) * SQM_TO_SQFT),
       ownershipType: d.ownershipTypeId?.toString() ?? "",
       geographicRegion: d.geographicRegionId?.toString() ?? "",
       usageRights: d.usageRightId?.toString() ?? "",
       usageTypes: d.usageId?.toString() ?? "",
-      currentUsage: d.usageRightId?.toString() ?? "",
+      // Fix: currentUsage should use its own field, not duplicate usageRightId
+      currentUsage: d.currentUsageId?.toString() ?? d.usageRightId?.toString() ?? "",
       noOfFloor: d.noOfFloors ?? 0,
       encroachmentRisk: d.encroachmentRisk ?? "",
-      valuation: d.valuation?.toString() ?? "",
-      taxAmount: d.taxAmount?.toString() ?? "",
+      // Fix: pass as numbers so Zod coercion works correctly
+      valuation: Number(d.valuation) || 0,
+      taxAmount: Number(d.taxAmount) || 0,
       ownershipTransferMiti: d.ownershipTransferDate ?? "",
       measurementUnit: officeMeasurementUnit || "Katha",
-      bigha: terai.bigha,
-      kattha: terai.kattha,
-      dhur: terai.dhur,
-      ropani: hilly.ropani,
-      aana: hilly.aana,
-      paisa: hilly.paisa,
-      daam: hilly.daam,
-      latitude: d.propertyTypeId ? d.land_Latitude : d.building_Latitude ?? "",
-      longitude: d.propertyTypeId ? d.land_Longitude : d.building_Longitude ?? "",
+      bigha: teraiVals.bigha,
+      kattha: teraiVals.kattha,
+      dhur: teraiVals.dhur,
+      ropani: hillyVals.ropani,
+      aana: hillyVals.aana,
+      paisa: hillyVals.paisa,
+      daam: hillyVals.daam,
+      latitude: d.land_Latitude ?? d.building_Latitude ?? 0,
+      longitude: d.land_Longitude ?? d.building_Longitude ?? 0,
     });
-  }, [initialData]);
+  }, [initialData, officeMeasurementUnit]);
 
   const buildDefaultArea = (values: PropertyFormValues): string => {
     const unit = (officeMeasurementUnit ?? "").toLowerCase();
     const isTeraiUnit = /bigha|kattha|katha|dhur|terai/i.test(unit);
     const isHillyUnit = /ropani|aana|paisa|daam|hilly/i.test(unit);
-
-    if (isTeraiUnit) {
+    if (isTeraiUnit)
       return `${values.bigha ?? 0}-${values.kattha ?? 0}-${values.dhur ?? 0}`;
-    }
-    if (isHillyUnit) {
+    if (isHillyUnit)
       return `${values.ropani ?? 0}-${values.aana ?? 0}-${values.paisa ?? 0}-${values.daam ?? 0}`;
-    }
     return (
       `${values.bigha ?? 0}-${values.kattha ?? 0}-${values.dhur ?? 0} | ` +
       `${values.ropani ?? 0}-${values.aana ?? 0}-${values.paisa ?? 0}-${values.daam ?? 0}`
@@ -691,8 +717,6 @@ export default function PropertyForm({
   const onSubmit = async (values: PropertyFormValues) => {
     setLoading(true);
     try {
-      const areaMeasurement = buildDefaultArea(values);
-
       const payload: any = {
         propertyTypeId: Number(values.propertytype) || 0,
         name: values.name || "",
@@ -713,11 +737,11 @@ export default function PropertyForm({
         ownershipTypeId: Number(values.ownershipType) || 0,
         geographicRegionId: Number(values.geographicRegion) || 0,
         ownershipTransferMiti: values.ownershipTransferMiti || "",
-        latitude: values.latitude || "",
-        longitude: values.longitude || "",
+        latitude: values.latitude || 0,
+        longitude: values.longitude || 0,
         valuation: Number(values.valuation) || 0,
         taxAmount: Number(values.taxAmount) || 0,
-        defaultArea: areaMeasurement,
+        defaultArea: buildDefaultArea(values),
       };
 
       if (mode === "edit" && initialData?.id) {
@@ -753,8 +777,6 @@ export default function PropertyForm({
     else navigate("/app/property");
   };
 
-  const disabled = loading;
-
   const makeNumberHandler = (
     section: "terai" | "hilly" | "sqm",
     fieldOnChange: (v: number | null) => void
@@ -762,6 +784,10 @@ export default function PropertyForm({
     lastEdited.current = section;
     fieldOnChange(e.target.value === "" ? null : Number(e.target.value));
   };
+
+  const isBuilding = propertyTypeList
+    .find((p) => String(p.id) === form.watch("propertytype"))
+    ?.propertyType?.toLowerCase() === "building";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/40 p-6 space-y-6">
@@ -778,7 +804,13 @@ export default function PropertyForm({
         <>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <Button type="button" variant="ghost" size="icon" onClick={handleCancel} className="text-gray-400 hover:text-gray-600">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleCancel}
+                className="text-gray-400 hover:text-gray-600"
+              >
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -794,9 +826,9 @@ export default function PropertyForm({
                       <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
                         <span className="material-symbols-outlined text-white text-xl">description</span>
                       </div>
-                      <div>
-                        <h2 className="text-lg font-bold text-gray-900">{t("property.propertyInformation")}</h2>
-                      </div>
+                      <h2 className="text-lg font-bold text-gray-900">
+                        {t("property.propertyInformation")}
+                      </h2>
                     </div>
                   </div>
 
@@ -806,7 +838,9 @@ export default function PropertyForm({
                     <div className="space-y-6">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
-                        <h3 className="text-base font-bold text-gray-800 tracking-tight">{t("property.generalDetails")}</h3>
+                        <h3 className="text-base font-bold text-gray-800 tracking-tight">
+                          {t("property.generalDetails")}
+                        </h3>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -814,24 +848,36 @@ export default function PropertyForm({
                         {/* Property Type */}
                         <FormField control={form.control} name="propertytype" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.propertyType")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.propertyType")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
-                                <SearchableSelect options={PropertyData || []} value={field.value} onChange={(v) => field.onChange(v || "")} getLabel={(item) => item.propertyType} placeholder={isLoadingItems ? "Loading..." : "Select Property Type"} disabled={disabled || isLoadingItems} />
+                                <SearchableSelect
+                                  options={propertyTypeList}
+                                  value={field.value}
+                                  onChange={(v) => field.onChange(v || "")}
+                                  getLabel={(item) => item.propertyType}
+                                  placeholder="Select Property Type"
+                                  disabled={loading || isLoadingPropertyType}
+                                  isLoading={isLoadingPropertyType}
+                                />
                               </FormControl>
                             </div>
                             <FormMessage />
                           </FormItem>
                         )} />
 
-                        {/* Province Selection */}
+                        {/* Province */}
                         <FormField control={form.control} name="province" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.province")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.province")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
                                 <SearchableSelect
-                                  options={provinceData || []}
+                                  options={provinceList}
                                   value={field.value}
                                   onChange={(v) => {
                                     field.onChange(v || "");
@@ -841,8 +887,9 @@ export default function PropertyForm({
                                     }
                                   }}
                                   getLabel={(item) => item.name || item.province}
-                                  placeholder={isLoadingProvince ? "Loading..." : "Select Province"}
-                                  disabled={disabled || isLoadingProvince}
+                                  placeholder="Select Province"
+                                  disabled={loading || isLoadingProvince}
+                                  isLoading={isLoadingProvince}
                                 />
                               </FormControl>
                             </div>
@@ -850,21 +897,25 @@ export default function PropertyForm({
                           </FormItem>
                         )} />
 
-                        {/* District Dropdown */}
+                        {/* District */}
                         <FormField control={form.control} name="district" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("dashboard.district")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("dashboard.district")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
                                 <SearchableSelect
-                                  options={districtData || []}
+                                  options={districtList}
                                   value={field.value}
                                   onChange={(v) => {
                                     field.onChange(v || "");
                                     if (!v) form.setValue("localbody", "");
                                   }}
-                                  getLabel={(item) => item.name || item.district}
-                                  placeholder={isLoadingDistrict ? "Loading..." : "Select District"}
+                                  getLabel={(item) => item.name || (item as any).district}
+                                  placeholder="Select District"
+                                  disabled={loading || isLoadingDistrict}
+                                  isLoading={isLoadingDistrict}
                                 />
                               </FormControl>
                             </div>
@@ -872,18 +923,22 @@ export default function PropertyForm({
                           </FormItem>
                         )} />
 
-                        {/* Local Body Dropdown */}
+                        {/* Local Body */}
                         <FormField control={form.control} name="localbody" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.localBody")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.localBody")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
                                 <SearchableSelect
-                                  options={localbodyData || []}
+                                  options={localbodyList}
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
-                                  getLabel={(item) => item.name || item.localbody}
-                                  placeholder={isLoadingLocalbody ? "Loading..." : "Select Local Body"}
+                                  getLabel={(item) => item.name || (item as any).localbody}
+                                  placeholder="Select Local Body"
+                                  disabled={loading || isLoadingLocalbody}
+                                  isLoading={isLoadingLocalbody}
                                 />
                               </FormControl>
                             </div>
@@ -894,9 +949,17 @@ export default function PropertyForm({
                         {/* Ward No */}
                         <FormField control={form.control} name="wardNo" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.wardNo")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.wardNo")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <FormControl>
-                              <Input {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || "")} disabled={disabled} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none" />
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value || "")}
+                                disabled={loading}
+                                className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -905,23 +968,44 @@ export default function PropertyForm({
                         {/* Geographic Region */}
                         <FormField control={form.control} name="geographicRegion" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.geographicRegion")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.geographicRegion")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
-                                <SearchableSelect options={geographicRegionData || []} value={field.value} onChange={(v) => field.onChange(v || "")} getLabel={(item) => item.name || item.geographicRegion} placeholder={isLoadingGeographicRegion ? "Loading..." : "Select Region"} disabled={disabled || isLoadingGeographicRegion} />
+                                <SearchableSelect
+                                  options={geographicRegionList}
+                                  value={field.value}
+                                  onChange={(v) => field.onChange(v || "")}
+                                  getLabel={(item) => item.name || (item as any).geographicRegion}
+                                  placeholder="Select Region"
+                                  disabled={loading || isLoadingGeographicRegion}
+                                  isLoading={isLoadingGeographicRegion}
+                                />
                               </FormControl>
                             </div>
                             <FormMessage />
                           </FormItem>
                         )} />
 
-                        {/* No of Floors (building only) */}
-                        {PropertyData?.find((p: PropertyType) => p.id.toString() === form.watch("propertytype"))?.propertyType?.toLowerCase() === "building" && (
+                        {/* No of Floors — building only */}
+                        {isBuilding && (
                           <FormField control={form.control} name="noOfFloor" render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.noOfFloor")} <span className="text-red-500">*</span></FormLabel>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                                {t("property.noOfFloor")} <span className="text-red-500">*</span>
+                              </FormLabel>
                               <FormControl>
-                                <Input {...field} type="number" min="0" value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} placeholder="e.g. 3" disabled={disabled} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none" />
+                                <Input
+                                  {...field}
+                                  type="number"
+                                  min="0"
+                                  value={field.value ?? ""}
+                                  onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                                  placeholder="e.g. 3"
+                                  disabled={loading}
+                                  className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -931,9 +1015,18 @@ export default function PropertyForm({
                         {/* Kitta Number */}
                         <FormField control={form.control} name="kittaNumber" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.kittaNumber")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.kittaNumber")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <FormControl>
-                              <Input {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || "")} placeholder="e.g. 4529-B" disabled={disabled} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none" />
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value || "")}
+                                placeholder="e.g. 4529-B"
+                                disabled={loading}
+                                className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -942,9 +1035,17 @@ export default function PropertyForm({
                         {/* Name */}
                         <FormField control={form.control} name="name" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("common.name")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("common.name")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <FormControl>
-                              <Input {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || "")} disabled={disabled} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value || "")}
+                                disabled={loading}
+                                className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -953,9 +1054,17 @@ export default function PropertyForm({
                         {/* Description */}
                         <FormField control={form.control} name="description" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.description")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.description")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <FormControl>
-                              <Input {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || "")} disabled={disabled} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value || "")}
+                                disabled={loading}
+                                className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -964,9 +1073,20 @@ export default function PropertyForm({
                         {/* Construction Year */}
                         <FormField control={form.control} name="constructionYear" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.constructionYear")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.constructionYear")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <FormControl>
-                              <NepaliDatePicker id="constructionYear" name="constructionYear" value={field.value ?? ""} onSelect={(value: any) => { const year = value.value.split("-")[0]; field.onChange(year || ""); }} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
+                              <NepaliDatePicker
+                                id="constructionYear"
+                                name="constructionYear"
+                                value={field.value ?? ""}
+                                onSelect={(value: any) => {
+                                  const year = value.value.split("-")[0];
+                                  field.onChange(year || "");
+                                }}
+                                className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -975,34 +1095,60 @@ export default function PropertyForm({
                         {/* Ownership Transfer Miti */}
                         <FormField control={form.control} name="ownershipTransferMiti" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.ownershipTransferMiti")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.ownershipTransferMiti")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <FormControl>
-                              <NepaliDatePicker id="ownershipTransferMiti" name="ownershipTransferMiti" value={field.value ?? ""} onSelect={(value: any) => { field.onChange(value.value); }} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
+                              <NepaliDatePicker
+                                id="ownershipTransferMiti"
+                                name="ownershipTransferMiti"
+                                value={field.value ?? ""}
+                                onSelect={(value: any) => field.onChange(value.value)}
+                                className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
 
-                        {/* Current Usage */}
+                        {/* Current Usage
                         <FormField control={form.control} name="currentUsage" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.currentUsage")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.currentUsage")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
-                                <SearchableSelect options={usageRightsData || []} value={field.value} onChange={(v) => field.onChange(v || "")} getLabel={(item) => item.name || item.usageRight} placeholder={isLoadingItems ? "Loading..." : "Select Usage"} disabled={disabled || isLoadingItems} />
+                                <SearchableSelect
+                                  options={usageRightsList}
+                                  value={field.value}
+                                  onChange={(v) => field.onChange(v || "")}
+                                  getLabel={(item) => item.name || (item as any).usageRight}
+                                  placeholder="Select Usage"
+                                  disabled={loading}
+                                />
                               </FormControl>
                             </div>
                             <FormMessage />
                           </FormItem>
-                        )} />
+                        )} /> */}
 
                         {/* Legal Status */}
                         <FormField control={form.control} name="legalstatus" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.legalStatus")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.legalStatus")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
-                                <SearchableSelect options={legalstatusData || []} value={field.value} onChange={(v) => field.onChange(v || "")} getLabel={(item) => item.name || item.legalStatus} placeholder={isLoadingItems ? "Loading..." : "Select Legal Status"} disabled={disabled || isLoadingItems} />
+                                <SearchableSelect
+                                  options={legalStatusList}
+                                  value={field.value}
+                                  onChange={(v) => field.onChange(v || "")}
+                                  getLabel={(item) => item.name || (item as any).legalStatus}
+                                  placeholder="Select Legal Status"
+                                  disabled={loading}
+                                />
                               </FormControl>
                             </div>
                             <FormMessage />
@@ -1016,95 +1162,55 @@ export default function PropertyForm({
                     <div className="space-y-6">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
-                        <h3 className="text-base font-bold text-gray-800 tracking-tight">{t("property.physicalMeasurementsAndLocation")}</h3>
+                        <h3 className="text-base font-bold text-gray-800 tracking-tight">
+                          {t("property.physicalMeasurementsAndLocation")}
+                        </h3>
                       </div>
 
                       <div className="space-y-6">
-
-                        {/* Terai Input Grid */}
+                        {/* Terai */}
                         <section className="space-y-4">
                           <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-widest">Terai</span>
                             <h3 className="text-sm font-semibold text-gray-600">Bigha · Kattha · Dhur</h3>
                           </div>
                           <div className="grid grid-cols-3 gap-4">
-                            <FormField control={form.control} name="bigha" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">Bigha</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("terai", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name="kattha" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">Kattha</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("terai", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name="dhur" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">Dhur</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("terai", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
+                            {(["bigha", "kattha", "dhur"] as const).map((unit) => (
+                              <FormField key={unit} control={form.control} name={unit} render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">{unit.charAt(0).toUpperCase() + unit.slice(1)}</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("terai", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                            ))}
                           </div>
                         </section>
 
-                        {/* Hilly Input Grid */}
+                        {/* Hilly */}
                         <section className="space-y-4">
                           <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 text-[10px] font-bold uppercase tracking-widest">Hilly</span>
                             <h3 className="text-sm font-semibold text-gray-600">Ropani · Aana · Paisa · Daam</h3>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <FormField control={form.control} name="ropani" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">Ropani</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("hilly", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name="aana" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">Aana</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("hilly", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name="paisa" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">Paisa</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("hilly", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
-                            <FormField control={form.control} name="daam" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">Daam</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("hilly", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
+                            {(["ropani", "aana", "paisa", "daam"] as const).map((unit) => (
+                              <FormField key={unit} control={form.control} name={unit} render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">{unit.charAt(0).toUpperCase() + unit.slice(1)}</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("hilly", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                            ))}
                           </div>
                         </section>
 
-                        {/* Metric Output Grid */}
+                        {/* Metric */}
                         <section className="space-y-4">
                           <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-widest">Metric</span>
@@ -1132,13 +1238,13 @@ export default function PropertyForm({
                           </div>
                         </section>
 
-                        {/* Location Details */}
+                        {/* Coordinates */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
                           <FormField control={form.control} name="latitude" render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Latitude</FormLabel>
                               <FormControl>
-                                <Input {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || "")} disabled={disabled} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
+                                <Input {...field} value={field.value ?? 0} onChange={(e) => field.onChange(e.target.value || 0)} disabled={loading} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1147,37 +1253,54 @@ export default function PropertyForm({
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Longitude</FormLabel>
                               <FormControl>
-                                <Input {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || "")} disabled={disabled} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
+                                <Input {...field} value={field.value ?? 0} onChange={(e) => field.onChange(e.target.value || 0)} disabled={loading} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )} />
                         </div>
-
                       </div>
                     </div>
 
-                    {/* Tax & Valuation Fields */}
+                    {/* ── Tax & Valuation ── */}
                     <div className="space-y-6">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
                         <h3 className="text-base font-bold text-gray-800 tracking-tight">Tax & Valuation</h3>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 pt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                         <FormField control={form.control} name="taxAmount" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Tax Amount <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              Tax Amount <span className="text-red-500">*</span>
+                            </FormLabel>
                             <FormControl>
-                              <Input {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || "")} disabled={disabled} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
+                              <Input
+                                {...field}
+                                type="number"
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                                disabled={loading}
+                                className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
                         <FormField control={form.control} name="valuation" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.valuation")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.valuation")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <FormControl>
-                              <Input {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.value || "")} disabled={disabled} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
+                              <Input
+                                {...field}
+                                type="number"
+                                value={field.value ?? ""}
+                                onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+                                disabled={loading}
+                                className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1189,17 +1312,27 @@ export default function PropertyForm({
                     <div className="space-y-6 pt-6 border-t border-gray-100">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-1.5 h-6 bg-purple-600 rounded-full" />
-                        <h3 className="text-base font-bold text-gray-800 tracking-tight">{t("property.legalAndUsageRights")}</h3>
+                        <h3 className="text-base font-bold text-gray-800 tracking-tight">
+                          {t("property.legalAndUsageRights")}
+                        </h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-
                         <div className="md:col-span-2">
                           <FormField control={form.control} name="ownershipType" render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.ownershipType")} <span className="text-red-500">*</span></FormLabel>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                                {t("property.ownershipType")} <span className="text-red-500">*</span>
+                              </FormLabel>
                               <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                                 <FormControl>
-                                  <SearchableSelect options={ownershipTypeData || []} value={field.value} onChange={(v) => field.onChange(v || "")} getLabel={(item) => item.name || item.ownershipType} placeholder={isLoadingItems ? "Loading..." : "Select Ownership"} disabled={disabled || isLoadingItems} />
+                                  <SearchableSelect
+                                    options={ownershipTypeList}
+                                    value={field.value}
+                                    onChange={(v) => field.onChange(v || "")}
+                                    getLabel={(item) => item.name || (item as any).ownershipType}
+                                    placeholder="Select Ownership"
+                                    disabled={loading}
+                                  />
                                 </FormControl>
                               </div>
                               <FormMessage />
@@ -1209,10 +1342,19 @@ export default function PropertyForm({
 
                         <FormField control={form.control} name="usageRights" render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.usageRights")} <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                              {t("property.usageRights")} <span className="text-red-500">*</span>
+                            </FormLabel>
                             <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
                               <FormControl>
-                                <SearchableSelect options={usageRightsData || []} value={field.value} onChange={(v) => field.onChange(v || "")} getLabel={(item) => item.name || item.usageRight} placeholder={isLoadingItems ? "Loading..." : "Select Usage Rights"} disabled={disabled || isLoadingItems} />
+                                <SearchableSelect
+                                  options={usageRightsList}
+                                  value={field.value}
+                                  onChange={(v) => field.onChange(v || "")}
+                                  getLabel={(item) => item.name || (item as any).usageRight}
+                                  placeholder="Select Usage Rights"
+                                  disabled={loading}
+                                />
                               </FormControl>
                             </div>
                             <FormMessage />
@@ -1220,44 +1362,52 @@ export default function PropertyForm({
                         )} />
 
                         {!isLeasedOutRights && (
-                          <FormField
-                            control={form.control}
-                            name="usageTypes"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
-                                  {t("property.usageTypes")} <span className="text-red-500">*</span>
-                                </FormLabel>
-                                <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
-                                  <FormControl>
-                                    <SearchableSelect
-                                      options={usageTypeData || []}
-                                      value={field.value}
-                                      onChange={(v) => field.onChange(v || "")}
-                                      getLabel={(item) => item.name || item.usageType}
-                                      placeholder={isLoadingItems ? "Loading..." : "Select Usage Type"}
-                                      disabled={disabled || isLoadingItems}
-                                    />
-                                  </FormControl>
-                                </div>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                          <FormField control={form.control} name="usageTypes" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                                {t("property.usageTypes")} <span className="text-red-500">*</span>
+                              </FormLabel>
+                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
+                                <FormControl>
+                                  <SearchableSelect
+                                    options={usageTypeList}
+                                    value={field.value}
+                                    onChange={(v) => field.onChange(v || "")}
+                                    getLabel={(item) => item.name || (item as any).usageType}
+                                    placeholder="Select Usage Type"
+                                    disabled={loading}
+                                  />
+                                </FormControl>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
                         )}
-
                       </div>
                     </div>
 
                   </div>
 
-                  {/* Submit Form Actions */}
+                  {/* Form Actions */}
                   <div className="p-6 bg-slate-50/50 border-t border-gray-100 flex justify-end gap-3">
-                    <Button type="button" variant="outline" onClick={handleCancel} className="h-12 px-6 rounded-xl border-gray-200 text-gray-600 hover:bg-gray-100">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCancel}
+                      className="h-12 px-6 rounded-xl border-gray-200 text-gray-600 hover:bg-gray-100"
+                    >
                       {t("common.cancel")}
                     </Button>
-                    <Button type="submit" disabled={loading} className="h-12 px-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 transition-all active:scale-95">
-                      {loading ? "Saving..." : mode === "edit" ? t("common.update") : t("common.save")}
+                    <Button
+                      type="submit"
+                      disabled={loading}
+                      className="h-12 px-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 transition-all active:scale-95"
+                    >
+                      {loading
+                        ? "Saving..."
+                        : mode === "edit"
+                          ? t("common.update")
+                          : t("common.save")}
                     </Button>
                   </div>
 

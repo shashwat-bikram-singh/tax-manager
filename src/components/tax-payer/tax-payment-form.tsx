@@ -19,10 +19,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useMutate } from "@/hooks/useMutate";
 import { useFetchAll } from "@/hooks/useFetchAll";
-import { useFiscalYear } from "@/context/FiscalYearContext";
 import type { Tax } from "@/type/tax";
 import NepaliDatePicker from "../ui/NepaliDatePicker";
 import { useTranslation } from "react-i18next";
+import type { FiscalYear } from "@/type/fiscalyear";
 
 // -------------------- TYPES --------------------
 interface Property {
@@ -135,31 +135,31 @@ const SearchableSelect = ({
         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
           <ChevronDown size={16} />
         </div>
-         {/* Clear Button */}
-         {value && inputValue && !disabled && (
-           <button
-             type="button"
-             onClick={(e) => {
-               e.stopPropagation();
-               if (onClear) {
-                 onClear();
-               } else {
-                 setInputValue("");
-                 onChange(null);
-               }
-             }}
-             className="absolute inset-y-0 right-8 flex items-center text-gray-400 hover:text-gray-600"
-           >
-             <X size={14} />
-           </button>
-         )}
+        {/* Clear Button */}
+        {value && inputValue && !disabled && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onClear) {
+                onClear();
+              } else {
+                setInputValue("");
+                onChange(null);
+              }
+            }}
+            className="absolute inset-y-0 right-8 flex items-center text-gray-400 hover:text-gray-600"
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
 
       {/* Dropdown Options */}
       {showOptions && !disabled && (
         <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
           {isLoading ? (
-            <li className="p-4 text-center text-sm text-gray-500">{t("payment.loading")}</li>
+            <li className="p-4 text-center text-sm text-gray-500">Loading...</li>
           ) : filteredOptions.length > 0 ? (
             filteredOptions.map((item, index) => (
               <li
@@ -192,7 +192,6 @@ export default function TaxPaymentForm({
   const { id: routeId } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState("");
-  const { activeFiscalYearId, fiscalYears } = useFiscalYear();
   const queryClient = useQueryClient();
 
   const handleCancel = () => {
@@ -204,8 +203,11 @@ export default function TaxPaymentForm({
 
   const { items: propertyData, isLoadingItems: isLoadingProperty } = useFetchAll<Property>("/api/property", ["property"]);
 
+  const { items: fiscalyearData } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
+  const fiscalYear = fiscalyearData?.data;
+
   const editApiUrl = editId ? `/api/payment?id=${editId}` : "";
-  const { items: paymentData, isLoadingItems: isLoadingPayment } = useFetchAll<Tax>(
+  const { items: paymentData } = useFetchAll<Tax>(
     editApiUrl,
     editId ? ["payment", editId] : ["payment-none"]
   );
@@ -243,7 +245,7 @@ export default function TaxPaymentForm({
     resolver: zodResolver(baseTaxPaymentSchema),
     defaultValues: {
       propertyId: 0,
-      fiscalYearId: activeFiscalYearId || 0,
+      fiscalYearId: 0,
       receiptNo: "",
       amountPaid: 0,
       paymentMiti: "",
@@ -261,14 +263,11 @@ export default function TaxPaymentForm({
 
   const properties = normalizeData<Property>(propertyData);
 
-  // Filter Fiscal Years to ensure valid ID > 0
-  const validFiscalYears = fiscalYears.filter(fy => fy.id && fy.id > 0);
-
   useEffect(() => {
     if (mode === "edit" && existingPayment) {
       form.reset({
         propertyId: existingPayment.PropertyId || 0,
-        fiscalYearId: existingPayment.FIscalYearId || activeFiscalYearId || 0,
+        fiscalYearId: existingPayment.FIscalYearId || 0,
         receiptNo: existingPayment.receiptNo || "",
         amountPaid: existingPayment.amount || 0,
         paymentMiti: existingPayment.paymentMiti || "",
@@ -280,7 +279,7 @@ export default function TaxPaymentForm({
     } else if (mode === "add") {
       form.reset({
         propertyId: 0,
-        fiscalYearId: activeFiscalYearId || 0,
+        fiscalYearId: 0,
         receiptNo: "",
         amountPaid: 0,
         paymentMiti: "",
@@ -288,7 +287,7 @@ export default function TaxPaymentForm({
       });
       setFileName("");
     }
-  }, [mode, existingPayment, activeFiscalYearId, form]);
+  }, [mode, existingPayment, form]);
 
   const onSubmit = async (values: TaxPaymentFormValues) => {
     setLoading(true);
@@ -303,7 +302,7 @@ export default function TaxPaymentForm({
       formData.append("propertyId", values.propertyId.toString());
       formData.append("fiscalYearId", values.fiscalYearId.toString());
       formData.append("receiptNo", values.receiptNo);
-      formData.append("amountPaid", values.amountPaid.toString());
+      formData.append("Amount", values.amountPaid.toString());
       formData.append("paymentMiti", values.paymentMiti);
 
       if (values.file && values.file.length > 0) {
@@ -412,19 +411,13 @@ export default function TaxPaymentForm({
                   <FormLabel> {t("payment.fiscalYear")} <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <SearchableSelect
-                      options={validFiscalYears}
+                      options={fiscalYear}
                       value={field.value?.toString()}
                       onChange={(val) => field.onChange(val ? Number(val) : null)}
                       getLabel={(fy) => fy.fiscalYear}
                       placeholder=""
                       disabled={loading}
                       inputClassName={inputBaseClass}
-                      // When X is clicked, reset to active fiscal year
-                      onClear={() => {
-                        if (activeFiscalYearId) {
-                          field.onChange(activeFiscalYearId);
-                        }
-                      }}
                     />
                   </FormControl>
                   <FormMessage />

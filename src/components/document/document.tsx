@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import type { ChangeEvent, FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import { useFetchAll } from "@/hooks/useFetchAll";
-import { Button } from "@/components/ui/button";
+
 import { Search, Download, X, ChevronDown } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import axiosInstance from '@/config/axios';
@@ -206,7 +206,7 @@ export default function DocumentSearchForm() {
 
       // Convert back to array
       setSearchResults(Array.from(uniqueMap.values()));
-      
+
       setShowTable(true);
     },
     onError: (error) => {
@@ -231,7 +231,7 @@ export default function DocumentSearchForm() {
       }
     } catch (error) {
       console.error(error);
-      alert("File load garna sakiyena. URL check garnu na hola.");
+      alert("Unsuccessfull to load the File.");
     }
   };
 
