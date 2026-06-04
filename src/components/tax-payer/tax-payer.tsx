@@ -29,7 +29,10 @@ import {
   Download,
   X,
   Plus,
-  ChevronDown
+  ChevronDown,
+  Printer,
+  FileSpreadsheet,
+  FileText,
 } from "lucide-react";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import axiosInstance from "@/config/axios";
@@ -40,6 +43,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 
 import type { FiscalYear } from "@/type/fiscalyear";
@@ -71,7 +75,7 @@ const SearchableSelect = ({
   className = "",
   disabled = false,
   isLoading = false,
-  onClear
+  onClear,
 }: SearchableSelectProps) => {
   const [inputValue, setInputValue] = useState("");
   const [showOptions, setShowOptions] = useState(false);
@@ -90,7 +94,10 @@ const SearchableSelect = ({
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setShowOptions(false);
       }
     };
@@ -149,7 +156,9 @@ const SearchableSelect = ({
       {showOptions && !disabled && (
         <ul className="absolute z-50 w-full mt-1 bg-white border-gray-300 rounded-xl shadow-xl max-h-60 overflow-auto">
           {isLoading ? (
-            <li className="p-4 text-center text-sm text-gray-500">Loading...</li>
+            <li className="p-4 text-center text-sm text-gray-500">
+              Loading...
+            </li>
           ) : filteredOptions.length > 0 ? (
             filteredOptions.map((item, index) => (
               <li
@@ -161,7 +170,9 @@ const SearchableSelect = ({
               </li>
             ))
           ) : (
-            <li className="p-4 text-center text-sm text-gray-400 italic">{t("document.noPropertyFound") || "No matches found"}</li>
+            <li className="p-4 text-center text-sm text-gray-400 italic">
+              {t("document.noPropertyFound") || "No matches found"}
+            </li>
           )}
         </ul>
       )}
@@ -169,32 +180,254 @@ const SearchableSelect = ({
   );
 };
 
+// ─── PRINT HELPER ──────────────────────────────────────────────────────
+function printElement(id: string, title: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const w = window.open("", "_blank", "width=900,height=700");
+  if (!w) {
+    alert("Popup blocked! Please allow popups to print.");
+    return;
+  }
+  w.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #1e293b; }
+          h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+          p.subtitle { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          th { background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 10px; text-align: left; font-weight: 600; color: #475569; text-transform: uppercase; font-size: 10px; letter-spacing: .05em; }
+          td { border: 1px solid #e2e8f0; padding: 7px 10px; color: #334155; }
+          tr:nth-child(even) td { background: #f8fafc; }
+          .paid { color: #16a34a; font-weight: 600; }
+          .unpaid { color: #dc2626; font-weight: 600; }
+          .footer { margin-top: 16px; font-size: 11px; color: #94a3b8; text-align: right; }
+        </style>
+      </head>
+      <body>
+        <h2>${title}</h2>
+        <p class="subtitle">Printed on ${new Date().toLocaleString()}</p>
+        ${el.innerHTML}
+        <div class="footer">This is a computer-generated document.</div>
+      </body>
+    </html>
+  `);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); w.close(); }, 500);
+}
+
+// ─── EXCEL EXPORT ──────────────────────────────────────────────────────
+function exportToExcel(data: any[], filename: string, sheetTitle: string) {
+  const headers = ["SN", "Property", "Receipt No", "Amount Paid", "Payment Date", "Status"];
+  const rows = data.map((item, i) => [
+    i + 1,
+    item.property ?? "-",
+    item.receiptNo ?? "-",
+    item.amountPaid ? `Rs. ${Number(item.amountPaid).toLocaleString()}` : "-",
+    item.paymentMiti ?? "-",
+    item.isPaid === 1 || item.isPaid === true ? "Paid" : "Unpaid",
+  ]);
+
+  const csvContent = [
+    [sheetTitle],
+    [],
+    headers,
+    ...rows,
+  ]
+    .map((r) => r.map((c: any) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+
+  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${filename}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── PDF EXPORT (DOWNLOAD APPROACH SAME AS EXCEL) ──────────────────────
+function exportToPdf(data: any[], title: string) {
+  const rows = data
+    .map((item, i) => {
+      const isPaidStatus = item.isPaid === 1 || item.isPaid === true;
+      const statusText = isPaidStatus ? "Paid" : "Unpaid";
+      const statusClass = isPaidStatus ? "paid" : "unpaid";
+      const amountValue = item.amountPaid ? Number(item.amountPaid) : 0;
+      const amountText = item.amountPaid ? `Rs. ${amountValue.toLocaleString()}` : "-";
+
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${item.property ?? "-"}</td>
+          <td>${item.receiptNo ?? "-"}</td>
+          <td>${amountText}</td>
+          <td>${item.paymentMiti ?? "-"}</td>
+          <td class="${statusClass}">${statusText}</td>
+        </tr>`;
+    })
+    .join("");
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #1e293b; }
+          h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+          p.subtitle { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          th { background: #1e40af; color: white; border: 1px solid #1e3a8a; padding: 8px 10px; text-align: left; font-weight: 600; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; }
+          td { border: 1px solid #e2e8f0; padding: 7px 10px; color: #334155; }
+          tr:nth-child(even) td { background: #f1f5f9; }
+          .paid { color: #16a34a; font-weight: 700; }
+          .unpaid { color: #dc2626; font-weight: 700; }
+          .footer { margin-top: 16px; font-size: 11px; color: #94a3b8; text-align: right; }
+        </style>
+      </head>
+      <body>
+        <h2>${title}</h2>
+        <p class="subtitle">Exported on ${new Date().toLocaleString()}</p>
+        <table>
+          <thead>
+            <tr><th>SN</th><th>Property</th><th>Receipt No</th><th>Amount Paid</th><th>Payment Date</th><th>Status</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="footer">This is a computer-generated document.</div>
+      </body>
+    </html>
+  `;
+
+  const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── POPUP HISTORY EXCEL EXPORT ────────────────────────────────────────
+function exportHistoryToExcel(data: any[], propertyName: string) {
+  const headers = ["SN", "Receipt No", "Amount", "Fiscal Year", "Payment Date", "Status"];
+  const rows = data.map((item, i) => [
+    i + 1,
+    item.receiptNo ?? "-",
+    item.amountPaid ? `Rs. ${Number(item.amountPaid).toLocaleString()}` : "-",
+    item.fiscalYearName ?? "-",
+    item.paymentMiti ?? "-",
+    "Paid",
+  ]);
+
+  const csvContent = [
+    [`Payment History - ${propertyName}`],
+    [],
+    headers,
+    ...rows,
+  ]
+    .map((r) => r.map((c: any) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+
+  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `payment-history-${propertyName.replace(/\s+/g, "-")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── POPUP HISTORY PDF EXPORT (DOWNLOAD APPROACH SAME AS EXCEL) ─────────
+function exportHistoryToPdf(data: any[], propertyName: string) {
+  const rows = data
+    .map((item, i) => {
+      const amountValue = item.amountPaid ? Number(item.amountPaid) : 0;
+      const amountText = item.amountPaid ? `Rs. ${amountValue.toLocaleString()}` : "-";
+
+      return `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${item.receiptNo ?? "-"}</td>
+          <td>${amountText}</td>
+          <td>${item.fiscalYearName ?? "-"}</td>
+          <td>${item.paymentMiti ?? "-"}</td>
+          <td class="paid">Paid</td>
+        </tr>`;
+    })
+    .join("");
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Payment History - ${propertyName}</title>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #1e293b; }
+          h2 { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+          p.prop { font-size: 13px; color: #3b82f6; font-weight: 600; margin-bottom: 4px; }
+          p.subtitle { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          th { background: #1e40af; color: white; border: 1px solid #1e3a8a; padding: 8px 10px; text-align: left; font-weight: 600; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; }
+          td { border: 1px solid #e2e8f0; padding: 7px 10px; color: #334155; }
+          tr:nth-child(even) td { background: #f1f5f9; }
+          .paid { color: #16a34a; font-weight: 700; }
+          .footer { margin-top: 16px; font-size: 11px; color: #94a3b8; text-align: right; }
+        </style>
+      </head>
+      <body>
+        <h2>Payment History</h2>
+        <p class="prop">${propertyName}</p>
+        <p class="subtitle">Exported on ${new Date().toLocaleString()}</p>
+        <table>
+          <thead>
+            <tr><th>SN</th><th>Receipt No</th><th>Amount</th><th>Fiscal Year</th><th>Payment Date</th><th>Status</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="footer">This is a computer-generated document.</div>
+      </body>
+    </html>
+  `;
+
+  const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `payment-history-${propertyName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── MAIN COMPONENT ────────────────────────────────────────────────────
 export default function PaymentList() {
   const navigate = useNavigate();
 
-  // --- Auth Logic for Modal Download Button ---
   const { token } = useAuthStore();
   const decoded: any = token ? jwtDecode(token) : {};
   const Role = decoded.Role || "User";
 
-  // --- Local State for Fiscal Year ---
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [selectedFiscalYearId, setSelectedFiscalYearId] = useState<number | undefined>(undefined);
 
-  // --- Property Payment Popup State ---
   const [propertyPopupOpen, setPropertyPopupOpen] = useState(false);
   const [propertyPopupData, setPropertyPopupData] = useState<Payment[]>([]);
   const [propertyPopupLoading, setPropertyPopupLoading] = useState(false);
   const [popupPropertyName, setPopupPropertyName] = useState("");
 
-  // --- File View/Modal State ---
   const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // --- Edit Modal State ---
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
 
-  // Fetch Fiscal Years Locally
   const { items: fyData, isLoadingItems: isLoadingFy } = useFetchAll<FiscalYear>("/api/fiscalyear", ["fiscalyear"]);
 
   function getFiscalYears(data: any): FiscalYear[] {
@@ -221,10 +454,13 @@ export default function PaymentList() {
     }
   }, [fiscalYears, selectedFiscalYearId]);
 
-  // --- Payments Fetching ---
   const { items: paymentData, isLoadingItems } = useFetchAll<Payment>(
-    selectedFiscalYearId ? `/api/paymentStatus?fiscalYearId=${selectedFiscalYearId}` : "/api/paymentStatus",
-    selectedFiscalYearId ? ["paymentStatus", selectedFiscalYearId] : ["paymentStatus"]
+    selectedFiscalYearId
+      ? `/api/paymentStatus?fiscalYearId=${selectedFiscalYearId}`
+      : "/api/paymentStatus",
+    selectedFiscalYearId
+      ? ["paymentStatus", selectedFiscalYearId]
+      : ["paymentStatus"]
   );
 
   const handlePropertyClick = async (propertyId: number, propertyName: string) => {
@@ -244,10 +480,8 @@ export default function PaymentList() {
     }
   };
 
-  // Helper to normalize Payment data
   function getPayment(data: any): Payment[] {
     if (!data) return [];
-
     let arr: any[] = [];
     if (Array.isArray(data)) {
       arr = data;
@@ -260,18 +494,21 @@ export default function PaymentList() {
     }
 
     const normalized = arr.map((item: any) => {
-      const normalizedId = item.id ?? item.Id ?? item.taxId ?? item.TaxId ?? item.paymentId ?? item.PaymentId;
+      const normalizedId =
+        item.id ?? item.Id ?? item.taxId ?? item.TaxId ?? item.paymentId ?? item.PaymentId;
       return {
         ...item,
         id: item.id,
-        taxRecordId: item.taxRecordId ?? item.TaxRecordId ?? item.taxrecordid ?? normalizedId,
+        taxRecordId:
+          item.taxRecordId ?? item.TaxRecordId ?? item.taxrecordid ?? normalizedId,
         amountPaid: item.amountPaid ?? item.amount ?? item.Amount,
         propertyId: item.propertyId ?? item.PropertyId,
         property: item.property ?? item.Property,
         receiptNo: item.receiptNo ?? item.ReceiptNo,
         paymentMiti: item.paymentMiti ?? item.PaymentMiti,
         isPaid: item.isPaid ?? item.IsPaid,
-        fiscalYearName: item.fiscalYear?.fiscalYear ?? item.fiscalYearName ?? item.FiscalYear ?? "-",
+        fiscalYearName:
+          item.fiscalYear?.fiscalYear ?? item.fiscalYearName ?? item.FiscalYear ?? "-",
       };
     });
     return normalized as Payment[];
@@ -279,19 +516,15 @@ export default function PaymentList() {
 
   const payments = getPayment(paymentData);
 
-  // Search State
   const [searchTerm, setSearchTerm] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Pagination State
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // --- Tab State ---
   const [activeTab, setActiveTab] = useState<"all" | "paid" | "unpaid">("all");
 
-  // Column Visibility State
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
     sn: true,
     property: true,
@@ -317,19 +550,19 @@ export default function PaymentList() {
     setCurrentPage(1);
   };
 
-  // --- View File Logic ---
   interface ApiResponseViewFile {
     url: string;
   }
 
   const handleViewFile = async (taxRecordId: number) => {
     if (!taxRecordId) {
-      console.error("Invalid taxRecordId provided:", taxRecordId);
       alert("Cannot view file: Invalid record ID");
       return;
     }
     try {
-      const response = await axiosInstance.get<ApiResponseViewFile>(`/api/view-receipt?id=${taxRecordId}`);
+      const response = await axiosInstance.get<ApiResponseViewFile>(
+        `/api/view-receipt?id=${taxRecordId}`
+      );
       if (response?.data?.url) {
         setSelectedFileUrl(response.data.url);
         setIsModalOpen(true);
@@ -342,30 +575,25 @@ export default function PaymentList() {
     }
   };
 
-  // --- Download Logic ---
   const handleDownload = async () => {
     if (!selectedFileUrl) return;
-
     try {
       const response = await fetch(selectedFileUrl);
-      if (!response.ok) throw new Error('Network response was not ok');
+      if (!response.ok) throw new Error("Network response was not ok");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-
-      const a = document.createElement('a');
-      a.style.display = 'none';
+      const a = document.createElement("a");
+      a.style.display = "none";
       a.href = url;
-      const fileName = selectedFileUrl.split('/').pop()?.split('?')[0] || 'document.pdf';
+      const fileName =
+        selectedFileUrl.split("/").pop()?.split("?")[0] || "document.pdf";
       a.download = fileName;
-
       document.body.appendChild(a);
       a.click();
-
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      console.error("Download Error:", error);
-      window.open(selectedFileUrl, '_blank');
+      window.open(selectedFileUrl, "_blank");
     }
   };
 
@@ -380,7 +608,9 @@ export default function PaymentList() {
 
     const searchMatch =
       searchTerm === "" ||
-      (item.property && typeof item.property === 'string' && item.property.toLowerCase().includes(searchLower)) ||
+      (item.property &&
+        typeof item.property === "string" &&
+        item.property.toLowerCase().includes(searchLower)) ||
       (item.receiptNo && item.receiptNo.toLowerCase().includes(searchLower)) ||
       amountStr.includes(searchLower);
 
@@ -389,11 +619,17 @@ export default function PaymentList() {
 
   const totalPages = Math.ceil(filteredpayments.length / entriesPerPage);
   const startIndex = (currentPage - 1) * entriesPerPage;
-  const paginatedpayments = filteredpayments.slice(startIndex, startIndex + entriesPerPage);
+  const paginatedpayments = filteredpayments.slice(
+    startIndex,
+    startIndex + entriesPerPage
+  );
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
+
+  const activeFyLabel =
+    fiscalYears.find((fy) => fy.id === selectedFiscalYearId)?.fiscalYear ?? "";
 
   if (isLoadingFy || isLoadingItems) {
     return (
@@ -405,42 +641,39 @@ export default function PaymentList() {
 
   return (
     <div className="-mt-5 md:p-1 max-w-9xl mx-auto space-y-4">
-      {/* Header Section */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight">{t("payment.paymentStatus")}</h2>
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight">
+            {t("payment.paymentStatus")}
+          </h2>
         </div>
       </div>
 
-      {/* Tabs Section */}
+      {/* Tabs */}
       <div className="flex gap-2 p-1 bg-white border-b border-slate-200">
-        <button
-          onClick={() => { setActiveTab("all"); setCurrentPage(1); }}
-          className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${activeTab === "all" ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100"
-            }`}
-        >
-          {t("payment.all")}
-        </button>
-        <button
-          onClick={() => { setActiveTab("paid"); setCurrentPage(1); }}
-          className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${activeTab === "paid" ? "bg-green-600 text-white" : "text-slate-500 hover:bg-slate-100"
-            }`}
-        >
-          {t("payment.paid")}
-        </button>
-        <button
-          onClick={() => { setActiveTab("unpaid"); setCurrentPage(1); }}
-          className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${activeTab === "unpaid" ? "bg-red-600 text-white" : "text-slate-500 hover:bg-slate-100"
-            }`}
-        >
-          {t("payment.unpaid")}
-        </button>
+        {(["all", "paid", "unpaid"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
+            className={`px-6 py-2 text-sm font-medium transition-colors rounded-t-lg ${activeTab === tab
+              ? tab === "all"
+                ? "bg-blue-600 text-white"
+                : tab === "paid"
+                  ? "bg-green-600 text-white"
+                  : "bg-red-600 text-white"
+              : "text-slate-500 hover:bg-slate-100"
+              }`}
+          >
+            {t(`payment.${tab}`)}
+          </button>
+        ))}
       </div>
 
       {/* Controls Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex flex-1 sm:flex-none items-center gap-3 w-full">
-          {/* Fiscal Year Selector */}
+        <div className="flex flex-1 sm:flex-none items-center gap-3 w-full flex-wrap">
+          {/* Fiscal Year */}
           <div className="w-full sm:w-48 shrink-0">
             <SearchableSelect
               options={fiscalYears}
@@ -453,6 +686,7 @@ export default function PaymentList() {
             />
           </div>
 
+          {/* Search Toggle */}
           <Button
             variant="outline"
             size="sm"
@@ -478,9 +712,13 @@ export default function PaymentList() {
             </div>
           )}
 
+          {/* Column Visibility */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 shrink-0 rounded-xl">
+              <Button
+                variant="outline"
+                className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 shrink-0 rounded-xl"
+              >
                 <Settings2 />
               </Button>
             </DropdownMenuTrigger>
@@ -491,7 +729,9 @@ export default function PaymentList() {
                 <DropdownMenuCheckboxItem
                   key={key}
                   checked={visible}
-                  onCheckedChange={() => setColumnVisibility({ ...columnVisibility, [key]: !visible })}
+                  onCheckedChange={() =>
+                    setColumnVisibility({ ...columnVisibility, [key]: !visible })
+                  }
                 >
                   {key.charAt(0).toUpperCase() + key.slice(1)}
                 </DropdownMenuCheckboxItem>
@@ -499,44 +739,166 @@ export default function PaymentList() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0 w-full sm:w-auto ml-auto rounded-xl" onClick={handleAddNew}>
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 shrink-0 rounded-xl"
+              >
+                <Download className="h-4 w-4" />
+                Export
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel className="text-xs text-slate-400">
+                Export as
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={() =>
+                  exportToExcel(
+                    filteredpayments,
+                    `payment-status-${activeFyLabel}`,
+                    `Payment Status — ${activeFyLabel}`
+                  )
+                }
+              >
+                <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                <span className="text-sm">Excel / CSV</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={() =>
+                  exportToPdf(
+                    filteredpayments,
+                    `Payment Status — ${activeFyLabel}`
+                  )
+                }
+              >
+                <FileText className="h-4 w-4 text-red-500" />
+                <span className="text-sm">PDF (HTML)</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Print Button */}
+          <Button
+            variant="outline"
+            className="text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 shrink-0 rounded-xl"
+            onClick={() =>
+              printElement(
+                "payment-print-table",
+                `Payment Status — ${activeFyLabel}`
+              )
+            }
+          >
+            <Printer className="h-4 w-4" />
+            Print
+          </Button>
+
+          {/* Add Payment */}
+          <Button
+            className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0 w-full sm:w-auto ml-auto rounded-xl"
+            onClick={handleAddNew}
+          >
             <Plus className="mr-2 h-4 w-4" /> {t("payment.addPayment")}
           </Button>
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table Section */}
       <div className="hidden md:block rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div id="payment-print-table" className="hidden">
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {columnVisibility.sn && <th>SN</th>}
+                {columnVisibility.property && <th>Property</th>}
+                {columnVisibility.receiptNo && <th>Receipt No</th>}
+                {columnVisibility.amountPaid && <th>Amount Paid</th>}
+                {columnVisibility.paymentMiti && <th>Payment Date</th>}
+                {columnVisibility.status && <th>Status</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredpayments.map((item, i) => (
+                <tr key={item.id}>
+                  {columnVisibility.sn && <td>{i + 1}</td>}
+                  {columnVisibility.property && <td>{item.property ?? "-"}</td>}
+                  {columnVisibility.receiptNo && <td>{item.receiptNo ?? "-"}</td>}
+                  {columnVisibility.amountPaid && (
+                    <td>
+                      {item.amountPaid
+                        ? `Rs. ${Number(item.amountPaid).toLocaleString()}`
+                        : "-"}
+                    </td>
+                  )}
+                  {columnVisibility.paymentMiti && <td>{item.paymentMiti ?? "-"}</td>}
+                  {columnVisibility.status && (
+                    <td
+                      className={
+                        item.isPaid === 1 || item.isPaid === true ? "paid" : "unpaid"
+                      }
+                    >
+                      {item.isPaid === 1 || item.isPaid === true ? "Paid" : "Unpaid"}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         <Table>
           <TableHeader className="bg-slate-50 border-b border-slate-200">
             <TableRow className="hover:bg-slate-50/50">
               {columnVisibility.sn && (
-                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">{t("common.sn")}</TableHead>
+                <TableHead className="w-16 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">
+                  {t("common.sn")}
+                </TableHead>
               )}
               {columnVisibility.property && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.property")}</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">
+                  {t("payment.property")}
+                </TableHead>
               )}
               {columnVisibility.receiptNo && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.receiptNo")}</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">
+                  {t("payment.receiptNo")}
+                </TableHead>
               )}
               {columnVisibility.amountPaid && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.amountPaid")}</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">
+                  {t("payment.amountPaid")}
+                </TableHead>
               )}
               {columnVisibility.paymentMiti && (
-                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.paymentDate")}</TableHead>
+                <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">
+                  {t("payment.paymentDate")}
+                </TableHead>
               )}
               {columnVisibility.status && (
-                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.paymentStatus")}</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">
+                  {t("payment.paymentStatus")}
+                </TableHead>
               )}
               {columnVisibility.file && (
-                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("payment.file")}</TableHead>
+                <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">
+                  {t("payment.file")}
+                </TableHead>
               )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedpayments.length > 0 ? (
               paginatedpayments.map((item, index) => (
-                <TableRow key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                <TableRow
+                  key={item.id}
+                  className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
+                >
                   {columnVisibility.sn && (
                     <TableCell className="text-center text-sm text-slate-500 font-medium py-2">
                       {(currentPage - 1) * entriesPerPage + index + 1}
@@ -545,7 +907,10 @@ export default function PaymentList() {
                   {columnVisibility.property && (
                     <TableCell
                       className="font-semibold text-slate-900 py-2 cursor-pointer hover:text-blue-600 hover:underline"
-                      onClick={() => item.propertyId && handlePropertyClick(item.propertyId, item.property)}
+                      onClick={() =>
+                        item.propertyId &&
+                        handlePropertyClick(item.propertyId, item.property)
+                      }
                       title="Click to view payment history"
                     >
                       {item.property ?? "-"}
@@ -558,7 +923,9 @@ export default function PaymentList() {
                   )}
                   {columnVisibility.amountPaid && (
                     <TableCell className="text-sm text-slate-600 font-medium py-2">
-                      {item.amountPaid ? `Rs. ${Number(item.amountPaid).toLocaleString()}` : "-"}
+                      {item.amountPaid
+                        ? `Rs. ${Number(item.amountPaid).toLocaleString()}`
+                        : "-"}
                     </TableCell>
                   )}
                   {columnVisibility.paymentMiti && (
@@ -596,11 +963,16 @@ export default function PaymentList() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length} className="h-64 text-center">
+                <TableCell
+                  colSpan={Object.values(columnVisibility).filter(Boolean).length}
+                  className="h-64 text-center"
+                >
                   <div className="flex flex-col items-center justify-center text-slate-400">
                     <FileX className="w-12 h-12 mb-3 opacity-50" />
                     <p className="text-sm font-medium">{t("payment.NoPaymentsFound")}</p>
-                    <p className="text-xs mt-1">{t("payment.TryAdjustingYourSearchOrFilters")}</p>
+                    <p className="text-xs mt-1">
+                      {t("payment.TryAdjustingYourSearchOrFilters")}
+                    </p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -609,26 +981,42 @@ export default function PaymentList() {
         </Table>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination Controls */}
       <div className="hidden sm:flex items-center justify-between px-2 pt-4">
         <div className="text-sm text-slate-500">
-          Showing <span className="font-medium text-slate-900">
-            {filteredpayments.length === 0 ? 0 : (currentPage - 1) * entriesPerPage + 1}
-          </span> to <span className="font-medium text-slate-900">
+          Showing{" "}
+          <span className="font-medium text-slate-900">
+            {filteredpayments.length === 0
+              ? 0
+              : (currentPage - 1) * entriesPerPage + 1}
+          </span>{" "}
+          to{" "}
+          <span className="font-medium text-slate-900">
             {Math.min(currentPage * entriesPerPage, filteredpayments.length)}
-          </span> of <span className="font-medium text-slate-900">{filteredpayments.length}</span> results
+          </span>{" "}
+          of{" "}
+          <span className="font-medium text-slate-900">{filteredpayments.length}</span>{" "}
+          results
         </div>
 
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
             <p className="text-sm font-medium text-slate-700">Rows per page</p>
-            <Select value={entriesPerPage.toString()} onValueChange={(v) => { setEntriesPerPage(Number(v)); setCurrentPage(1); }}>
+            <Select
+              value={entriesPerPage.toString()}
+              onValueChange={(v) => {
+                setEntriesPerPage(Number(v));
+                setCurrentPage(1);
+              }}
+            >
               <SelectTrigger className="h-8 w-[70px] rounded-lg">
                 <SelectValue placeholder={entriesPerPage} />
               </SelectTrigger>
               <SelectContent side="top">
                 {[10, 20, 30, 40, 50].map((size) => (
-                  <SelectItem key={size} value={size.toString()}>{size}</SelectItem>
+                  <SelectItem key={size} value={size.toString()}>
+                    {size}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -639,16 +1027,36 @@ export default function PaymentList() {
               Page {currentPage} of {totalPages || 1}
             </div>
             <div className="flex items-center space-x-1">
-              <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={() => goToPage(1)} disabled={currentPage === 1}>
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => goToPage(1)}
+                disabled={currentPage === 1}
+              >
                 <ChevronsLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" className="h-8 w-8 p-0" onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
+              <Button
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" className="h-8 w-8 p-0" onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages || totalPages === 0}>
+              <Button
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages || totalPages === 0}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0}>
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => goToPage(totalPages)}
+                disabled={currentPage === totalPages || totalPages === 0}
+              >
                 <ChevronsRight className="h-4 w-4" />
               </Button>
             </div>
@@ -656,16 +1064,14 @@ export default function PaymentList() {
         </div>
       </div>
 
-      {/* --- POPUP MODAL (File Viewer) --- */}
+      {/* ── FILE VIEWER MODAL ─────────────────────────────── */}
       {isModalOpen && selectedFileUrl && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden p-4">
           <div
             className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm transition-opacity"
             onClick={() => { setIsModalOpen(false); setSelectedFileUrl(null); }}
-          ></div>
-
+          />
           <div className="relative bg-white w-full max-w-6xl h-[95vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-
             <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-slate-50">
               <div className="flex items-center gap-3">
                 <div className="bg-red-100 p-2 rounded-lg">
@@ -673,12 +1079,13 @@ export default function PaymentList() {
                 </div>
                 <div className="overflow-hidden">
                   <h3 className="text-sm font-bold text-slate-800 truncate max-w-[200px] md:max-w-md">
-                    {selectedFileUrl.split('/').pop()?.split('?')[0] || "Document Preview"}
+                    {selectedFileUrl.split("/").pop()?.split("?")[0] || "Document Preview"}
                   </h3>
-                  <p className="text-[10px] text-slate-400 italic font-medium">Secure Cloud Viewer</p>
+                  <p className="text-[10px] text-slate-400 italic font-medium">
+                    Secure Cloud Viewer
+                  </p>
                 </div>
               </div>
-
               <button
                 onClick={() => { setIsModalOpen(false); setSelectedFileUrl(null); }}
                 className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-all"
@@ -688,16 +1095,17 @@ export default function PaymentList() {
             </div>
 
             <div className="flex-grow bg-slate-200 flex flex-col overflow-hidden relative">
-              {selectedFileUrl.toLowerCase().includes('.pdf') ? (
+              {selectedFileUrl.toLowerCase().includes(".pdf") ? (
                 <div className="w-full h-full bg-white">
-                  {/* Changed from unsecure iframe wrapper to standard Object layout to allow browser rendering */}
                   <object
                     data={selectedFileUrl}
                     type="application/pdf"
                     className="w-full h-full border-none shadow-inner"
                   >
                     <div className="flex flex-col items-center justify-center h-full p-4 text-slate-600 bg-slate-50">
-                      <p className="mb-4 font-semibold text-sm">Your browser doesn't support embedded PDFs.</p>
+                      <p className="mb-4 font-semibold text-sm">
+                        Your browser doesn't support embedded PDFs.
+                      </p>
                       <a
                         href={selectedFileUrl}
                         target="_blank"
@@ -716,7 +1124,8 @@ export default function PaymentList() {
                     alt="Preview"
                     className="max-w-full max-h-full object-contain rounded-lg shadow-xl bg-white p-1"
                     onError={(e) => {
-                      e.currentTarget.src = "https://placehold.co/600x400?text=Preview+Not+Available";
+                      e.currentTarget.src =
+                        "https://placehold.co/600x400?text=Preview+Not+Available";
                     }}
                   />
                 </div>
@@ -730,9 +1139,8 @@ export default function PaymentList() {
               >
                 Close
               </button>
-
               <div className="flex items-center gap-4">
-                {Role === 'Admin' ? (
+                {Role === "Admin" ? (
                   <button
                     type="button"
                     onClick={handleDownload}
@@ -743,7 +1151,9 @@ export default function PaymentList() {
                   </button>
                 ) : (
                   <div className="flex items-center gap-2 text-slate-500 bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
-                    <span className="text-[10px] font-bold uppercase tracking-widest italic">View Only Mode</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest italic">
+                      View Only Mode
+                    </span>
                   </div>
                 )}
               </div>
@@ -752,7 +1162,7 @@ export default function PaymentList() {
         </div>
       )}
 
-      {/* --- PROPERTY PAYMENT POPUP --- */}
+      {/* ── PROPERTY PAYMENT HISTORY POPUP ───────────────── */}
       {propertyPopupOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
@@ -761,12 +1171,71 @@ export default function PaymentList() {
                 <h3 className="text-lg font-bold text-slate-800">Payment History</h3>
                 <p className="text-sm text-slate-500">{popupPropertyName}</p>
               </div>
-              <button
-                onClick={() => setPropertyPopupOpen(false)}
-                className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-all"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {!propertyPopupLoading && propertyPopupData.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-slate-600 border-slate-200 rounded-lg text-xs"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Export
+                        <ChevronDown className="h-3 w-3 opacity-60" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuLabel className="text-xs text-slate-400">
+                        Export as
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="gap-2 cursor-pointer"
+                        onClick={() =>
+                          exportHistoryToExcel(propertyPopupData, popupPropertyName)
+                        }
+                      >
+                        <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                        <span className="text-sm">Excel / CSV</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="gap-2 cursor-pointer"
+                        onClick={() =>
+                          exportHistoryToPdf(propertyPopupData, popupPropertyName)
+                        }
+                      >
+                        <FileText className="h-4 w-4 text-red-500" />
+                        <span className="text-sm">PDF</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                {!propertyPopupLoading && propertyPopupData.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-slate-600 border-slate-200 rounded-lg text-xs"
+                    onClick={() =>
+                      printElement(
+                        "history-print-table",
+                        `Payment History — ${popupPropertyName}`
+                      )
+                    }
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    Print
+                  </Button>
+                )}
+
+                <button
+                  onClick={() => setPropertyPopupOpen(false)}
+                  className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-all"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-grow overflow-auto p-4">
@@ -775,42 +1244,93 @@ export default function PaymentList() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : propertyPopupData.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-slate-50/50">
-                      <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Receipt No</TableHead>
-                      <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Amount</TableHead>
-                      <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Fiscal Year</TableHead>
-                      <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Payment Date</TableHead>
-                      <TableHead className="text-[11px] font-bold text-slate-500 uppercase">Status</TableHead>
-                      <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase">Receipt</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {propertyPopupData.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.receiptNo ?? "-"}</TableCell>
-                        <TableCell>{item.amountPaid ? `Rs. ${Number(item.amountPaid).toLocaleString()}` : "-"}</TableCell>
-                        <TableCell className="text-slate-600">{item.fiscalYearName}</TableCell>
-                        <TableCell>{item.paymentMiti ?? "-"}</TableCell>
-                        <TableCell>
-                          <span className="text-green-600 font-bold">Paid</span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
-                            onClick={() => handleViewFile(item.taxRecordId)}
-                            title="View Receipt"
-                          >
-                            <Eye size={16} strokeWidth={2} />
-                          </Button>
-                        </TableCell>
+                <>
+                  <div id="history-print-table" className="hidden">
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <th>Receipt No</th>
+                          <th>Amount</th>
+                          <th>Fiscal Year</th>
+                          <th>Payment Date</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {propertyPopupData.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.receiptNo ?? "-"}</td>
+                            <td>
+                              {item.amountPaid
+                                ? `Rs. ${Number(item.amountPaid).toLocaleString()}`
+                                : "-"}
+                            </td>
+                            <td>{item.fiscalYearName ?? "-"}</td>
+                            <td>{item.paymentMiti ?? "-"}</td>
+                            <td className="paid">Paid</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-slate-50/50">
+                        <TableHead className="text-[11px] font-bold text-slate-500 uppercase">
+                          Receipt No
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-500 uppercase">
+                          Amount
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-500 uppercase">
+                          Fiscal Year
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-500 uppercase">
+                          Payment Date
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-500 uppercase">
+                          Status
+                        </TableHead>
+                        <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase">
+                          Receipt
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {propertyPopupData.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">
+                            {item.receiptNo ?? "-"}
+                          </TableCell>
+                          <TableCell>
+                            {item.amountPaid
+                              ? `Rs. ${Number(item.amountPaid).toLocaleString()}`
+                              : "-"}
+                          </TableCell>
+                          <TableCell className="text-slate-600">
+                            {item.fiscalYearName}
+                          </TableCell>
+                          <TableCell>{item.paymentMiti ?? "-"}</TableCell>
+                          <TableCell>
+                            <span className="text-green-600 font-bold">Paid</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                              onClick={() => handleViewFile(item.taxRecordId)}
+                              title="View Receipt"
+                            >
+                              <Eye size={16} strokeWidth={2} />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-40 text-slate-400">
                   <FileX className="w-10 h-10 mb-2 opacity-50" />
@@ -832,7 +1352,7 @@ export default function PaymentList() {
         </div>
       )}
 
-      {/* --- EDIT MODAL --- */}
+      {/* EDIT MODAL */}
       {editingPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
