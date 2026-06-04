@@ -43,7 +43,7 @@ const propertySchema = z.object({
   wardNo: z.string().min(1, { message: "Ward No is required" }),
   description: z.string().min(1, { message: "Description is required" }),
   propertytype: z.string().min(1, { message: "Property type is required" }),
-  currentUsage: z.string().min(1, { message: "Current usage is required" }),
+  currentUsage: z.string().optional(),
   legalstatus: z.string().min(1, { message: "Legal status is required" }),
   valuation: z.coerce.number().min(1, { message: "Valuation is required" }),
   taxAmount: z.coerce.number().min(1, { message: "Tax Amount is required" }),
@@ -819,7 +819,7 @@ export default function PropertyForm({
           <div className="gap-6 items-start">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-20">
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-xl">
 
                   <div className="bg-slate-50/50 p-6 border-b border-gray-100">
                     <div className="flex items-center gap-3">

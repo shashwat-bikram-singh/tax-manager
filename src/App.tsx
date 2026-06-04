@@ -20,6 +20,7 @@ import { MeasurementConverter } from "./components/Converter/converter";
 import TaxComplianceReport from "./components/report/tax-compliance-report"
 import Report from "./components/report/report";
 import GenericPage from "./components/generic-page/generic-page";
+import LeaderboardPage from "./components/dashboard/LeaderboardPage";
 
 // Unified authentication wrapper to allow any logged-in user (Admin or SuperAdmin)
 const AuthenticatedRoute = ({ children }: { children: ReactNode }) => {
@@ -65,6 +66,7 @@ function App() {
         <Route index element={<Dashboard />} />
 
         <Route path="office" element={<SubofficeList />} />
+        <Route path="leaderboardPage" element={<LeaderboardPage />} />
         <Route path="user" element={<UserList />} />
         <Route path="fiscalyear" element={<FiscalyearList />} />
         <Route path="fiscalyear/add" element={<FiscalyearForm mode="add" />} />

@@ -3,7 +3,7 @@ import ReactApexChart from "react-apexcharts";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import { FileText, AlertTriangle, Scale, Gavel, Upload, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ProjectMap } from "@/components/map/ProjectMap"; // ✅ adjust path if needed
+import { ProjectMap } from "@/components/map/projectmap"; // ✅ adjust path if needed
 
 export default function Report() {
   const { items: response, isLoading } = useFetchAll<any>("/decision-logic", [

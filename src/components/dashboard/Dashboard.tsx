@@ -7,7 +7,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, X, MapPin } from "lucide-react";
 import { useRef } from "react";
-import { ProjectMap } from "@/components/map/ProjectMap";
+import { ProjectMap } from "@/components/map/projectmap";
 
 // ─── SEARCHABLE SELECT ────────────────────────────────────────────────────────
 interface SearchableSelectProps {
@@ -275,8 +275,14 @@ function HighRiskAuditTable() {
 
 // ─── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 export default function Dashboard() {
+  // ── District bar chart filters ──
   const [selectedProvinceId, setSelectedProvinceId] = useState<string | number | null>(null);
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | number | null>(null);
+
+  // ── Local body section filters (independent) ──
+  const [lbProvinceId, setLbProvinceId] = useState<string | number | null>(null);
+  const [lbDistrictId, setLbDistrictId] = useState<string | number | null>(null);
+
   const { t } = useTranslation();
   const { items: dashboardResponse, isLoadingItems: loading, error } = useFetchAll<DashboardData>("/api/dashboard", ["dashboard"]);
   const { items: leaderboardResponse } = useFetchAll<LeaderboardData>("/api/leaderboard", ["leaderboard"]);
@@ -306,6 +312,7 @@ export default function Dashboard() {
   const districtData: DistrictData[] = d?.districtData ? JSON.parse(d.districtData) : [];
   const localBodyData: LocalBodyData[] = d?.localBodyData ? JSON.parse(d.localBodyData) : [];
 
+  // ── Seed district chart province to Bagmati on first load ──
   useEffect(() => {
     if (provinceData.length > 0 && !selectedProvinceId) {
       const bagmati = provinceData.find((p) => p.Name && p.Name.toLowerCase().includes("bagmati"));
@@ -313,19 +320,47 @@ export default function Dashboard() {
     }
   }, [provinceData, selectedProvinceId]);
 
+  // ── Seed local body province to Bagmati on first load ──
+  useEffect(() => {
+    if (provinceData.length > 0 && !lbProvinceId) {
+      const bagmati = provinceData.find((p) => p.Name && p.Name.toLowerCase().includes("bagmati"));
+      setLbProvinceId(bagmati ? bagmati.Id : provinceData[0].Id);
+    }
+  }, [provinceData, lbProvinceId]);
+
+  // ── District chart: districts for selected province ──
   const filteredDistricts = useMemo(() => {
     if (!selectedProvinceId) return districtData;
     return districtData.filter((d) => d.ProvinceId === Number(selectedProvinceId));
   }, [districtData, selectedProvinceId]);
 
-  const filteredLocalBodies = useMemo(() => {
-    if (!selectedDistrictId) return localBodyData;
-    return localBodyData.filter((lb) => lb.DistrictId === Number(selectedDistrictId));
-  }, [localBodyData, selectedDistrictId]);
-
   useEffect(() => {
     setSelectedDistrictId(null);
   }, [selectedProvinceId]);
+
+  // ── Local body section: districts for selected lb province ──
+  const lbFilteredDistricts = useMemo(() => {
+    if (!lbProvinceId) return districtData;
+    return districtData.filter((d) => d.ProvinceId === Number(lbProvinceId));
+  }, [districtData, lbProvinceId]);
+
+  // Reset district when province changes in local body section
+  useEffect(() => {
+    setLbDistrictId(null);
+  }, [lbProvinceId]);
+
+  // ── Local bodies: filter by lb district (and implicitly province via district) ──
+  const filteredLocalBodies = useMemo(() => {
+    if (lbDistrictId) {
+      return localBodyData.filter((lb) => lb.DistrictId === Number(lbDistrictId));
+    }
+    if (lbProvinceId) {
+      // get all district ids for this province, then filter local bodies
+      const districtIds = lbFilteredDistricts.map((d) => d.DistrictId ?? d.Id);
+      return localBodyData.filter((lb) => districtIds.includes(lb.DistrictId));
+    }
+    return localBodyData;
+  }, [localBodyData, lbProvinceId, lbDistrictId, lbFilteredDistricts]);
 
   const unpaidProperty = (d?.totalProperty ?? 0) - (d?.totalPaidProperty ?? 0);
 
@@ -482,7 +517,7 @@ export default function Dashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-lg">bar_chart</span>
-              <h4 className="font-headline font-bold text-primary text-sm">{t("dashboard.districtsBy")}</h4>
+              <h4 className="font-headline font-bold text-primary text-sm">{t("dashboard.propertiesByDistrict")}</h4>
             </div>
             <SearchableSelect
               options={provinceData || []}
@@ -535,7 +570,7 @@ export default function Dashboard() {
                 <p className="text-gray-500 text-[10px] uppercase tracking-widest font-semibold mt-0.5">{t("dashboard.byTotalProperties")}</p>
               </div>
             </div>
-            <Link to="/leaderboard" className="text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1">
+            <Link to="/app/leaderboardPage" className="text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1">
               {t("dashboard.viewAll")}
               <span className="material-symbols-outlined text-sm">arrow_forward</span>
             </Link>
@@ -571,31 +606,54 @@ export default function Dashboard() {
       {/* ── Local Body Table ── */}
       <section className="bg-white rounded-2xl border border-surface-container shadow-sm p-6">
         <div className="p-2 flex flex-col h-[380px]">
+          {/* Header row */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 shrink-0 gap-3">
-            <div className="flex items-center gap-2">
+            {/* Title + count badge */}
+            <div className="flex items-center gap-2 shrink-0">
               <span className="material-symbols-outlined text-[#0ea5e9] text-lg">home_work</span>
               <h4 className="font-headline font-bold text-[#0ea5e9] text-sm">{t("dashboard.propertiesByLocalBody")}</h4>
               <span className="bg-tertiary-container text-on-tertiary-container text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
                 {filteredLocalBodies.length} {t("common.bodies")}
               </span>
             </div>
-            {selectedProvinceId && filteredDistricts.length > 0 && (
-              <div className="flex items-center gap-2">
-                <label className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">Filter by District:</label>
-                <SearchableSelect
-                  options={filteredDistricts || []}
-                  value={selectedDistrictId}
-                  onChange={(v) => setSelectedDistrictId(v)}
-                  getLabel={(item) => item.Name || item.name}
-                  placeholder="All Districts"
-                  widthClass="w-44"
-                  isLoading={loading}
-                  valueField="DistrictId"
-                  onClear={() => setSelectedDistrictId(null)}
-                />
-              </div>
-            )}
+
+            {/* Province + District selects */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Province */}
+              <label className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">Province:</label>
+              <SearchableSelect
+                options={provinceData || []}
+                value={lbProvinceId}
+                onChange={(v) => setLbProvinceId(v)}
+                getLabel={(item) => item.Name || item.name}
+                placeholder="All Provinces"
+                widthClass="w-40"
+                isLoading={loading}
+                valueField="ProvinceId"
+                onClear={() => { setLbProvinceId(null); setLbDistrictId(null); }}
+              />
+
+              {/* District — only shown when a province is selected */}
+              {lbProvinceId && lbFilteredDistricts.length > 0 && (
+                <>
+                  <label className="text-[11px] font-semibold text-slate-600 whitespace-nowrap">District:</label>
+                  <SearchableSelect
+                    options={lbFilteredDistricts}
+                    value={lbDistrictId}
+                    onChange={(v) => setLbDistrictId(v)}
+                    getLabel={(item) => item.Name || item.name}
+                    placeholder="All Districts"
+                    widthClass="w-40"
+                    isLoading={loading}
+                    valueField="DistrictId"
+                    onClear={() => setLbDistrictId(null)}
+                  />
+                </>
+              )}
+            </div>
           </div>
+
+          {/* Scrollable table */}
           <div className="flex-grow overflow-y-auto overflow-x-hidden pr-2 scrollbar-thin scrollbar-thumb-slate-200">
             {filteredLocalBodies.length > 0 ? (
               <table className="w-full text-left border-collapse">
@@ -618,7 +676,11 @@ export default function Dashboard() {
               </table>
             ) : (
               <div className="h-full flex items-center justify-center text-outline text-sm italic">
-                {selectedDistrictId ? "No local bodies found for this district" : "Select a district to view local bodies"}
+                {lbProvinceId
+                  ? lbDistrictId
+                    ? "No local bodies found for this district"
+                    : "No local bodies found for this province"
+                  : "Select a province to view local bodies"}
               </div>
             )}
           </div>

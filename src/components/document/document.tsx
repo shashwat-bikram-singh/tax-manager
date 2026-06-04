@@ -295,7 +295,7 @@ export default function DocumentSearchForm() {
 
   return (
     <div className="w-full bg-gray-50 border-b border-gray-200 pb-20">
-      <div className="-mt-7 max-w-8xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+      <div className="-mt-7 max-w-8xl mx-auto bg-white rounded-xl shadow-md">
 
         {/* Header */}
         <div className="bg-white px-4 py-2 sm:px-5 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-200 rounded-t-xl shadow-sm">

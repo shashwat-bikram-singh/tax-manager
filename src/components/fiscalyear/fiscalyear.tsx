@@ -525,9 +525,9 @@ export default function FiscalyearList() {
               {t("fiscalYear.sureYouWantToActivate")} <strong className="text-slate-800">{fyToActive?.fiscalYear}</strong> {t("fiscalYear.asTheCurrentActiveFiscalYear")}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" onClick={() => setActiveDialogOpen(false)}>{t("common.cancel")}</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleActive}>{t("fiscalYear.activate")}</Button>
+            <Button variant="outline" onClick={handleActive}>{t("fiscalYear.activate")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -42,8 +42,7 @@
         "Failed to Load Dashboard": "Failed to Load Dashboard",
         "noDataAvailable": "No data available",
         "noActiveFYFound": "No active FY found",
-        "loading": "Loading...",
-        "districtsBy": "Districts by"
+        "loading": "Loading..."
     },
     "common": {
         "search": "Search",
