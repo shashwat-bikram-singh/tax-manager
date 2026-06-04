@@ -1,9 +1,8 @@
 import { useState, useRef, useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import axiosInstance from "@/config/axios";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useFetchAll } from "@/hooks/useFetchAll";
+import { useMutate } from "@/hooks/useMutate";
 
 // ── Types ─────────────────────────────────────────────────────
 interface Notification {
@@ -23,7 +22,8 @@ export default function NotificationPanel() {
   const [onlyUnread, setOnlyUnread] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
+
+  const { create: markAsRead } = useMutate<{ id?: number; ids: number[] }>("/api/mark-as-read", "notifications");
 
   // ── Data Fetching ───────────────────────────────────────────────
   const { items: notificationData, isLoadingItems } = useFetchAll<Notification>(
@@ -53,12 +53,7 @@ export default function NotificationPanel() {
   // Mark a single notification as read
   const handleMarkAsRead = async (id: number) => {
     try {
-      const jsonString = JSON.stringify([id]);
-      // API call sending the JSON string in the body
-      await axiosInstance.post(`/api/mark-as-read?ids=${jsonString}`);
-
-      // Invalidate the query to trigger a re-fetch via useFetchAll
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      await markAsRead.mutateAsync({ ids: [id] });
     } catch (error) {
       console.error("Error marking notification as read:", error);
       toast.error("Failed to mark as read");
@@ -72,14 +67,7 @@ export default function NotificationPanel() {
     if (unreadIds.length === 0) return;
 
     try {
-      // Prepare payload as a JSON string
-      const jsonString = JSON.stringify(unreadIds);
-      // API call sending the JSON string in the body
-      await axiosInstance.post(`/api/mark-as-read?ids=${jsonString}`);
-
-      // Invalidate query to refresh UI
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-
+      await markAsRead.mutateAsync({ ids: unreadIds });
       toast.success("All notifications marked as read");
     } catch (error) {
       console.error("Error marking all as read:", error);

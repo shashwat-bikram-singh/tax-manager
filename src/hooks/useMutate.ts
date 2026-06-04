@@ -12,9 +12,26 @@ export function useMutate<T extends { id?: number }>(
     /**
      * CREATE
      */
-    const createMutation = useMutation<T, Error, Omit<T, "id"> | FormData>({
+    const createMutation = useMutation<T, Error, Omit<T, "id"> | FormData | { ids: number[] }>({
         mutationFn: async (data) => {
             const isFormData = data instanceof FormData;
+
+            if (
+                data &&
+                typeof data === "object" &&
+                !isFormData &&
+                "ids" in data &&
+                Array.isArray((data as { ids: number[] }).ids)
+            ) {
+                const jsonString = JSON.stringify((data as { ids: number[] }).ids);
+                const response = await axiosInstance.post<T>(
+                    `${baseURL}${apiUrl}?ids=${jsonString}`,
+                    {},
+                    { headers: { "Content-Type": "application/json" } }
+                );
+                return response.data;
+            }
+
             const response = await axiosInstance.post<T>(
                 baseURL + apiUrl,
                 data, {

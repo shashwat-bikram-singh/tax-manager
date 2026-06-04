@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,7 +17,6 @@ import { toast } from "sonner";
 import { X, ShieldCheck, ChevronDown } from "lucide-react";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import { useMutate } from "@/hooks/useMutate";
-import axiosInstance from "@/config/axios";
 import type {
   District,
   LegalStatus,
@@ -435,21 +433,11 @@ export default function PropertyForm({
   const { t } = useTranslation();
   const officeId = parseInt(sessionStorage.getItem("OfficeId") || "1");
 
-  const { data: fetchedItem, isLoading: isFetchingProperty } = useQuery({
-    queryKey: ["property-detail", id],
-    queryFn: async () => {
-      const res = await axiosInstance.get(
-        `${import.meta.env.VITE_API_BASE_URL}/api/property?id=${id}`
-      );
-      return res.data;
-    },
-    enabled: mode === "edit" && !!id,
-    staleTime: 0,
-    refetchOnMount: "always",
-  });
-
-  const fetchedData = (fetchedItem as any)?.data || fetchedItem;
-  const propertyData = Array.isArray(fetchedData) ? fetchedData[0] : fetchedData;
+  const { items: rawFetchedProperty, isLoadingItems: isFetchingProperty } = useFetchAll<PropertyDetail>(
+    mode === "edit" && id ? `/api/property?id=${id}` : "",
+    ["property-detail", id ?? ""]
+  );
+  const propertyData = unwrapList<PropertyDetail>(rawFetchedProperty)[0];
   const initialData = propInitialData || (mode === "edit" ? propertyData : undefined);
 
   const { create, update } = useMutate<PropertyDetail>("/api/property", "property");
