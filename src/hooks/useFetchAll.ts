@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import axiosInstance from "../config/axios";
+import { useAuthStore } from "@/store/authStore";
+import { jwtDecode } from "jwt-decode";
 
 /**
  * Standard API response structure
@@ -22,8 +24,17 @@ export function useFetchAll<T>(
     const query = useQuery<ApiResponse<T>>({
         queryKey,
         queryFn: async () => {
+
+            const token = useAuthStore.getState().token;
+            const decodedToken: any = token ? jwtDecode(token) : null;
+            const officeKey = decodedToken?.OfficeKey || null;
+
             const response = await axiosInstance.get<ApiResponse<T>>(
-                import.meta.env.VITE_API_BASE_URL + apiUrl
+                import.meta.env.VITE_API_BASE_URL + apiUrl, {
+                    headers: {
+                        'X-Company-Key': officeKey,
+                    },
+                }
             );
             return response.data;
         },
