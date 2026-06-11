@@ -24,7 +24,6 @@ const GEO_ASSET_URLS: Record<string, string> = (() => {
 })();
 
 /* ─── Area thresholds for marker sizing ─────────────────────────────────── */
-// Returns size in px based on landArea or buildingArea
 function getMarkerSize(area: number): number {
   if (area >= 50000) return 22;
   if (area >= 20000) return 18;
@@ -38,17 +37,16 @@ function getMarkerSize(area: number): number {
 function getMarkerIcon(type: string, area: number = 0) {
   const normalizedType = type.toLowerCase();
 
-  // Land: green shades; Building: blue shades; unknown: gray
   let markerColor = '#6b7280';
   let borderColor = '#fff';
   let glowColor = 'rgba(107,114,128,0.3)';
 
   if (normalizedType === 'land') {
-    markerColor = '#10b981';   // emerald-500
+    markerColor = '#10b981';
     borderColor = '#fff';
     glowColor = 'rgba(16,185,129,0.35)';
   } else if (normalizedType === 'building') {
-    markerColor = '#3b82f6';   // blue-500
+    markerColor = '#3b82f6';
     borderColor = '#fff';
     glowColor = 'rgba(59,130,246,0.35)';
   }
@@ -56,17 +54,17 @@ function getMarkerIcon(type: string, area: number = 0) {
   const size = getMarkerSize(area);
   const borderWidth = size >= 15 ? 3 : 2;
 
-  // Large markers get a subtle pulse ring
-  const pulse = size >= 15
-    ? `<span style="
-        position:absolute;top:50%;left:50%;
-        transform:translate(-50%,-50%);
-        width:${size + 10}px;height:${size + 10}px;
-        border-radius:50%;
-        background:${glowColor};
-        animation:pulse-ring 2s ease-out infinite;
-      "></span>`
-    : '';
+  const pulse =
+    size >= 15
+      ? `<span style="
+          position:absolute;top:50%;left:50%;
+          transform:translate(-50%,-50%);
+          width:${size + 10}px;height:${size + 10}px;
+          border-radius:50%;
+          background:${glowColor};
+          animation:pulse-ring 2s ease-out infinite;
+        "></span>`
+      : '';
 
   return L.divIcon({
     className: 'project-map-pin',
@@ -146,11 +144,26 @@ function getProvinceBaseStyle(feature: GeoJSON.Feature): L.PathOptions {
 
 function getProvinceHoverStyle(feature: GeoJSON.Feature): L.PathOptions {
   const base = getProvinceBaseStyle(feature);
-  return { ...base, color: '#0f172a', weight: 2, fillOpacity: Math.min(0.78, (base.fillOpacity ?? 0.45) + 0.22) };
+  return {
+    ...base,
+    color: '#0f172a',
+    weight: 2,
+    fillOpacity: Math.min(0.78, (base.fillOpacity ?? 0.45) + 0.22),
+  };
 }
 
-const hoverStyle: L.PathOptions = { color: '#0f172a', fillColor: '#93c5fd', weight: 2, fillOpacity: 0.35 };
-const selectedStyle: L.PathOptions = { color: '#dc2626', fillColor: '#fca5a5', weight: 3, fillOpacity: 0.22 };
+const hoverStyle: L.PathOptions = {
+  color: '#0f172a',
+  fillColor: '#93c5fd',
+  weight: 2,
+  fillOpacity: 0.35,
+};
+const selectedStyle: L.PathOptions = {
+  color: '#dc2626',
+  fillColor: '#fca5a5',
+  weight: 3,
+  fillOpacity: 0.22,
+};
 
 function hideTooltips(layers: L.Layer[]) {
   layers.forEach((l) => {
@@ -167,6 +180,41 @@ function districtGeoPaths(feature: GeoJSON.Feature): string[] {
   if (nameEn) paths.push(`districts/${nameEn}.geojson`);
   if (name && name !== nameEn) paths.push(`districts/${name}.geojson`);
   return paths;
+}
+
+/* ─── Zoom-based label visibility ───────────────────────────────────────── */
+// Province labels shown at zoom ≤ 8 (overview level)
+// District labels shown at zoom 8–11 (province drill-down)
+// Local body labels shown at zoom ≥ 11 (district drill-down)
+const ZOOM_PROVINCE_MAX = 8;
+const ZOOM_DISTRICT_MIN = 8;
+const ZOOM_DISTRICT_MAX = 11;
+const ZOOM_LOCALBODY_MIN = 11;
+
+function setLayerLabelsVisible(layers: L.Layer[], visible: boolean) {
+  layers.forEach((l) => {
+    const path = l as L.Path;
+    if (!path.getTooltip()) return;
+    if (visible) {
+      path.openTooltip();
+    } else {
+      path.closeTooltip();
+    }
+  });
+}
+
+function syncLabelVisibility(
+  zoom: number,
+  provinceTooltipLayers: L.Layer[],
+  districtTooltipLayers: L.Layer[],
+  localBodyTooltipLayers: L.Layer[],
+) {
+  setLayerLabelsVisible(provinceTooltipLayers, zoom <= ZOOM_PROVINCE_MAX);
+  setLayerLabelsVisible(
+    districtTooltipLayers,
+    zoom >= ZOOM_DISTRICT_MIN && zoom <= ZOOM_DISTRICT_MAX,
+  );
+  setLayerLabelsVisible(localBodyTooltipLayers, zoom >= ZOOM_LOCALBODY_MIN);
 }
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
@@ -202,9 +250,18 @@ function createResetControl(onReset: () => void): L.Control {
           <path d="M3 3v5h5"/>
         </svg>
       `;
-      btn.onmouseenter = () => { btn.style.background = '#eff6ff'; btn.style.color = '#2563eb'; };
-      btn.onmouseleave = () => { btn.style.background = '#fff'; btn.style.color = '#374151'; };
-      L.DomEvent.on(btn, 'click', (e) => { L.DomEvent.stopPropagation(e); onReset(); });
+      btn.onmouseenter = () => {
+        btn.style.background = '#eff6ff';
+        btn.style.color = '#2563eb';
+      };
+      btn.onmouseleave = () => {
+        btn.style.background = '#fff';
+        btn.style.color = '#374151';
+      };
+      L.DomEvent.on(btn, 'click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        onReset();
+      });
       return btn;
     },
     onRemove() { },
@@ -257,7 +314,9 @@ function createLegendControl(): L.Control {
           { size: 11, label: '1,000 – 4,999' },
           { size: 15, label: '5,000 – 19,999' },
           { size: 22, label: '≥ 50,000' },
-        ].map(({ size, label }) => `
+        ]
+          .map(
+            ({ size, label }) => `
           <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
             <span style="display:flex;align-items:center;justify-content:center;
                          width:22px;flex-shrink:0;">
@@ -268,7 +327,9 @@ function createLegendControl(): L.Control {
             </span>
             <span>${label}</span>
           </div>
-        `).join('')}
+        `,
+          )
+          .join('')}
       `;
       return div;
     },
@@ -290,7 +351,6 @@ function addPropertyMarkers(
       const lng = Number(item.building_Longitude ?? item.land_Longitude);
       if (!isFinite(lat) || !isFinite(lng) || (lat === 0 && lng === 0)) return null;
 
-      // Compute area: prefer buildingArea for buildings, landArea for land
       const rawArea = Number(item.buildingArea ?? item.landArea ?? 0);
       const area = isFinite(rawArea) ? rawArea : 0;
 
@@ -323,11 +383,12 @@ function addPropertyMarkers(
 
         const icon = getMarkerIcon(property.type, property.area);
         const gmaps = `http://maps.google.com/?q=${property.lat},${property.lng}`;
-        const areaLabel = property.area > 0
-          ? `<div style="margin-top:3px;font-size:11px;color:#64748b;">
+        const areaLabel =
+          property.area > 0
+            ? `<div style="margin-top:3px;font-size:11px;color:#64748b;">
                Area: <strong>${property.area.toLocaleString()} m²</strong>
              </div>`
-          : '';
+            : '';
 
         return L.marker(ll, { icon }).bindPopup(
           `<div style="font-size:13px;line-height:1.5;min-width:180px;">
@@ -335,7 +396,12 @@ function addPropertyMarkers(
             <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
               <span style="
                 display:inline-block;width:8px;height:8px;border-radius:50%;
-                background:${property.type.toLowerCase() === 'land' ? '#10b981' : property.type.toLowerCase() === 'building' ? '#3b82f6' : '#6b7280'};
+                background:${property.type.toLowerCase() === 'land'
+            ? '#10b981'
+            : property.type.toLowerCase() === 'building'
+              ? '#3b82f6'
+              : '#6b7280'
+          };
               "></span>
               <span style="background:#f1f5f9;border-radius:4px;padding:2px 6px;
                            font-size:11px;color:#475569;font-weight:600;">${typeKey}</span>
@@ -359,7 +425,8 @@ function addPropertyMarkers(
     group_.addTo(map);
 
     const norm = typeKey.toLowerCase();
-    const legendColor = norm === 'land' ? '#10b981' : norm === 'building' ? '#3b82f6' : '#6b7280';
+    const legendColor =
+      norm === 'land' ? '#10b981' : norm === 'building' ? '#3b82f6' : '#6b7280';
 
     const labelWithLegend = `
       <span style="display:inline-flex;align-items:center;gap:6px;">
@@ -389,7 +456,6 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
   const addedOverlaysRef = useRef<Set<string>>(new Set());
   const pendingPropertiesRef = useRef<PropertyDetail[]>([]);
 
-  // Refs for drill-down layers so reset can remove them
   const provinceLayerRef = useRef<L.GeoJSON | null>(null);
   const districtLayerRef = useRef<L.GeoJSON | null>(null);
   const localBodyLayerRef = useRef<L.GeoJSON | null>(null);
@@ -412,19 +478,28 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
 
     let cancelled = false;
 
+    // All three tooltip layer arrays are declared here so syncLabelVisibility
+    // can close over them and always see the latest contents via mutation.
     const provinceTooltipLayers: L.Layer[] = [];
     let districtTooltipLayers: L.Layer[] = [];
     let localBodyTooltipLayers: L.Layer[] = [];
+
     let selectedLayer: L.Path | null = null;
 
     const districtRestyle: L.PathOptions = {
-      color: '#334155', fillColor: '#cbd5e1', weight: 1, fillOpacity: 0.65,
+      color: '#334155',
+      fillColor: '#cbd5e1',
+      weight: 1,
+      fillOpacity: 0.65,
     };
 
     const run = async () => {
       const raw = await fetchBundledGeoJson('all_provinces.geojson');
       if (cancelled) return;
-      if (!raw) { toast.error('Could not load province boundaries from app assets.'); return; }
+      if (!raw) {
+        toast.error('Could not load province boundaries from app assets.');
+        return;
+      }
 
       const osmLayer = L.tileLayer(
         'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
@@ -457,7 +532,6 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
 
       /* ── Reset Control ── */
       const resetControl = createResetControl(() => {
-        // Remove all drill-down layers
         provinceLayerRef.current?.remove();
         districtLayerRef.current?.remove();
         localBodyLayerRef.current?.remove();
@@ -468,8 +542,11 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
         districtTooltipLayers = [];
         localBodyTooltipLayers = [];
 
-        // Fly back to Nepal overview
         map.flyTo(HOME_CENTER, HOME_ZOOM, { animate: true, duration: 0.8 });
+
+        // After flyTo settles, zoomend will re-sync labels automatically.
+        // But also sync immediately so province labels reappear at once.
+        syncLabelVisibility(HOME_ZOOM, provinceTooltipLayers, districtTooltipLayers, localBodyTooltipLayers);
 
         toast.success('Map reset to Nepal overview');
       });
@@ -478,13 +555,27 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
       /* ── Legend Control ── */
       createLegendControl().addTo(map);
 
-      /* Province boundaries */
+      /* ── Zoom-based label sync listener ── */
+      map.on('zoomend', () => {
+        syncLabelVisibility(
+          map.getZoom(),
+          provinceTooltipLayers,
+          districtTooltipLayers,
+          localBodyTooltipLayers,
+        );
+      });
+
+      /* ── Province boundaries ── */
       L.geoJSON(raw as GeoJSON.GeoJsonObject, {
         style: (feat) => getProvinceBaseStyle(feat as GeoJSON.Feature),
         onEachFeature(feature: GeoJSON.Feature, layer) {
           const path = layer as L.Path;
           const name = (feature.properties as { name?: string })?.name ?? '';
-          path.bindTooltip(name, { permanent: true, direction: 'center', className: 'map-label' });
+          path.bindTooltip(name, {
+            permanent: true,
+            direction: 'center',
+            className: 'map-label',
+          });
           provinceTooltipLayers.push(layer);
 
           path.on({
@@ -493,13 +584,20 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
             click: async () => {
               const provinceName = (feature.properties as { name_en?: string })?.name_en;
               if (!provinceName) {
-                toast.message('This province has no English id in data; cannot open detail file.');
+                toast.message(
+                  'This province has no English id in data; cannot open detail file.',
+                );
                 return;
               }
               hideTooltips(provinceTooltipLayers);
-              const provinceData = await fetchBundledGeoJson(`provinces/${provinceName}.geojson`);
+              const provinceData = await fetchBundledGeoJson(
+                `provinces/${provinceName}.geojson`,
+              );
               if (cancelled) return;
-              if (!provinceData) { toast.error(`Missing asset: provinces/${provinceName}.geojson`); return; }
+              if (!provinceData) {
+                toast.error(`Missing asset: provinces/${provinceName}.geojson`);
+                return;
+              }
 
               provinceLayerRef.current?.remove();
               districtLayerRef.current?.remove();
@@ -507,35 +605,79 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
               districtTooltipLayers = [];
               localBodyTooltipLayers = [];
 
-              provinceLayerRef.current = L.geoJSON(provinceData as GeoJSON.GeoJsonObject, {
-                style: { color: '#475569', fillColor: '#cbd5e1', weight: 1, fillOpacity: 0.55 },
-                onEachFeature(dFeature: GeoJSON.Feature, dLayer) {
-                  const dPath = dLayer as L.Path;
-                  const dName = (dFeature.properties as { name?: string })?.name ?? '';
-                  dPath.bindTooltip(dName, { permanent: true, direction: 'center', className: 'map-label' });
-                  districtTooltipLayers.push(dLayer);
-                  dPath.on({
-                    mouseover: () => dPath.setStyle(hoverStyle),
-                    mouseout: () => dPath.setStyle(districtRestyle),
-                    click: () => { hideTooltips(districtTooltipLayers); void loadDistrict(dFeature); },
-                  });
+              provinceLayerRef.current = L.geoJSON(
+                provinceData as GeoJSON.GeoJsonObject,
+                {
+                  style: {
+                    color: '#475569',
+                    fillColor: '#cbd5e1',
+                    weight: 1,
+                    fillOpacity: 0.55,
+                  },
+                  onEachFeature(dFeature: GeoJSON.Feature, dLayer) {
+                    const dPath = dLayer as L.Path;
+                    const dName =
+                      (dFeature.properties as { name?: string })?.name ?? '';
+                    dPath.bindTooltip(dName, {
+                      permanent: true,
+                      direction: 'center',
+                      className: 'map-label',
+                    });
+                    districtTooltipLayers.push(dLayer);
+                    dPath.on({
+                      mouseover: () => dPath.setStyle(hoverStyle),
+                      mouseout: () => dPath.setStyle(districtRestyle),
+                      click: () => {
+                        hideTooltips(districtTooltipLayers);
+                        void loadDistrict(dFeature);
+                      },
+                    });
+                  },
                 },
-              }).addTo(map);
-              map.fitBounds(provinceLayerRef.current.getBounds(), { padding: [20, 20] });
+              ).addTo(map);
+
+              map.fitBounds(provinceLayerRef.current.getBounds(), {
+                padding: [20, 20],
+              });
+
+              // Sync labels immediately after fitBounds (zoom may not trigger zoomend yet)
+              syncLabelVisibility(
+                map.getZoom(),
+                provinceTooltipLayers,
+                districtTooltipLayers,
+                localBodyTooltipLayers,
+              );
             },
           });
         },
       }).addTo(map);
 
+      // Sync province labels at initial zoom level
+      syncLabelVisibility(
+        map.getZoom(),
+        provinceTooltipLayers,
+        districtTooltipLayers,
+        localBodyTooltipLayers,
+      );
+
+      /* ── loadDistrict ── */
       async function loadDistrict(dFeature: GeoJSON.Feature) {
         const candidates = districtGeoPaths(dFeature);
         let districtData: unknown | null = null;
-        for (const c of candidates) { districtData = await fetchBundledGeoJson(c); if (districtData) break; }
+        for (const c of candidates) {
+          districtData = await fetchBundledGeoJson(c);
+          if (districtData) break;
+        }
         if (cancelled) return;
         if (!districtData) {
-          toast.error(candidates.length ? `No district GeoJSON for: ${candidates.join(' / ')}` : 'No district name.');
+          toast.error(
+            candidates.length
+              ? `No district GeoJSON for: ${candidates.join(' / ')}`
+              : 'No district name.',
+          );
           return;
         }
+
         districtLayerRef.current?.remove();
         localBodyLayerRef.current?.remove();
         localBodyTooltipLayers = [];
@@ -546,14 +688,23 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
             const lPath = lLayer as L.Path;
             const lbName =
               (lFeature.properties as { name?: string })?.name ??
-              (lFeature.properties as { name_en?: string })?.name_en ?? '';
-            lPath.bindTooltip(lbName, { permanent: true, direction: 'center', className: 'map-label' });
+              (lFeature.properties as { name_en?: string })?.name_en ??
+              '';
+            lPath.bindTooltip(lbName, {
+              permanent: true,
+              direction: 'center',
+              className: 'map-label',
+            });
             localBodyTooltipLayers.push(lLayer);
             lPath.on({
               mouseover: () => lPath.setStyle(hoverStyle),
-              mouseout: () => { if (selectedLayer !== lPath) districtLayerRef.current?.resetStyle(lPath); },
+              mouseout: () => {
+                if (selectedLayer !== lPath)
+                  districtLayerRef.current?.resetStyle(lPath);
+              },
               click: () => {
-                if (selectedLayer) districtLayerRef.current?.resetStyle(selectedLayer);
+                if (selectedLayer)
+                  districtLayerRef.current?.resetStyle(selectedLayer);
                 selectedLayer = lPath;
                 lPath.setStyle(selectedStyle);
                 void loadLocalBody(lFeature);
@@ -561,38 +712,71 @@ export const ProjectMap: React.FC<{ className?: string }> = ({ className }) => {
             });
           },
         }).addTo(map);
+
         map.fitBounds(districtLayerRef.current.getBounds(), { padding: [20, 20] });
+
+        // Sync labels immediately after fitBounds
+        syncLabelVisibility(
+          map.getZoom(),
+          provinceTooltipLayers,
+          districtTooltipLayers,
+          localBodyTooltipLayers,
+        );
       }
 
+      /* ── loadLocalBody ── */
       async function loadLocalBody(lFeature: GeoJSON.Feature) {
-        const p = lFeature.properties as { name?: string; name_en?: string } | undefined;
+        const p = lFeature.properties as
+          | { name?: string; name_en?: string }
+          | undefined;
         const lbName = (p?.name ?? p?.name_en ?? '').trim();
         if (!lbName) return;
+
         const localData = await fetchBundledGeoJson(`localbody/${lbName}.geojson`);
         if (cancelled) return;
         if (!localData) {
-          toast.message('Ward-level GeoJSON not bundled; selection is highlighted only.');
+          toast.message(
+            'Ward-level GeoJSON not bundled; selection is highlighted only.',
+          );
           return;
         }
+
         localBodyLayerRef.current?.remove();
         localBodyLayerRef.current = L.geoJSON(localData as GeoJSON.GeoJsonObject, {
           style: { color: '#0f172a', fillColor: '#cbd5e1', weight: 1, fillOpacity: 0.45 },
           onEachFeature(f: GeoJSON.Feature, l) {
             const path = l as L.Path;
             const nm = (f.properties as { name?: string })?.name ?? '';
-            path.bindTooltip(nm, { permanent: true, direction: 'center', className: 'map-label' });
+            path.bindTooltip(nm, {
+              permanent: true,
+              direction: 'center',
+              className: 'map-label',
+            });
             path.on({
               mouseover: () => path.setStyle(hoverStyle),
-              mouseout: () => { if (selectedLayer !== path) localBodyLayerRef.current?.resetStyle(path); },
+              mouseout: () => {
+                if (selectedLayer !== path)
+                  localBodyLayerRef.current?.resetStyle(path);
+              },
               click: () => {
-                if (selectedLayer) localBodyLayerRef.current?.resetStyle(selectedLayer);
+                if (selectedLayer)
+                  localBodyLayerRef.current?.resetStyle(selectedLayer);
                 selectedLayer = path;
                 path.setStyle(selectedStyle);
               },
             });
           },
         }).addTo(map);
+
         map.fitBounds(localBodyLayerRef.current.getBounds(), { padding: [20, 20] });
+
+        // Sync labels immediately after fitBounds
+        syncLabelVisibility(
+          map.getZoom(),
+          provinceTooltipLayers,
+          districtTooltipLayers,
+          localBodyTooltipLayers,
+        );
       }
 
       map.invalidateSize();
