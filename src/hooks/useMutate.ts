@@ -1,5 +1,7 @@
+import { useAuthStore } from "@/store/authStore";
 import axiosInstance from "../config/axios";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { jwtDecode } from "jwt-decode";
 
 
 export function useMutate<T extends { id?: number }>(
@@ -14,6 +16,9 @@ export function useMutate<T extends { id?: number }>(
      */
     const createMutation = useMutation<T, Error, Omit<T, "id"> | FormData | { ids: number[] }>({
         mutationFn: async (data) => {
+            const token = useAuthStore.getState().token;
+            const decodedToken: any = token ? jwtDecode(token) : null;
+            const officeKey = decodedToken?.OfficeKey || null;
             const isFormData = data instanceof FormData;
 
             if (
@@ -27,7 +32,11 @@ export function useMutate<T extends { id?: number }>(
                 const response = await axiosInstance.post<T>(
                     `${baseURL}${apiUrl}?ids=${jsonString}`,
                     {},
-                    { headers: { "Content-Type": "application/json" } }
+                    { headers: { 
+                        "Content-Type": "application/json",
+                        'X-Company-Key': officeKey 
+                    },
+                    }
                 );
                 return response.data;
             }
@@ -39,6 +48,7 @@ export function useMutate<T extends { id?: number }>(
                 //     "Content-Type": "multipart/form-data",
                 // },
                 headers: {
+                    'X-Company-Key': officeKey,  
                     ...(isFormData
                         ? { "Content-Type": "multipart/form-data" } // let Axios handle multipart headers
                         : { "Content-Type": "application/json" }),
@@ -74,11 +84,16 @@ export function useMutate<T extends { id?: number }>(
                 throw new Error("Id is required for update operation");
             }
 
+            const token = useAuthStore.getState().token;
+            const decodedToken: any = token ? jwtDecode(token) : null;
+            const officeKey = decodedToken?.OfficeKey || null;
+
             const isFormData = data instanceof FormData;
             const response = await axiosInstance.post<T>(
                 `${baseURL}${apiUrl}?id=${id}`,
                 data, {
                 headers: {
+                    'X-Company-Key': officeKey,  
                     ...(isFormData
                         ? { "Content-Type": "multipart/form-data" } // let Axios handle multipart headers
                         : { "Content-Type": "application/json" }),
@@ -102,8 +117,16 @@ export function useMutate<T extends { id?: number }>(
      */
     const deleteMutation = useMutation<void, Error, number>({
         mutationFn: async (id) => {
+
+            const token = useAuthStore.getState().token;
+            const decodedToken: any = token ? jwtDecode(token) : null;
+            const officeKey = decodedToken?.OfficeKey || null;
+
             await axiosInstance.delete(
-                `${baseURL}${apiUrl}?id=${id}`
+                `${baseURL}${apiUrl}?id=${id}`,         
+                { headers: {
+                    "X-Company-Key": officeKey,
+                }},
             );
         },
         onSuccess: () => {
