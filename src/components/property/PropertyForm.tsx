@@ -1074,7 +1074,7 @@ export default function PropertyForm({
                         )} />
 
                         {/* Construction Year — land only */}
-                        {isLand && (
+                        {isBuilding && (
                           <FormField control={form.control} name="constructionYear" render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
