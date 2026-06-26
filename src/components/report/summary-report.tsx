@@ -336,7 +336,7 @@ export default function SummaryReport() {
                                     {columnVisibility.id && (<TableCell className="text-center text-sm text-slate-500 font-medium py-2">{item.id}</TableCell>)}
                                     {columnVisibility.name && (
                                         <TableCell className="font-semibold text-slate-900 py-2">
-                                            <button onClick={() => handleOpenDetails(item)} className="hover:text-blue-600 hover:underline underline-offset-2 transition-colors text-left">
+                                            <button onClick={() => handleOpenDetails(item)} className="text-blue-600 underline underline-offset-2 transition-colors text-left">
                                                 {item.name ?? "-"}
                                             </button>
                                         </TableCell>
