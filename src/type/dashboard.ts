@@ -12,6 +12,17 @@ export interface DistrictData {
   TotalLand: number;
   TotalBuilding: number;
 }
+export interface OwnershipDistribution {
+  OwnershipTypeId: number;
+  OwnershipName: string;
+  ProvinceId: number;
+  ProvinceName: string;
+  DistrictId: number;
+  DistrictName: string;
+  LocalBodyId: number;
+  LocalBodyName: string;
+  TotalProperty: number;
+}
 
 export interface LocalBodyData {
   LocalBodyId: number;
@@ -31,6 +42,7 @@ export interface DashboardData {
   provinceData: string; // JSON string
   districtData: string; // JSON string
   localBodyData: string; // JSON string
+  ownershipDistribution: string; // JSON string
 }
 
 export interface LeaderboardData {

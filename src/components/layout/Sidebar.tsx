@@ -13,7 +13,9 @@ import {
   Building2,
   Calculator,
   FileCheck,
-  Split
+  Split,
+  BarChart3,
+  ChartColumn
 } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
 import { t } from 'i18next';
@@ -38,6 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
   }
 
   const Role = decoded?.Role;
+  console.log(Role)
 
   const handleLogout = () => {
     logout();
@@ -56,32 +59,34 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     corporate_fare: Building2,
     FileCheck: FileCheck,
     Split: Split,
+    BarChart3: BarChart3,
+    ChartColumn: ChartColumn,
   };
 
   return (
     <aside
       className={cn(
         "h-full flex flex-col bg-slate-50 border-r border-slate-200 transition-all duration-300 relative z-20",
-        isOpen ? "w-60" : "w-20"
+        isOpen ? "w-60" : "w-25"
       )}
     >
       {/* Branding */}
-      <div className="flex items-center justify-between p-6 h-20">
+      <div className="flex items-center justify-between p-5 h-12">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shrink-0 shadow-sm">
-            <img src="/TU.png" alt="TU" className="w-8 h-8 object-contain" />
+          <div className="w-10 h-10 bg-transparent rounded-lg flex items-center justify-center shrink-0">
+            <img src="/TU.png" alt="TU" className="w-8 h-8 object-contain bg-transparent" />
           </div>
           {isOpen && (
             <div className="overflow-hidden transition-opacity duration-200">
               <h1 className="font-bold text-slate-900 leading-tight truncate text-lg">{t("app.title")}</h1>
-              <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold truncate">Property Authority</p>
+              {/* <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold truncate">Property Authority</p> */}
             </div>
           )}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar">
         <NavItem
           to="/app"
           icon="dashboard"
@@ -170,6 +175,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
               isOpen={isOpen}
               iconMap={iconMap}
             />
+            <NavItem
+              to="/app/summary-report"
+              icon="BarChart3"
+              label={t("sidebar.summaryReport")}
+              isOpen={isOpen}
+              iconMap={iconMap}
+            />
+            <NavItem
+              to="/app/analytic-engine"
+              icon="ChartColumn"
+              label={t("sidebar.analyticEngine")}
+              isOpen={isOpen}
+              iconMap={iconMap}
+            />
           </>
         )}
       </nav>
@@ -207,7 +226,7 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isOpen, iconMap }) =
       to={to}
       end
       className={({ isActive }) => cn(
-        "flex items-center gap-3 px-3 py-2.5 transition-all rounded-lg text-sm font-medium",
+        "flex items-center gap-2 px-2 py-1.5 transition-all rounded-lg text-[13px] font-medium",
         isActive
           ? "bg-white text-blue-600 shadow-sm border border-slate-100"
           : "text-slate-600 hover:bg-white hover:text-slate-900",
@@ -216,7 +235,7 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isOpen, iconMap }) =
       title={!isOpen ? label : undefined}
     >
       {IconComponent && (
-        <IconComponent className="w-5 h-5 shrink-0" />
+        <IconComponent className="w-4 h-4 shrink-0" />
       )}
       {isOpen && <span className="truncate">{label}</span>}
     </NavLink>

@@ -136,7 +136,7 @@ const SearchableSelect = ({
           onFocus={() => setShowOptions(!disabled)}
           placeholder={placeholder}
           disabled={disabled || isLoading}
-          className="w-full h-[50px] px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full h-[38px] px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         />
         {/* Chevron Icon */}
         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
@@ -319,7 +319,7 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
                 </div>
 
                 {/* User Name and Role Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
                   <FormField
                     control={form.control}
                     name="name"
@@ -368,7 +368,7 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
                 </div>
 
                 {/* Office Field */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-6 max-w-5xl">
                   <FormField
                     control={form.control}
                     name="office"
@@ -394,7 +394,7 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
                 </div>
 
                 {/* Username and Email */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
                   <FormField
                     control={form.control}
                     name="username"
@@ -439,7 +439,7 @@ export default function UserForm({ mode, initialData, onSuccess, onCancel }: Use
                 </div>
 
                 {mode === "add" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
                     <FormField
                       control={form.control}
                       name="password"

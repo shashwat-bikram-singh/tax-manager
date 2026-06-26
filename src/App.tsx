@@ -21,6 +21,8 @@ import TaxComplianceReport from "./components/report/tax-compliance-report"
 import Report from "./components/report/report";
 import GenericPage from "./components/generic-page/generic-page";
 import LeaderboardPage from "./components/dashboard/LeaderboardPage";
+import SummaryReport from "./components/report/summary-report";
+import AnalyticEngine from "./components/report/analytic-engine";
 
 // Unified authentication wrapper to allow any logged-in user (Admin or SuperAdmin)
 const AuthenticatedRoute = ({ children }: { children: ReactNode }) => {
@@ -83,6 +85,8 @@ function App() {
         <Route path="tax-compliance" element={<TaxPayerList />} />
         <Route path="tax-compliance-report" element={<TaxComplianceReport />} />
         <Route path="result" element={<Report />} />
+        <Route path="summary-report" element={<SummaryReport />} />
+        <Route path="analytic-engine" element={<AnalyticEngine />} />
       </Route>
 
       {/* Catch-all for unknown routes */}

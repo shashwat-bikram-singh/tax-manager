@@ -458,7 +458,7 @@ export default function OfficeList() {
       {
         editingFy && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
+            <div className="w-full sm:max-w-4xl max-h-[95vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
               <OfficeForm mode="edit" initialData={editingFy} onSuccess={() => setEditingFy(null)} onCancel={() => setEditingFy(null)} />
             </div>
           </div>
@@ -469,7 +469,7 @@ export default function OfficeList() {
       {
         isAddingNew && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
+            <div className="w-full sm:max-w-4xl max-h-[95vh] overflow-y-auto rounded-lg animate-in zoom-in-95 duration-200">
               <OfficeForm mode="add" onSuccess={() => setIsAddingNew(false)} onCancel={() => setIsAddingNew(false)} />
             </div>
           </div>

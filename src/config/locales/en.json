@@ -16,16 +16,18 @@
         "areaConverter": "Area Converter",
         "taxComplianceReport": "Tax Compliance Report",
         "decisionLogic": "Decision Logic€",
-        "reports": "Reports"
+        "reports": "Reports",
+        "summaryReport": "Summary Report",
+        "analyticEngine": "Analytic Engine"
     },
     "dashboard": {
         "totalProperties": "Total Properties",
-        "totalPaidAmount": "Total Paid Amount",
-        "paymentProgress": "Payment Progress",
-        "unpaidProperties": "Unpaid Properties",
+        "totalPaidAmount": "Total Tax Paid Amount",
+        "paymentProgress": "Tax Payment Progress",
+        "unpaidProperties": "Tax Unpaid Properties",
         "pendingPayment": "Pending Payment",
         "propertiesByDistrict": "Properties by District",
-        "paymentRate": "Payment Rate",
+        "paymentRate": "Tax Payment Rate",
         "propertiesByLocalBody": "Properties by Local Body",
         "topPerformingOffices": "Top Performing Offices",
         "byTotalProperties": "By Total Properties",

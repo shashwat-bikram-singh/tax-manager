@@ -527,7 +527,7 @@ export default function UserList() {
 
         {/* Edit User Dialog */}
         <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+          <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto p-3">
             <UserForm
               mode="edit"
               initialData={editingUser!}
@@ -539,7 +539,7 @@ export default function UserList() {
 
         {/* Add User Dialog */}
         <Dialog open={isAddingNew} onOpenChange={setIsAddingNew}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+          <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto p-3">
             <UserForm
               mode="add"
               onSuccess={() => setIsAddingNew(false)}

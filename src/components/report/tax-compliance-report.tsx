@@ -8,7 +8,7 @@ export default function TaxComplianceReport() {
     "/tax-compliance-rpt",
     ["tax-compliance-report"]
   );
-console.log("Tax Compliance Report Data:", response);
+  console.log("Tax Compliance Report Data:", response);
   const taxComplianceData = response?.data;
 
   // --- Summary Cards ---
@@ -16,8 +16,8 @@ console.log("Tax Compliance Report Data:", response);
     const overall = taxComplianceData?.table1?.[0];
     return {
       liability: overall?.overallTaxLiabilities ?? 0,
-      paid:      overall?.overallTaxPaid ?? 0,
-      balance:   overall?.overallOutstandingBalance ?? 0,
+      paid: overall?.overallTaxPaid ?? 0,
+      balance: overall?.overallOutstandingBalance ?? 0,
     };
   }, [taxComplianceData]);
 
@@ -31,44 +31,44 @@ console.log("Tax Compliance Report Data:", response);
         )
         .map((item: any) => ({
           province: item.provinceName || "Unknown",
-          paid:     item.totalTaxPaid || 0,
-          unpaid:   item.outstandingBalance || 0,
+          paid: item.totalTaxPaid || 0,
+          unpaid: item.outstandingBalance || 0,
         })),
     [taxComplianceData]
   );
 
   const series = [
-    { name: "Total Tax Paid",      data: chartDataRaw.map((i: any) => i.paid) },
+    { name: "Total Tax Paid", data: chartDataRaw.map((i: any) => i.paid) },
     { name: "Outstanding Balance", data: chartDataRaw.map((i: any) => i.unpaid) },
   ];
 
   const options: ApexCharts.ApexOptions = {
     chart: {
-      type:        "bar",
-      height:      350,
-      toolbar:     { show: false },
-      fontFamily:  "Inter, sans-serif",
-      background:  "transparent",
+      type: "bar",
+      height: 350,
+      toolbar: { show: false },
+      fontFamily: "Inter, sans-serif",
+      background: "transparent",
     },
     colors: ["#10b981", "#1e3a8a"],
     plotOptions: {
       bar: {
-        horizontal:  false,
+        horizontal: false,
         columnWidth: "60%",
         borderRadius: 6,
       },
     },
     dataLabels: { enabled: false },
     stroke: {
-      show:   true,
-      width:  2,
+      show: true,
+      width: 2,
       colors: ["transparent"],
     },
     xaxis: {
       categories: chartDataRaw.map((i: any) => i.province),
       labels: {
         rotate: -45,
-        style:  { fontSize: "11px" },
+        style: { fontSize: "11px" },
       },
     },
     yaxis: {
@@ -117,7 +117,7 @@ console.log("Tax Compliance Report Data:", response);
         {/* Outstanding Balance */}
         <div className="bg-surface-container-highest p-6 rounded-2xl space-y-3 border-l-4 border-tertiary shadow-sm hover:shadow-md transition-shadow">
           <p className="text-[10px] font-black uppercase tracking-widest text-on-tertiary-container">
-            Outstanding Balance
+            Liability Balance
           </p>
           <h3 className="font-headline text-3xl font-black text-on-primary-fixed-variant">
             NPR {balance.toLocaleString()}

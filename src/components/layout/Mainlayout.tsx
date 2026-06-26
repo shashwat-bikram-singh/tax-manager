@@ -112,7 +112,7 @@ const MainLayout: React.FC = () => {
         {/* Desktop Sidebar */}
         <aside className={cn(
           "hidden lg:flex flex-col h-screen sticky top-0 transition-all duration-300 z-50 ambient-shadow",
-          isSidebarOpen ? "w-60" : "w-20"
+          isSidebarOpen ? "w-60" : "w-25"
         )}>
           <Sidebar isOpen={isSidebarOpen} />
         </aside>
@@ -128,7 +128,7 @@ const MainLayout: React.FC = () => {
           />
 
           {/* Page Content */}
-          <div className="p-4 max-w-7xl mx-auto space-y-8">
+          <div className="p-2 max-w-8xl mx-auto space-y-8 mt-2.5">
             <Outlet />
           </div>
         </main>
@@ -150,7 +150,7 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   isLoading,
 }) => {
   return (
-    <header className="hidden lg:flex h-16 items-center justify-between px-5 sticky top-0 z-40 bg-surface text-primary">
+    <header className="hidden lg:flex h-12 items-center justify-between px-5 sticky top-0 z-40 bg-white text-primary border-b border-surface-container-low">
       <div className="flex items-center ">
         <Button
           variant="ghost"

@@ -258,7 +258,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
   // -------------------- UI --------------------
   return (
     <div className="">
-      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300">
+      <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-gray-100 relative animate-in fade-in zoom-in-95 duration-300">
 
         {/* Header Section */}
         <div className="bg-white border-b border-gray-100 p-8 pb-6">
@@ -297,7 +297,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                 </div>
 
                 {/* Row 1: Name & Code */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
                   <FormField
                     control={form.control}
                     name="name"
@@ -320,27 +320,6 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="code"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
-                          {t("common.code")}
-                          <span className="text-red-500">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="e.g. KTM-001"
-                            className={inputClass}
-                            disabled={loading}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 {/* Row 2: Parent Office */}
@@ -371,7 +350,7 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                 </div>
 
                 {/* Row 3: Measurement Unit */}
-                <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
                     name="measurementUnit"
@@ -389,6 +368,28 @@ export default function OfficeForm({ mode, initialData, onSuccess, onCancel }: O
                             placeholder=""
                             disabled={loading}
                             inputClassName={inputClass}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="code"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="flex items-center gap-1 text-gray-700 font-medium">
+                          {t("common.code")}
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="e.g. KTM-001"
+                            className={inputClass}
+                            disabled={loading}
                           />
                         </FormControl>
                         <FormMessage />

@@ -23,86 +23,64 @@ const GEO_ASSET_URLS: Record<string, string> = (() => {
   return out;
 })();
 
-/* ─── Dynamic Marker Generator (Land / Building Separation) ──────────────── */
-function getMarkerIcon(type: string) {
-  const normalizedType = type.toLowerCase();
+/* ─── Marker icons (Land=pin, Building=house) ────────────────────────────── */
+function getMarkerIcon(type: string): L.DivIcon {
+  const norm = type.toLowerCase();
+  const SIZE = 28;
 
-  let markerColor = '#6b7280';
-  let glowColor = 'rgba(107,114,128,0.35)';
-
-  if (normalizedType === 'land') {
-    markerColor = '#10b981';
-    glowColor = 'rgba(16,185,129,0.4)';
-  } else if (normalizedType === 'building') {
-    markerColor = '#3b82f6';
-    glowColor = 'rgba(59,130,246,0.4)';
-  }
-
-  return L.divIcon({
-    className: 'project-map-pin-custom',
-    html: `
-      <span style="
-        position:relative;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        width:14px;height:14px;
-      ">
+  if (norm === 'land') {
+    return L.divIcon({
+      className: 'project-map-pin-custom',
+      html: `<span style="position:relative;display:flex;align-items:center;justify-content:center;width:${SIZE}px;height:${SIZE}px;">
         <span style="
           position:absolute;top:50%;left:50%;
           transform:translate(-50%,-50%);
-          width:24px;height:24px;
-          border-radius:50%;
-          background:${glowColor};
+          width:36px;height:36px;border-radius:50%;
+          background:rgba(16,185,129,0.30);
           animation:pulse-ring 2s ease-out infinite;
         "></span>
-        <span style="
-          position:relative;z-index:1;
-          display:block;
-          width:13px;height:13px;
-          border-radius:50%;
-          background:${markerColor};
-          border:2px solid #fff;
-          box-shadow:0 2px 5px rgba(0,0,0,0.3);
-        "></span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 24 24"
+          style="position:relative;z-index:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+            fill="#10b981" stroke="#fff" stroke-width="1.2"/>
+          <circle cx="12" cy="9" r="2.5" fill="#fff"/>
+        </svg>
       </span>`,
+      iconSize: [SIZE, SIZE],
+      iconAnchor: [SIZE / 2, SIZE],
+    });
+  }
+
+  if (norm === 'building') {
+    return L.divIcon({
+      className: 'project-map-pin-custom',
+      html: `<span style="position:relative;display:flex;align-items:center;justify-content:center;width:${SIZE}px;height:${SIZE}px;">
+        <span style="
+          position:absolute;top:50%;left:50%;
+          transform:translate(-50%,-50%);
+          width:36px;height:36px;border-radius:4px;
+          background:rgba(59,130,246,0.30);
+          animation:pulse-ring-sq 2s ease-out infinite;
+        "></span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 24 24"
+          style="position:relative;z-index:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));">
+          <path d="M3 9.5L12 3l9 6.5V21H3V9.5z" fill="#3b82f6" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>
+          <rect x="9" y="14" width="6" height="7" fill="#fff" opacity="0.9"/>
+          <path d="M9 14h6v7H9z" fill="none" stroke="#3b82f6" stroke-width="0.8"/>
+        </svg>
+      </span>`,
+      iconSize: [SIZE, SIZE],
+      iconAnchor: [SIZE / 2, SIZE],
+    });
+  }
+
+  // fallback
+  return L.divIcon({
+    className: 'project-map-pin-custom',
+    html: `<span style="display:block;width:14px;height:14px;border-radius:50%;background:#6b7280;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></span>`,
     iconSize: [14, 14],
     iconAnchor: [7, 7],
   });
-}
-
-/* ─── Shared Custom Reset Button ────────────────────────────────────────── */
-function createResetControl(onReset: () => void): L.Control {
-  const ResetControl = L.Control.extend({
-    options: { position: 'topleft' as L.ControlPosition },
-    onAdd() {
-      const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-control');
-      btn.title = 'Reset to Nepal view';
-      btn.setAttribute('aria-label', 'Reset map view');
-      btn.style.cssText = `
-        display:flex;align-items:center;justify-content:center;
-        width:34px;height:34px;cursor:pointer;
-        background:#fff;border:none;border-radius:4px;
-        box-shadow:0 1px 5px rgba(0,0,0,0.25);
-        font-size:16px;color:#374151;
-        transition:background 0.15s,color 0.15s;
-      `;
-      btn.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-          fill="none" stroke="currentColor" stroke-width="2.2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-          <path d="M3 3v5h5"/>
-        </svg>
-      `;
-      btn.onmouseenter = () => { btn.style.background = '#eff6ff'; btn.style.color = '#2563eb'; };
-      btn.onmouseleave = () => { btn.style.background = '#fff'; btn.style.color = '#374151'; };
-      L.DomEvent.on(btn, 'click', (e) => { L.DomEvent.stopPropagation(e); onReset(); });
-      return btn;
-    },
-    onRemove() { },
-  });
-  return new ResetControl();
 }
 
 /* ─── Helpers ───────────────────────────────────────────────────────────── */
@@ -119,9 +97,7 @@ async function fetchBundledGeoJson(relPath: string): Promise<unknown | null> {
     const res = await fetch(url);
     if (!res.ok) return null;
     return res.json();
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function groupBy<T>(xs: T[], key: keyof T): Record<string, T[]> {
@@ -144,7 +120,8 @@ function hashString(s: string): number {
   return Math.abs(h);
 }
 
-function getProvinceBaseStyle(feature: GeoJSON.Feature): L.PathOptions {
+function getProvinceBaseStyle(feature: GeoJSON.Feature, isSatellite = false): L.PathOptions {
+  if (isSatellite) return { color: '#ffffff', fillColor: 'transparent', weight: 1.5, fillOpacity: 0 };
   const p = feature.properties as { name_en?: string; name?: string } | undefined;
   const key = p?.name_en?.trim() || p?.name?.trim() || '';
   return {
@@ -155,18 +132,14 @@ function getProvinceBaseStyle(feature: GeoJSON.Feature): L.PathOptions {
   };
 }
 
-function getProvinceHoverStyle(feature: GeoJSON.Feature): L.PathOptions {
-  const base = getProvinceBaseStyle(feature);
+function getProvinceHoverStyle(feature: GeoJSON.Feature, isSatellite = false): L.PathOptions {
+  if (isSatellite) return { color: '#3b82f6', fillColor: 'transparent', weight: 2, fillOpacity: 0 };
+  const base = getProvinceBaseStyle(feature, false);
   return { ...base, color: '#0f172a', weight: 2, fillOpacity: Math.min(0.78, (base.fillOpacity ?? 0.45) + 0.22) };
 }
 
-const hoverStyle: L.PathOptions = { color: '#0f172a', fillColor: '#93c5fd', weight: 2, fillOpacity: 0.35 };
-const selectedStyle: L.PathOptions = { color: '#dc2626', fillColor: '#fca5a5', weight: 3, fillOpacity: 0.22 };
-
 function hideTooltips(layers: L.Layer[]) {
-  layers.forEach((l) => {
-    if ('closeTooltip' in l) (l as L.Path).closeTooltip();
-  });
+  layers.forEach((l) => { if ('closeTooltip' in l) (l as L.Path).closeTooltip(); });
 }
 
 function districtGeoPaths(feature: GeoJSON.Feature): string[] {
@@ -180,47 +153,93 @@ function districtGeoPaths(feature: GeoJSON.Feature): string[] {
   return paths;
 }
 
-/* ─── Zoom-based label visibility ───────────────────────────────────────── */
-// Province labels shown at zoom ≤ 8 (overview level)
-// District labels shown at zoom 8–11 (province drill-down)
-// Local body labels shown at zoom ≥ 11 (district drill-down)
-const ZOOM_PROVINCE_MAX = 8;
+const ZOOM_PROVINCE_MAX = 7;
 const ZOOM_DISTRICT_MIN = 8;
-const ZOOM_DISTRICT_MAX = 11;
+const ZOOM_DISTRICT_MAX = 10;
 const ZOOM_LOCALBODY_MIN = 11;
 
 function setLayerLabelsVisible(layers: L.Layer[], visible: boolean) {
   layers.forEach((l) => {
     const path = l as L.Path;
     if (!path.getTooltip()) return;
-    if (visible) {
-      path.openTooltip();
-    } else {
-      path.closeTooltip();
-    }
+    visible ? path.openTooltip() : path.closeTooltip();
   });
 }
 
-function syncLabelVisibility(
+function syncVisibility(
   zoom: number,
+  map: L.Map,
   provinceTooltipLayers: L.Layer[],
-  districtTooltipLayers: L.Layer[],
-  localBodyTooltipLayers: L.Layer[],
+  districtTooltipLayersRef: React.MutableRefObject<L.Layer[]>,
+  localBodyTooltipLayersRef: React.MutableRefObject<L.Layer[]>,
+  provinceLayerRef: React.MutableRefObject<L.GeoJSON | null>,
+  districtLayerRef: React.MutableRefObject<L.GeoJSON | null>,
+  localBodyLayerRef: React.MutableRefObject<L.GeoJSON | null>,
+  resetSelectionState: () => void,
 ) {
   setLayerLabelsVisible(provinceTooltipLayers, zoom <= ZOOM_PROVINCE_MAX);
-  setLayerLabelsVisible(districtTooltipLayers, zoom >= ZOOM_DISTRICT_MIN && zoom <= ZOOM_DISTRICT_MAX);
-  setLayerLabelsVisible(localBodyTooltipLayers, zoom >= ZOOM_LOCALBODY_MIN);
+
+  if (zoom <= ZOOM_PROVINCE_MAX) {
+    if (provinceLayerRef.current) { map.removeLayer(provinceLayerRef.current); provinceLayerRef.current = null; }
+    if (districtLayerRef.current) { map.removeLayer(districtLayerRef.current); districtLayerRef.current = null; }
+    if (localBodyLayerRef.current) { map.removeLayer(localBodyLayerRef.current); localBodyLayerRef.current = null; }
+    districtTooltipLayersRef.current = [];
+    localBodyTooltipLayersRef.current = [];
+    resetSelectionState();
+    return;
+  }
+
+  const showDistricts = zoom >= ZOOM_DISTRICT_MIN && zoom <= ZOOM_DISTRICT_MAX;
+  if (provinceLayerRef.current) {
+    if (showDistricts && !map.hasLayer(provinceLayerRef.current)) provinceLayerRef.current.addTo(map);
+    else if (!showDistricts && map.hasLayer(provinceLayerRef.current)) map.removeLayer(provinceLayerRef.current);
+  }
+  setLayerLabelsVisible(districtTooltipLayersRef.current, showDistricts);
+
+  const showLocalBodies = zoom > ZOOM_DISTRICT_MAX && zoom < ZOOM_LOCALBODY_MIN;
+  if (districtLayerRef.current) {
+    if (showLocalBodies && !map.hasLayer(districtLayerRef.current)) districtLayerRef.current.addTo(map);
+    else if (!showLocalBodies && map.hasLayer(districtLayerRef.current)) map.removeLayer(districtLayerRef.current);
+  }
+
+  const showWards = zoom >= ZOOM_LOCALBODY_MIN;
+  if (localBodyLayerRef.current) {
+    if (showWards && !map.hasLayer(localBodyLayerRef.current)) localBodyLayerRef.current.addTo(map);
+    else if (!showWards && map.hasLayer(localBodyLayerRef.current)) map.removeLayer(localBodyLayerRef.current);
+  }
+  setLayerLabelsVisible(localBodyTooltipLayersRef.current, showWards);
 }
 
-/* ─── Types ─────────────────────────────────────────────────────────────── */
-interface MapItem {
-  type: string;
-  name: string;
-  lat: number;
-  lng: number;
+function createResetControl(onReset: () => void): L.Control {
+  const ResetControl = L.Control.extend({
+    options: { position: 'topleft' as L.ControlPosition },
+    onAdd() {
+      const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-control');
+      btn.title = 'Reset to Nepal view';
+      btn.setAttribute('aria-label', 'Reset map view');
+      btn.style.cssText = `
+        display:flex;align-items:center;justify-content:center;
+        width:34px;height:34px;cursor:pointer;
+        background:#fff;border:none;border-radius:4px;
+        box-shadow:0 1px 5px rgba(0,0,0,0.25);font-size:16px;color:#374151;
+        transition:background 0.15s,color 0.15s;
+      `;
+      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+      </svg>`;
+      btn.onmouseenter = () => { btn.style.background = '#eff6ff'; btn.style.color = '#2563eb'; };
+      btn.onmouseleave = () => { btn.style.background = '#fff'; btn.style.color = '#374151'; };
+      L.DomEvent.on(btn, 'click', (e) => { L.DomEvent.stopPropagation(e); onReset(); });
+      return btn;
+    },
+    onRemove() { },
+  });
+  return new ResetControl();
 }
 
-/* ─── Pure function: build markers and add them to the map ──────────────── */
+interface MapItem { type: string; name: string; lat: number; lng: number; }
+
 function addPropertyMarkers(
   properties: Map[],
   map: L.Map,
@@ -231,25 +250,12 @@ function addPropertyMarkers(
     .map((item): MapItem | null => {
       const lat = item.Latitude ? parseFloat(String(item.Latitude)) : null;
       const lng = item.Longitude ? parseFloat(String(item.Longitude)) : null;
-
-      if (lat === null || lng === null || Number.isNaN(lat) || Number.isNaN(lng)) {
-        console.log('Skipped (no coords):', item.Name);
-        return null;
-      }
-
-      return {
-        type: String(item.PropertyType || 'Unknown'),
-        name: item.Name?.trim() || 'Unnamed Property',
-        lat,
-        lng,
-      };
+      if (lat === null || lng === null || Number.isNaN(lat) || Number.isNaN(lng)) return null;
+      return { type: String(item.PropertyType || 'Unknown'), name: item.Name?.trim() || 'Unnamed Property', lat, lng };
     })
     .filter((x): x is MapItem => x !== null);
 
-  if (!items.length) {
-    console.warn('[ProjectMap] No properties with valid coordinates.');
-    return;
-  }
+  if (!items.length) return;
 
   const grouped = groupBy(items, 'type');
   const allLatLngs: L.LatLng[] = [];
@@ -263,17 +269,21 @@ function addPropertyMarkers(
         const ll = L.latLng(property.lat, property.lng);
         allLatLngs.push(ll);
 
-        const gmaps = `https://www.google.com/maps/search/?api=1&query=${property.lat},${property.lng}`;
+        const gmaps = `https://maps.google.com/?q=${property.lat},${property.lng}`;
         const norm = property.type.toLowerCase();
         const popupColor = norm === 'land' ? '#10b981' : norm === 'building' ? '#3b82f6' : '#6b7280';
+        const shapeStyle = norm === 'building' ? 'border-radius:2px' : 'border-radius:50%';
+        const shapeLabel = norm === 'land' ? '📍 Pin' : norm === 'building' ? '🏠 House' : '●';
 
         return L.marker(ll, { icon: getMarkerIcon(property.type) }).bindPopup(
           `<div style="font-size:13px;line-height:1.5;min-width:160px;">
             <strong style="color:#1e293b">${property.name}</strong>
             <div style="margin-top:4px;display:flex;align-items:center;gap:6px;">
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${popupColor};"></span>
+              <span style="display:inline-block;width:8px;height:8px;${shapeStyle};background:${popupColor};"></span>
               <span style="background:#f1f5f9;border-radius:4px;padding:2px 6px;
-                           font-size:11px;color:#475569;font-weight:600;">${typeKey}</span>
+                           font-size:11px;color:#475569;font-weight:600;">
+                ${typeKey} ${shapeLabel}
+              </span>
             </div>
             <div style="margin-top:8px;">
               <a href="${gmaps}" target="_blank" rel="noreferrer"
@@ -294,21 +304,23 @@ function addPropertyMarkers(
 
     const norm = typeKey.toLowerCase();
     const legendColor = norm === 'land' ? '#10b981' : norm === 'building' ? '#3b82f6' : '#6b7280';
-    const labelWithLegend = `
-      <span style="display:inline-flex;align-items:center;gap:6px;">
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${legendColor};"></span>
-        <span>${typeKey} (${markers.length})</span>
-      </span>
-    `;
+    const legendShape = norm === 'building' ? 'border-radius:2px' : 'border-radius:50%';
 
-    layersCtrl.addOverlay(group_, labelWithLegend);
+    layersCtrl.addOverlay(
+      group_,
+      `<span style="display:inline-flex;align-items:center;gap:6px;">
+        <span style="display:inline-block;width:9px;height:9px;${legendShape};
+                     background:${legendColor};border:1.5px solid #fff;
+                     box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+        <span>${typeKey} (${markers.length})</span>
+      </span>`,
+    );
   });
 
   if (allLatLngs.length) {
     const bounds = L.latLngBounds(allLatLngs);
-    if (bounds.getNorthEast().distanceTo(bounds.getSouthWest()) < 500_000) {
+    if (bounds.getNorthEast().distanceTo(bounds.getSouthWest()) < 500_000)
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
-    }
   }
 }
 
@@ -324,6 +336,11 @@ export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
   const districtLayerRef = useRef<L.GeoJSON | null>(null);
   const localBodyLayerRef = useRef<L.GeoJSON | null>(null);
 
+  const districtTooltipLayersRef = useRef<L.Layer[]>([]);
+  const localBodyTooltipLayersRef = useRef<L.Layer[]>([]);
+  const selectedLayerRef = useRef<L.Path | null>(null);
+  const isSatelliteModeRef = useRef<boolean>(false);
+
   const HOME_CENTER: L.LatLngExpression = [28.3949, 84.124];
   const HOME_ZOOM = 7;
 
@@ -333,7 +350,7 @@ export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
       if (!raw) return [];
       return typeof raw === 'string' ? JSON.parse(raw) : raw;
     } catch (err) {
-      console.error('[ProjectMap] Failed to parse mapData JSON:', err);
+      console.error('[GenericMap] Failed to parse mapData JSON:', err);
       return [];
     }
   }, [propertyResponse]);
@@ -352,15 +369,31 @@ export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
     if (!el) return;
 
     let cancelled = false;
-
+    let baseProvinceGeoJSON: L.GeoJSON | null = null;
     const provinceTooltipLayers: L.Layer[] = [];
-    let districtTooltipLayers: L.Layer[] = [];
-    let localBodyTooltipLayers: L.Layer[] = [];
-    let selectedLayer: L.Path | null = null;
 
-    const districtRestyle: L.PathOptions = {
-      color: '#334155', fillColor: '#cbd5e1', weight: 1, fillOpacity: 0.65,
+    const standardDistrictStyle: L.PathOptions = { color: '#334155', fillColor: '#cbd5e1', weight: 1, fillOpacity: 0.65 };
+    const satelliteDistrictStyle: L.PathOptions = { color: '#ffffff', fillColor: 'transparent', weight: 1.5, fillOpacity: 0 };
+
+    const getDynamicStyles = () => {
+      const sat = isSatelliteModeRef.current;
+      return {
+        hover: sat ? { color: '#3b82f6', fillColor: 'transparent', weight: 2, fillOpacity: 0 } : { color: '#0f172a', fillColor: '#93c5fd', weight: 2, fillOpacity: 0.35 },
+        selected: sat ? { color: '#ef4444', fillColor: 'transparent', weight: 2.5, fillOpacity: 0 } : { color: '#dc2626', fillColor: '#fca5a5', weight: 3, fillOpacity: 0.22 },
+        districtBase: sat ? satelliteDistrictStyle : standardDistrictStyle,
+        nestedBase: sat ? { color: '#ffffff', fillColor: 'transparent', weight: 1.2, fillOpacity: 0 } : { color: '#0f172a', fillColor: '#94a3b8', weight: 1, fillOpacity: 0.55 },
+        wardBase: sat ? { color: '#ffffff', fillColor: 'transparent', weight: 1, fillOpacity: 0 } : { color: '#0f172a', fillColor: '#cbd5e1', weight: 1, fillOpacity: 0.45 },
+      };
     };
+
+    const doSync = (zoom: number) =>
+      syncVisibility(
+        zoom, mapRef.current!,
+        provinceTooltipLayers,
+        districtTooltipLayersRef, localBodyTooltipLayersRef,
+        provinceLayerRef, districtLayerRef, localBodyLayerRef,
+        () => { selectedLayerRef.current = null; },
+      );
 
     const run = async () => {
       const raw = await fetchBundledGeoJson('all_provinces.geojson');
@@ -377,13 +410,8 @@ export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
       );
 
       const map = L.map(el, {
-        scrollWheelZoom: true,
-        dragging: true,
-        doubleClickZoom: false,
-        center: HOME_CENTER,
-        zoom: HOME_ZOOM,
-        zoomControl: true,
-        attributionControl: true,
+        scrollWheelZoom: true, dragging: true, doubleClickZoom: true,
+        center: HOME_CENTER, zoom: HOME_ZOOM, zoomControl: true, attributionControl: true,
       });
       mapRef.current = map;
       osmLayer.addTo(map);
@@ -396,40 +424,40 @@ export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
       layersCtrl.addTo(map);
       layersCtrlRef.current = layersCtrl;
 
-      /* ── Reset Control ── */
-      const resetControl = createResetControl(() => {
+      createResetControl(() => {
         provinceLayerRef.current?.remove();
         districtLayerRef.current?.remove();
         localBodyLayerRef.current?.remove();
         provinceLayerRef.current = null;
         districtLayerRef.current = null;
         localBodyLayerRef.current = null;
-        selectedLayer = null;
-        districtTooltipLayers = [];
-        localBodyTooltipLayers = [];
-
+        selectedLayerRef.current = null;
+        districtTooltipLayersRef.current = [];
+        localBodyTooltipLayersRef.current = [];
         map.flyTo(HOME_CENTER, HOME_ZOOM, { animate: true, duration: 0.8 });
-
-        // Sync province labels back immediately
-        syncLabelVisibility(HOME_ZOOM, provinceTooltipLayers, districtTooltipLayers, localBodyTooltipLayers);
-
+        doSync(HOME_ZOOM);
         toast.success('Map reset to Nepal overview');
-      });
-      resetControl.addTo(map);
+      }).addTo(map);
 
-      /* ── Zoom-based label sync listener ── */
-      map.on('zoomend', () => {
-        syncLabelVisibility(
-          map.getZoom(),
-          provinceTooltipLayers,
-          districtTooltipLayers,
-          localBodyTooltipLayers,
-        );
+      map.on('baselayerchange', (e: L.LayersControlEvent) => {
+        isSatelliteModeRef.current = e.name.toLowerCase().includes('satellite');
+        if (baseProvinceGeoJSON) {
+          baseProvinceGeoJSON.eachLayer((layer) => {
+            const path = layer as L.Path;
+            const feature = (path as any).feature as GeoJSON.Feature;
+            path.setStyle(getProvinceBaseStyle(feature, isSatelliteModeRef.current));
+          });
+        }
+        const s = getDynamicStyles();
+        if (provinceLayerRef.current) provinceLayerRef.current.setStyle(s.districtBase);
+        if (districtLayerRef.current) districtLayerRef.current.setStyle(s.nestedBase);
+        if (localBodyLayerRef.current) localBodyLayerRef.current.setStyle(s.wardBase);
       });
 
-      /* ── Province boundaries ── */
-      L.geoJSON(raw as GeoJSON.GeoJsonObject, {
-        style: (feat) => getProvinceBaseStyle(feat as GeoJSON.Feature),
+      map.on('zoomend', () => doSync(map.getZoom()));
+
+      baseProvinceGeoJSON = L.geoJSON(raw as GeoJSON.GeoJsonObject, {
+        style: (feat) => getProvinceBaseStyle(feat as GeoJSON.Feature, isSatelliteModeRef.current),
         onEachFeature(feature: GeoJSON.Feature, layer) {
           const path = layer as L.Path;
           const name = (feature.properties as { name?: string })?.name ?? '';
@@ -437,14 +465,11 @@ export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
           provinceTooltipLayers.push(layer);
 
           path.on({
-            mouseover: () => path.setStyle(getProvinceHoverStyle(feature)),
-            mouseout: () => path.setStyle(getProvinceBaseStyle(feature)),
+            mouseover: () => path.setStyle(getProvinceHoverStyle(feature, isSatelliteModeRef.current)),
+            mouseout: () => path.setStyle(getProvinceBaseStyle(feature, isSatelliteModeRef.current)),
             click: async () => {
               const provinceName = (feature.properties as { name_en?: string })?.name_en;
-              if (!provinceName) {
-                toast.message('This province has no English id in data; cannot open detail file.');
-                return;
-              }
+              if (!provinceName) { toast.message('No English province id in data.'); return; }
               hideTooltips(provinceTooltipLayers);
               const provinceData = await fetchBundledGeoJson(`provinces/${provinceName}.geojson`);
               if (cancelled) return;
@@ -453,95 +478,77 @@ export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
               provinceLayerRef.current?.remove();
               districtLayerRef.current?.remove();
               localBodyLayerRef.current?.remove();
-              districtTooltipLayers = [];
-              localBodyTooltipLayers = [];
+              provinceLayerRef.current = null;
+              districtLayerRef.current = null;
+              localBodyLayerRef.current = null;
+              districtTooltipLayersRef.current = [];
+              localBodyTooltipLayersRef.current = [];
 
+              const s = getDynamicStyles();
               provinceLayerRef.current = L.geoJSON(provinceData as GeoJSON.GeoJsonObject, {
-                style: { color: '#475569', fillColor: '#cbd5e1', weight: 1, fillOpacity: 0.55 },
+                style: s.districtBase,
                 onEachFeature(dFeature: GeoJSON.Feature, dLayer) {
                   const dPath = dLayer as L.Path;
                   const dName = (dFeature.properties as { name?: string })?.name ?? '';
                   dPath.bindTooltip(dName, { permanent: true, direction: 'center', className: 'map-label' });
-                  districtTooltipLayers.push(dLayer);
+                  districtTooltipLayersRef.current.push(dLayer);
                   dPath.on({
-                    mouseover: () => dPath.setStyle(hoverStyle),
-                    mouseout: () => dPath.setStyle(districtRestyle),
-                    click: () => { hideTooltips(districtTooltipLayers); void loadDistrict(dFeature); },
+                    mouseover: () => dPath.setStyle(getDynamicStyles().hover),
+                    mouseout: () => dPath.setStyle(getDynamicStyles().districtBase),
+                    click: () => { hideTooltips(districtTooltipLayersRef.current); void loadDistrict(dFeature); },
                   });
                 },
-              }).addTo(map);
+              });
 
               map.fitBounds(provinceLayerRef.current.getBounds(), { padding: [20, 20] });
-
-              // Sync labels immediately after fitBounds
-              syncLabelVisibility(
-                map.getZoom(),
-                provinceTooltipLayers,
-                districtTooltipLayers,
-                localBodyTooltipLayers,
-              );
+              doSync(map.getZoom());
             },
           });
         },
       }).addTo(map);
 
-      // Sync province labels at initial zoom level
-      syncLabelVisibility(
-        map.getZoom(),
-        provinceTooltipLayers,
-        districtTooltipLayers,
-        localBodyTooltipLayers,
-      );
+      doSync(map.getZoom());
 
-      /* ── loadDistrict ── */
       async function loadDistrict(dFeature: GeoJSON.Feature) {
         const candidates = districtGeoPaths(dFeature);
         let districtData: unknown | null = null;
         for (const c of candidates) { districtData = await fetchBundledGeoJson(c); if (districtData) break; }
         if (cancelled) return;
-        if (!districtData) {
-          toast.error(candidates.length ? `No district GeoJSON for: ${candidates.join(' / ')}` : 'No district name.');
-          return;
-        }
+        if (!districtData) { toast.error(`No district GeoJSON for: ${candidates.join(' / ')}`); return; }
 
         districtLayerRef.current?.remove();
         localBodyLayerRef.current?.remove();
-        localBodyTooltipLayers = [];
+        districtLayerRef.current = null;
+        localBodyLayerRef.current = null;
+        localBodyTooltipLayersRef.current = [];
 
+        const s = getDynamicStyles();
         districtLayerRef.current = L.geoJSON(districtData as GeoJSON.GeoJsonObject, {
-          style: { color: '#0f172a', fillColor: '#94a3b8', weight: 1, fillOpacity: 0.55 },
+          style: s.nestedBase,
           onEachFeature(lFeature: GeoJSON.Feature, lLayer) {
             const lPath = lLayer as L.Path;
             const lbName =
               (lFeature.properties as { name?: string })?.name ??
               (lFeature.properties as { name_en?: string })?.name_en ?? '';
             lPath.bindTooltip(lbName, { permanent: true, direction: 'center', className: 'map-label' });
-            localBodyTooltipLayers.push(lLayer);
+            localBodyTooltipLayersRef.current.push(lLayer);
             lPath.on({
-              mouseover: () => lPath.setStyle(hoverStyle),
-              mouseout: () => { if (selectedLayer !== lPath) districtLayerRef.current?.resetStyle(lPath); },
+              mouseover: () => lPath.setStyle(getDynamicStyles().hover),
+              mouseout: () => { if (selectedLayerRef.current !== lPath) districtLayerRef.current?.resetStyle(lPath); },
               click: () => {
-                if (selectedLayer) districtLayerRef.current?.resetStyle(selectedLayer);
-                selectedLayer = lPath;
-                lPath.setStyle(selectedStyle);
+                if (selectedLayerRef.current) districtLayerRef.current?.resetStyle(selectedLayerRef.current);
+                selectedLayerRef.current = lPath;
+                lPath.setStyle(getDynamicStyles().selected);
                 void loadLocalBody(lFeature);
               },
             });
           },
-        }).addTo(map);
+        });
 
         map.fitBounds(districtLayerRef.current.getBounds(), { padding: [20, 20] });
-
-        // Sync labels immediately after fitBounds
-        syncLabelVisibility(
-          map.getZoom(),
-          provinceTooltipLayers,
-          districtTooltipLayers,
-          localBodyTooltipLayers,
-        );
+        doSync(map.getZoom());
       }
 
-      /* ── loadLocalBody ── */
       async function loadLocalBody(lFeature: GeoJSON.Feature) {
         const p = lFeature.properties as { name?: string; name_en?: string } | undefined;
         const lbName = (p?.name ?? p?.name_en ?? '').trim();
@@ -549,50 +556,38 @@ export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
 
         const localData = await fetchBundledGeoJson(`localbody/${lbName}.geojson`);
         if (cancelled) return;
-        if (!localData) {
-          toast.message('Ward-level GeoJSON not bundled; selection is highlighted only.');
-          return;
-        }
+        if (!localData) { toast.message('Ward-level GeoJSON not bundled; selection highlighted only.'); return; }
 
         localBodyLayerRef.current?.remove();
+        localBodyLayerRef.current = null;
+
+        const s = getDynamicStyles();
         localBodyLayerRef.current = L.geoJSON(localData as GeoJSON.GeoJsonObject, {
-          style: { color: '#0f172a', fillColor: '#cbd5e1', weight: 1, fillOpacity: 0.45 },
+          style: s.wardBase,
           onEachFeature(f: GeoJSON.Feature, l) {
             const path = l as L.Path;
             const nm = (f.properties as { name?: string })?.name ?? '';
             path.bindTooltip(nm, { permanent: true, direction: 'center', className: 'map-label' });
             path.on({
-              mouseover: () => path.setStyle(hoverStyle),
-              mouseout: () => { if (selectedLayer !== path) localBodyLayerRef.current?.resetStyle(path); },
+              mouseover: () => path.setStyle(getDynamicStyles().hover),
+              mouseout: () => { if (selectedLayerRef.current !== path) localBodyLayerRef.current?.resetStyle(path); },
               click: () => {
-                if (selectedLayer) localBodyLayerRef.current?.resetStyle(selectedLayer);
-                selectedLayer = path;
-                path.setStyle(selectedStyle);
+                if (selectedLayerRef.current) localBodyLayerRef.current?.resetStyle(selectedLayerRef.current);
+                selectedLayerRef.current = path;
+                path.setStyle(getDynamicStyles().selected);
               },
             });
           },
-        }).addTo(map);
+        });
 
         map.fitBounds(localBodyLayerRef.current.getBounds(), { padding: [20, 20] });
-
-        // Sync labels immediately after fitBounds
-        syncLabelVisibility(
-          map.getZoom(),
-          provinceTooltipLayers,
-          districtTooltipLayers,
-          localBodyTooltipLayers,
-        );
+        doSync(map.getZoom());
       }
 
       map.invalidateSize();
 
       if (pendingPropertiesRef.current.length) {
-        addPropertyMarkers(
-          pendingPropertiesRef.current,
-          map,
-          layersCtrl,
-          addedOverlaysRef.current,
-        );
+        addPropertyMarkers(pendingPropertiesRef.current, map, layersCtrl, addedOverlaysRef.current);
       }
     };
 
@@ -608,25 +603,20 @@ export const GenericMap: React.FC<{ className?: string }> = ({ className }) => {
   }, []);
 
   return (
-    <div
-      className={cn(
-        'project-map flex h-full min-h-[420px] w-full overflow-hidden rounded-xl border border-border-main bg-white shadow-sm',
-        className,
-      )}
-    >
+    <div className={cn('project-map flex h-full min-h-[420px] w-full overflow-hidden rounded-xl border border-border-main bg-white shadow-sm', className)}>
       <style>{`
         @keyframes pulse-ring {
-          0%   { opacity: 0.7; transform: translate(-50%, -50%) scale(0.8); }
-          70%  { opacity: 0;   transform: translate(-50%, -50%) scale(1.5); }
-          100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.5); }
+          0%   { opacity:0.7; transform:translate(-50%,-50%) scale(0.85); }
+          70%  { opacity:0;   transform:translate(-50%,-50%) scale(1.6); }
+          100% { opacity:0;   transform:translate(-50%,-50%) scale(1.6); }
+        }
+        @keyframes pulse-ring-sq {
+          0%   { opacity:0.7; transform:translate(-50%,-50%) scale(0.85); }
+          70%  { opacity:0;   transform:translate(-50%,-50%) scale(1.5); }
+          100% { opacity:0;   transform:translate(-50%,-50%) scale(1.5); }
         }
       `}</style>
-      <div
-        ref={mapElRef}
-        className="relative z-0 min-h-0 min-w-0 flex-1"
-        role="application"
-        aria-label="Nepal map"
-      />
+      <div ref={mapElRef} className="relative z-0 min-h-0 min-w-0 flex-1" role="application" aria-label="Nepal map" />
     </div>
   );
 };

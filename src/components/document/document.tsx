@@ -315,7 +315,7 @@ export default function DocumentSearchForm() {
         {/* Header */}
         <div className="bg-white px-4 py-2 sm:px-5 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-200 rounded-t-xl shadow-sm">
           <div>
-            <h2 className="text-xl font-bold text-slate-800">{t("document.documentSearch")}</h2>
+            <h2 className="text-md font-bold text-slate-800">{t("document.documentSearch")}</h2>
             <p className="text-slate-800 font-semibold text-sm mt-1">{t("document.filterBy")}</p>
           </div>
         </div>
@@ -323,7 +323,7 @@ export default function DocumentSearchForm() {
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-4">
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
 
             {/* Field: Property Name */}
             <div className="flex flex-col">
@@ -337,7 +337,7 @@ export default function DocumentSearchForm() {
                 getLabel={(item) => (item && item.name) ? item.name : ""}
                 placeholder={isLoadingProperty ? "Loading..." : "Select Property Name..."}
                 disabled={isLoadingProperty}
-                className="h-12 px-4"
+                className="h-8 px-2"
               />
             </div>
 
@@ -351,7 +351,7 @@ export default function DocumentSearchForm() {
                 getLabel={(item) => item.name}
                 placeholder={isLoadingDocument ? "Loading..." : "Select Type..."}
                 disabled={isLoadingDocument}
-                className="h-12 px-4"
+                className="h-8 px-2"
               />
             </div>
 
@@ -365,7 +365,7 @@ export default function DocumentSearchForm() {
                 getLabel={(item) => item.propertyType}
                 placeholder={isLoadingPropertyType ? "Loading..." : "Select Type..."}
                 disabled={isLoadingPropertyType}
-                className="h-12 px-4"
+                className="h-8 px-2"
               />
             </div>
 
@@ -379,7 +379,7 @@ export default function DocumentSearchForm() {
                 getLabel={(item) => item.fiscalYear}
                 placeholder={isLoadingFiscalYear ? "Loading..." : "Select Year..."}
                 disabled={isLoadingFiscalYear}
-                className="h-12 px-4"
+                className="h-8 px-2"
               />
             </div>
 
@@ -393,7 +393,7 @@ export default function DocumentSearchForm() {
                 getLabel={(item) => item.name}
                 placeholder={isLoadingFileTag ? "Loading..." : "Select Tag..."}
                 disabled={isLoadingFileTag}
-                className="h-12 px-4"
+                className="h-8 px-2"
               />
             </div>
 
@@ -407,20 +407,20 @@ export default function DocumentSearchForm() {
                 getLabel={(item) => item.name}
                 placeholder={isLoadingOffice ? "Loading..." : "Select Office..."}
                 disabled={isLoadingOffice}
-                className="h-12 px-4"
+                className="h-8 px-2"
               />
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-gray-100">
-            <button type="button" onClick={handleReset} className="px-5 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 text-sm">
+            <button type="button" onClick={handleReset} className="px-3 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 text-sm">
               {t("common.clear")}
             </button>
             <button
               type="submit"
               disabled={isSearchLoading}
-              className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+              className="px-3 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50"
             >
               {isSearchLoading ? (
                 <>
@@ -475,7 +475,7 @@ export default function DocumentSearchForm() {
                             <td className="px-6 py-3">
                               <button
                                 onClick={() => handleViewFile(doc.id)}
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition shadow-sm text-sm font-medium"
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded transition shadow-sm text-sm font-medium"
                               >
                                 View File
                               </button>
