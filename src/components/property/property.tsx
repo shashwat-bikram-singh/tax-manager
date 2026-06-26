@@ -41,6 +41,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTranslation } from "react-i18next";
+import { useAuthStore } from "@/store/authStore";
+import { jwtDecode } from "jwt-decode";
 
 interface Property {
   id: number;
@@ -51,7 +53,7 @@ interface Property {
   legalStatus?: string;
   usageName?: string;
   ownershipType?: string;
-  province: string
+  province: string;
 }
 
 export default function PropertyList() {
@@ -59,6 +61,14 @@ export default function PropertyList() {
   const { t } = useTranslation();
   const { items: propertyData, isLoadingItems } = useFetchAll<Property>("/api/property", ["property"]);
   const { delete: deleteProperty } = useMutate<Property>("/api/property", "property");
+
+  const { token } = useAuthStore();
+  const decoded: any = token ? jwtDecode(token) : {};
+  const isSuperAdmin = (decoded?.Role ?? decoded?.role ?? "").toLowerCase() === "superadmin";
+  const isAdmin = (decoded?.Role ?? decoded?.role ?? "").toLowerCase() === "admin";
+
+  // ✅ FIX: Create a derived boolean instead of a separate state
+  const canManageActions = isSuperAdmin || isAdmin;
 
   const getAreaDisplay = (item: Property) => {
     const land = item.landArea;
@@ -83,6 +93,8 @@ export default function PropertyList() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // ✅ FIX: Use the derived boolean directly in the initial state object
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
     sn: true,
     name: true,
@@ -93,7 +105,7 @@ export default function PropertyList() {
     legalStatus: true,
     usageName: true,
     ownershipType: true,
-    actions: true,
+    actions: canManageActions,
   });
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -167,12 +179,8 @@ export default function PropertyList() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
           <h2 className="text-md font-bold text-slate-800 tracking-tight">{t("property.propertyInventory")}</h2>
-
         </div>
       </div>
-
-      {/* Controls Bar */}
-
 
       {/* Table */}
       <div className="hidden md:block rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -221,10 +229,11 @@ export default function PropertyList() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-
-          <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0" onClick={handleAddNew}>
-            <span className="mr-2 text-lg leading-none">+</span> {t("common.add")}
-          </Button>
+          {canManageActions && (
+            <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0" onClick={handleAddNew}>
+              <span className="mr-2 text-lg leading-none">+</span> {t("common.add")}
+            </Button>
+          )}
         </div>
         <Table>
           <TableHeader className="bg-slate-50 border-b border-slate-200">

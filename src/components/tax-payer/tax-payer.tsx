@@ -415,7 +415,9 @@ export default function PaymentList() {
 
   const { token } = useAuthStore();
   const decoded: any = token ? jwtDecode(token) : {};
-  const Role = decoded.Role || "User";
+
+  const isSuperAdmin = (decoded?.Role ?? decoded?.role ?? "").toLowerCase() === "superadmin";
+  const isAdmin = (decoded?.Role ?? decoded?.role ?? "").toLowerCase() === "admin";
 
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [selectedFiscalYearId, setSelectedFiscalYearId] = useState<number | undefined>(undefined);
@@ -517,6 +519,7 @@ export default function PaymentList() {
   }
 
   const payments = getPayment(paymentData);
+
 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -802,12 +805,14 @@ export default function PaymentList() {
           </Button>
 
           {/* Add Payment */}
-          <Button
-            className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0 w-full sm:w-auto ml-auto rounded-xl"
-            onClick={handleAddNew}
-          >
-            <Plus className="mr-2 h-4 w-4" /> {t("payment.addPayment")}
-          </Button>
+          {isAdmin || isSuperAdmin && (
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-200 text-white shrink-0 w-full sm:w-auto ml-auto rounded-xl"
+              onClick={handleAddNew}
+            >
+              <Plus className="mr-2 h-4 w-4" /> {t("payment.addPayment")}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1142,7 +1147,7 @@ export default function PaymentList() {
                 Close
               </button>
               <div className="flex items-center gap-4">
-                {Role === "Admin" ? (
+                {isAdmin || isSuperAdmin ? (
                   <button
                     type="button"
                     onClick={handleDownload}

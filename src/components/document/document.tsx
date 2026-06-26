@@ -441,14 +441,14 @@ export default function DocumentSearchForm() {
         {showTable && (
           <div className="mt-8 animate-in fade-in duration-500 border-t border-gray-100">
             <div className="p-6 bg-gray-50">
-              <div className="flex items-center justify-between mb-4 max-w-7xl mx-auto">
+              <div className="flex items-center justify-between mb-4 max-w-9xl mx-auto">
                 <h3 className="text-lg font-bold text-slate-800">{t("document.searchResults")}</h3>
                 <span className="text-sm text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm border border-gray-200">
                   {searchResults.length} {t("document.itemsFound")}
                 </span>
               </div>
 
-              <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+              <div className="max-w-9xl mx-auto bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">

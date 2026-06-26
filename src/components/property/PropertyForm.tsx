@@ -481,6 +481,7 @@ export default function PropertyForm({
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema) as any,
     defaultValues: {
+      officeId: "",
       propertytype: "",
       name: "",
       province: "",
@@ -515,7 +516,6 @@ export default function PropertyForm({
       daam: 0,
       latitude: 0,
       longitude: 0,
-      officeId: "",
     },
   });
 
@@ -788,16 +788,12 @@ export default function PropertyForm({
   const isBuilding = propertyTypeList
     .find((p) => String(p.id) === form.watch("propertytype"))
     ?.propertyType?.toLowerCase() === "building";
-  const isLand = propertyTypeList
-    .find((p) => String(p.id) === form.watch("propertytype"))
-    ?.propertyType?.toLowerCase() === "land";
+  // const isLand = propertyTypeList
+  //   .find((p) => String(p.id) === form.watch("propertytype"))
+  //   ?.propertyType?.toLowerCase() === "land";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/40 p-6 space-y-6">
-      <p className="text-xs uppercase tracking-widest text-gray-400 font-semibold mb-3">
-        {t("property.inventory")} &rsaquo; {t("property.propertyDetail")}
-      </p>
-
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/40">
       {mode === "edit" && isFetchingProperty ? (
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -805,19 +801,7 @@ export default function PropertyForm({
         </div>
       ) : (
         <>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleCancel}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+
 
           <div className="gap-6 items-start">
             <Form {...form}>
@@ -825,13 +809,30 @@ export default function PropertyForm({
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-xl">
 
                   <div className="bg-slate-50/50 p-6 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
-                        <span className="material-symbols-outlined text-white text-xl">description</span>
+                    {/* Added justify-between here */}
+                    <div className="flex items-center justify-between">
+
+                      {/* Grouped the icon and title together on the left */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
+                          <span className="material-symbols-outlined text-white text-xl">description</span>
+                        </div>
+                        <h2 className="text-lg font-bold text-gray-900">
+                          {t("property.propertyInformation")}
+                        </h2>
                       </div>
-                      <h2 className="text-lg font-bold text-gray-900">
-                        {t("property.propertyInformation")}
-                      </h2>
+
+                      {/* Button is now a direct child, forcing it to the right */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleCancel}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+
                     </div>
                   </div>
 
@@ -847,6 +848,31 @@ export default function PropertyForm({
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* ── Office field — SuperAdmin only ── */}
+                        {isSuperAdmin && (
+                          <FormField control={form.control} name="officeId" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                                {t("sidebar.office")} <span className="text-red-500">*</span>
+                              </FormLabel>
+                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
+                                <FormControl>
+                                  <SearchableSelect
+                                    options={allOfficeList}
+                                    value={field.value ?? ""}
+                                    onChange={(v) => field.onChange(v || "")}
+                                    getLabel={(item) => item.name || (item as any).office || ""}
+                                    placeholder="Select Office"
+                                    disabled={loading || isLoadingAllOffices}
+                                    isLoading={isLoadingAllOffices}
+                                  />
+                                </FormControl>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                        )}
+
 
                         {/* Property Type */}
                         <FormField control={form.control} name="propertytype" render={({ field }) => (
@@ -1138,30 +1164,6 @@ export default function PropertyForm({
                           </FormItem>
                         )} />
 
-                        {/* ── Office field — SuperAdmin only ── */}
-                        {isSuperAdmin && (
-                          <FormField control={form.control} name="officeId" render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
-                                {t("sidebar.office")} <span className="text-red-500">*</span>
-                              </FormLabel>
-                              <div className="rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
-                                <FormControl>
-                                  <SearchableSelect
-                                    options={allOfficeList}
-                                    value={field.value ?? ""}
-                                    onChange={(v) => field.onChange(v || "")}
-                                    getLabel={(item) => item.name || (item as any).office || ""}
-                                    placeholder="Select Office"
-                                    disabled={loading || isLoadingAllOffices}
-                                    isLoading={isLoadingAllOffices}
-                                  />
-                                </FormControl>
-                              </div>
-                              <FormMessage />
-                            </FormItem>
-                          )} />
-                        )}
 
                       </div>
                     </div>
@@ -1424,7 +1426,8 @@ export default function PropertyForm({
             </Form>
           </div>
         </>
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 }

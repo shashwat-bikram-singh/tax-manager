@@ -89,8 +89,8 @@ export default function AnalyticReport() {
     // ─── AGGREGATE LEGAL STATUS FOR DONUT CHART ───────────────────────────
     const legalAggregation = useMemo(() => {
         const counts: Record<string, number> = {};
-        data.legalStatus.forEach((province) => {
-            province.Details.forEach((detail) => {
+        data.legalStatus?.forEach((province) => {
+            province.Details?.forEach((detail) => {
                 counts[detail.LegalStatusName] = (counts[detail.LegalStatusName] || 0) + detail.TotalProperty;
             });
         });

@@ -95,7 +95,7 @@ export default function TaxComplianceReport() {
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
         {/* Total Tax Liability */}
-        <div className="bg-surface-container-low p-6 rounded-2xl space-y-2 border-l-4 border-primary shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white p-6 rounded-2xl space-y-2 border-l-4 border-primary shadow-sm hover:shadow-md transition-shadow">
           <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
             Total Tax Liability
           </p>
@@ -105,7 +105,7 @@ export default function TaxComplianceReport() {
         </div>
 
         {/* Total Tax Paid */}
-        <div className="bg-surface-container-low p-6 rounded-2xl space-y-2 border-l-4 border-on-primary-fixed-variant shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white p-6 rounded-2xl space-y-2 border-l-4 border-on-primary-fixed-variant shadow-sm hover:shadow-md transition-shadow">
           <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
             Total Tax Paid
           </p>
@@ -115,7 +115,7 @@ export default function TaxComplianceReport() {
         </div>
 
         {/* Outstanding Balance */}
-        <div className="bg-surface-container-highest p-6 rounded-2xl space-y-3 border-l-4 border-tertiary shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white p-6 rounded-2xl space-y-3 border-l-4 border-tertiary shadow-sm hover:shadow-md transition-shadow">
           <p className="text-[10px] font-black uppercase tracking-widest text-on-tertiary-container">
             Liability Balance
           </p>
@@ -127,7 +127,7 @@ export default function TaxComplianceReport() {
       </section>
 
       {/* Chart */}
-      <section className="bg-surface-container-low p-6 rounded-3xl shadow-sm border border-outline-variant">
+      <section className="bg-white p-6 rounded-3xl shadow-sm border border-outline-variant">
         <div className="mb-6">
           <h2 className="text-lg font-bold text-on-surface">
             Tax Liability by Province
