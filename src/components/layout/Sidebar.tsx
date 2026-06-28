@@ -129,6 +129,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
             <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">{t("sidebar.administration")}</p>
           </div>
         )}
+        {(Role === "SuperAdmin") && (
+          <NavItem
+            to="/app/office"
+            icon="corporate_fare"
+            label={t("sidebar.office")}
+            isOpen={isOpen}
+            iconMap={iconMap}
+          />
+        )}
 
         {(Role === "Admin" || Role === "SuperAdmin") && (
           <>
@@ -139,13 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
               isOpen={isOpen}
               iconMap={iconMap}
             />
-            <NavItem
-              to="/app/office"
-              icon="corporate_fare"
-              label={t("sidebar.office")}
-              isOpen={isOpen}
-              iconMap={iconMap}
-            />
+
             <NavItem
               to="/app/user"
               icon="person"

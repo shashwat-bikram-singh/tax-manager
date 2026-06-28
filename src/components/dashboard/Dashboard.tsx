@@ -7,6 +7,8 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, X, MapPin, LayoutDashboard, Map } from "lucide-react";
 import { ProjectMap } from "@/components/map/projectmap";
+import { useAuthStore } from "@/store/authStore";
+import { jwtDecode } from "jwt-decode";
 
 // ─── SEARCHABLE SELECT ────────────────────────────────────────────────────────
 interface SearchableSelectProps {
@@ -351,6 +353,13 @@ export default function Dashboard() {
   const [lbProvinceId, setLbProvinceId] = useState<string | number | null>(null);
   const [lbDistrictId, setLbDistrictId] = useState<string | number | null>(null);
 
+  const { token } = useAuthStore();
+  const decoded: any = token ? jwtDecode(token) : {};
+  const Role = (decoded?.Role ?? decoded?.role ?? "");
+  const isSuperAdmin = Role.toLowerCase() === "superadmin";
+  // const isAdmin = Role.toLowerCase() === "admin";
+
+
   const { t } = useTranslation();
   const { items: dashboardResponse, isLoadingItems: loading, error } = useFetchAll<DashboardData>("/api/dashboard", ["dashboard"]);
   const { items: leaderboardResponse } = useFetchAll<LeaderboardData>("/api/leaderboard", ["leaderboard"]);
@@ -595,7 +604,8 @@ export default function Dashboard() {
           </div>
 
           {/* ── Radial + Leaderboard ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={`grid grid-cols-1 ${Role == "SuperAdmin" ? "lg:grid-cols-2" : "lg:grid-cols-1"} gap-6`}>
+            {/* Radial chart — always shown */}
             <div className="bg-white rounded-2xl border border-surface-container shadow-sm p-6">
               <div className="flex items-center gap-2 mb-2">
                 <span className="material-symbols-outlined text-primary text-lg">donut_large</span>
@@ -614,57 +624,60 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border flex flex-col border-gray-200 shadow-md overflow-hidden p-6 relative">
-              <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-gray-100 rounded-full blur-2xl pointer-events-none" />
-              <div className="flex items-center justify-between mb-6 relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0 border border-yellow-200">
-                    <span className="material-symbols-outlined text-yellow-600 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>trophy</span>
+            {/* Leaderboard — hidden for SuperAdmin */}
+            {isSuperAdmin && (
+              <div className="bg-white rounded-2xl border flex flex-col border-gray-200 shadow-md overflow-hidden p-6 relative">
+                <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-gray-100 rounded-full blur-2xl pointer-events-none" />
+                <div className="flex items-center justify-between mb-6 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center shrink-0 border border-yellow-200">
+                      <span className="material-symbols-outlined text-yellow-600 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>trophy</span>
+                    </div>
+                    <div>
+                      <h4 className="font-headline font-bold text-gray-800 text-base">{t("dashboard.topPerformingOffices")}</h4>
+                      <p className="text-gray-500 text-[10px] uppercase tracking-widest font-semibold mt-0.5">{t("dashboard.byTotalProperties")}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-headline font-bold text-gray-800 text-base">{t("dashboard.topPerformingOffices")}</h4>
-                    <p className="text-gray-500 text-[10px] uppercase tracking-widest font-semibold mt-0.5">{t("dashboard.byTotalProperties")}</p>
-                  </div>
+                  <Link to="/app/leaderboardPage" className="text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1">
+                    {t("dashboard.viewAll")}
+                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                  </Link>
                 </div>
-                <Link to="/app/leaderboardPage" className="text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-1">
-                  {t("dashboard.viewAll")}
-                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                </Link>
+                <div className="flex-1 overflow-y-auto space-y-3 relative z-10 pr-1">
+                  {!ld ? (
+                    <div className="h-[220px] flex flex-col items-center justify-center text-gray-400 text-sm gap-2">
+                      <p>{t("dashboard.noLeaderboardData")}</p>
+                    </div>
+                  ) : (
+                    (Array.isArray(ld) ? ld : [ld]).slice(0, 4).map((item: LeaderboardData) => {
+                      const isTop3 = item.rankPosition <= 3;
+                      return (
+                        <div key={item.officeId} className="flex items-center gap-4 bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200 rounded-xl p-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-black text-sm ${item.rankPosition === 1 ? "bg-yellow-400 text-yellow-900"
+                            : item.rankPosition === 2 ? "bg-gray-300 text-gray-800"
+                              : item.rankPosition === 3 ? "bg-amber-600 text-white"
+                                : "bg-gray-200 text-gray-600 font-bold"
+                            }`}>
+                            {item.rankPosition}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm truncate leading-snug ${isTop3 ? "font-bold text-gray-900" : "font-semibold text-gray-700"}`}>
+                              {item.officeName}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className={`font-black text-lg leading-none ${isTop3 ? "text-yellow-600" : "text-gray-800"}`}>
+                              {item.totalProperties.toLocaleString()}
+                            </p>
+                            <p className="text-[9px] uppercase tracking-widest text-gray-400 font-semibold mt-1">{t("common.properties")}</p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto space-y-3 relative z-10 pr-1">
-                {!ld ? (
-                  <div className="h-[220px] flex flex-col items-center justify-center text-gray-400 text-sm gap-2">
-                    <p>{t("dashboard.noLeaderboardData")}</p>
-                  </div>
-                ) : (
-                  (Array.isArray(ld) ? ld : [ld]).slice(0, 4).map((item: LeaderboardData) => {
-                    const isTop3 = item.rankPosition <= 3;
-                    return (
-                      <div key={item.officeId} className="flex items-center gap-4 bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200 rounded-xl p-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-black text-sm ${item.rankPosition === 1 ? "bg-yellow-400 text-yellow-900"
-                          : item.rankPosition === 2 ? "bg-gray-300 text-gray-800"
-                            : item.rankPosition === 3 ? "bg-amber-600 text-white"
-                              : "bg-gray-200 text-gray-600 font-bold"
-                          }`}>
-                          {item.rankPosition}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm truncate leading-snug ${isTop3 ? "font-bold text-gray-900" : "font-semibold text-gray-700"}`}>
-                            {item.officeName}
-                          </p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className={`font-black text-lg leading-none ${isTop3 ? "text-yellow-600" : "text-gray-800"}`}>
-                            {item.totalProperties.toLocaleString()}
-                          </p>
-                          <p className="text-[9px] uppercase tracking-widest text-gray-400 font-semibold mt-1">{t("common.properties")}</p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
+            )}
           </div>
 
           {/* ── Local Body Table ── */}
