@@ -130,16 +130,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           </div>
         )}
         {(Role === "SuperAdmin") && (
-          <NavItem
-            to="/app/office"
-            icon="corporate_fare"
-            label={t("sidebar.office")}
-            isOpen={isOpen}
-            iconMap={iconMap}
-          />
-        )}
-
-        {(Role === "Admin" || Role === "SuperAdmin") && (
           <>
             <NavItem
               to="/app/fiscalyear"
@@ -148,6 +138,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
               isOpen={isOpen}
               iconMap={iconMap}
             />
+            <NavItem
+              to="/app/office"
+              icon="corporate_fare"
+              label={t("sidebar.office")}
+              isOpen={isOpen}
+              iconMap={iconMap}
+            />
+          </>
+        )}
+
+        {(Role === "Admin" || Role === "SuperAdmin") && (
+          <>
+
 
             <NavItem
               to="/app/user"

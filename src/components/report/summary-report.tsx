@@ -116,11 +116,11 @@ function getDocuments(docString?: string | null): PropertyDocument[] {
     }
 }
 
-function getLatestDocumentId(item: Property): number | null {
-    const docs = getDocuments(item.document);
-    if (docs.length === 0) return null;
-    return docs.reduce((max, doc) => (doc.Id > max.Id ? doc : max), docs[0]).Id;
-}
+// function getLatestDocumentId(item: Property): number | null {
+//     const docs = getDocuments(item.document);
+//     if (docs.length === 0) return null;
+//     return docs.reduce((max, doc) => (doc.Id > max.Id ? doc : max), docs[0]).Id;
+// }
 
 // ─── COMPONENT ───────────────────────────────────────────────────────────────
 export default function SummaryReport() {
@@ -375,7 +375,7 @@ export default function SummaryReport() {
                             {columnVisibility.legalStatus && <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("property.legalStatus")}</TableHead>}
                             {columnVisibility.usageName && <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2">{t("property.usageName")}</TableHead>}
                             {columnVisibility.ownershipType && <TableHead className="text-[11px] font-bold text-slate-500 uppercase tracking-wider py-3">{t("property.ownershipType")}</TableHead>}
-                            {columnVisibility.actions && <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">{t("property.actions")}</TableHead>}
+                            {/* {columnVisibility.actions && <TableHead className="text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider py-2 w-24">{t("property.actions")}</TableHead>} */}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -399,7 +399,7 @@ export default function SummaryReport() {
                                     {columnVisibility.legalStatus && <TableCell className="text-sm text-slate-600 py-2">{getStatusBadge(item.legalStatus ?? "")}</TableCell>}
                                     {columnVisibility.usageName && <TableCell className="text-sm text-slate-600 py-2">{item.usageName ?? "-"}</TableCell>}
                                     {columnVisibility.ownershipType && <TableCell className="text-sm text-slate-600 py-2">{item.ownershipType ?? "-"}</TableCell>}
-                                    {columnVisibility.actions && (
+                                    {/* {columnVisibility.actions && (
                                         <TableCell className="py-2">
                                             <div className="flex items-center justify-center gap-1.5">
                                                 <Button
@@ -417,7 +417,7 @@ export default function SummaryReport() {
                                                 </Button>
                                             </div>
                                         </TableCell>
-                                    )}
+                                    )} */}
                                 </TableRow>
                             ))
                         ) : (
