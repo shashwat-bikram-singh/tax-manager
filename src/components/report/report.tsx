@@ -3,13 +3,14 @@ import ReactApexChart from "react-apexcharts";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import { FileText, AlertTriangle, Scale, Gavel, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default function Report() {
   const { items: response, isLoading } = useFetchAll<any>("/decision-logic", [
     "decision-logic",
   ]);
   const navigate = useNavigate();
-
+  const { t } = useTranslation();
   const apiData = response?.data;
   const data = Array.isArray(apiData) ? apiData : [];
   const firstRecord = data?.[0] || {};
@@ -132,7 +133,7 @@ export default function Report() {
       legend: { position: "top" },
       grid: { borderColor: "#f1f5f9", strokeDashArray: 4 },
       title: {
-        text: "Litigation Heat Map (by Province)",
+        text: t("decisionLogic.litigationHeatMap"),
         align: "left",
         style: { fontSize: "16px", fontWeight: "bold", fontFamily: "Inter, sans-serif", color: "#333" },
       },
@@ -179,39 +180,39 @@ export default function Report() {
           <Scale className="w-4 h-4 text-white" />
         </div>
         <div>
-          <h1 className="text-lg font-semibold text-gray-900 tracking-tight">Decision Logic</h1>
-          <p className="text-sm text-gray-500 mt-1">Property Risk & Compliance Analysis</p>
+          <h1 className="text-lg font-semibold text-gray-900 tracking-tight">{t("sidebar.decisionLogic")}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t("decisionLogic.propertyRiskAndComplianceAnalysis")}</p>
         </div>
       </div>
 
       {/* Summary Cards */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Litigation — total derived from Properties[] counts */}
-       <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden group h-20">
-  <div className="absolute top-0 left-0 w-full h-1 bg-red-500" />
+        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden group h-20">
+          <div className="absolute top-0 left-0 w-full h-1 bg-red-500" />
 
-  <div className="flex items-center justify-between">
-    <div className="space-y-1">
-      <div className="p-2 bg-red-50 rounded-md group-hover:bg-red-100 transition-colors">
-        <Gavel className="w-5 h-5 text-red-600" />
-      </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="p-2 bg-red-50 rounded-md group-hover:bg-red-100 transition-colors">
+                <Gavel className="w-5 h-5 text-red-600" />
+              </div>
 
-      <p className="text-[9px] font-black uppercase tracking-wider text-red-600">
-        Litigation
-      </p>
-    </div>
+              <p className="text-[9px] font-black uppercase tracking-wider text-red-600">
+                Litigation
+              </p>
+            </div>
 
-    <div className="text-right">
-      <h3 className="text-3xl font-black text-gray-900">
-        {litigationTotal.toLocaleString()}
-      </h3>
+            <div className="text-right">
+              <h3 className="text-3xl font-black text-gray-900">
+                {litigationTotal.toLocaleString()}
+              </h3>
 
-      <p className="text-[9px] text-gray-400 mt-0.5 font-semibold">
-        {provinceRows.filter((r: any) => r.count > 0).length} province(s) affected
-      </p>
-    </div>
-  </div>
-</div>
+              <p className="text-[9px] text-gray-400 mt-0.5 font-semibold">
+                {provinceRows.filter((r: any) => r.count > 0).length} province(s) affected
+              </p>
+            </div>
+          </div>
+        </div>
 
         <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden group h-20">
           <div className="absolute top-0 left-0 w-full h-1 bg-amber-500" />
@@ -268,9 +269,9 @@ export default function Report() {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
           <div className="flex items-start justify-between mb-5">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Document Missing Index</h2>
+              <h2 className="text-lg font-bold text-gray-900">{t("decisionLogic.documentMissingIndex")}</h2>
               <p className="text-sm text-gray-400 mt-0.5">
-                Assets without verifiable Lalpurja (Land Ownership Certificate)
+                {t("decisionLogic.assetsWithoutVerifiableLalpurja")}
               </p>
             </div>
             <button
@@ -278,7 +279,7 @@ export default function Report() {
               className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-blue-600 hover:text-blue-800 transition-colors px-3 py-2 rounded-lg hover:bg-blue-100 flex-shrink-0"
             >
               <Upload className="w-3.5 h-3.5" />
-              Upload Doc
+              {t("decisionLogic.uploadDoc")}
             </button>
           </div>
 
@@ -322,9 +323,9 @@ export default function Report() {
         {/* RIGHT — Litigation Heatmap (all 7 provinces) */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
           <div className="mb-5">
-            <h2 className="text-lg font-bold text-gray-900">Litigation Heatmap</h2>
+            <h2 className="text-lg font-bold text-gray-900">{t("decisionLogic.litigationHeatMap")}</h2>
             <p className="text-sm text-gray-400 mt-0.5">
-              Active court cases distribution by Province
+              {t("decisionLogic.activeCourtCasesDistributionByProvince")}
             </p>
           </div>
 

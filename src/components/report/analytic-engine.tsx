@@ -3,6 +3,7 @@ import ReactApexChart from "react-apexcharts";
 import type { ApexOptions } from "apexcharts";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import { BarChart3, ShieldAlert, TrendingUp, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 interface LeaderBoardItem {
@@ -83,7 +84,7 @@ function parseAnalyticData(raw: any): ParsedAnalytics {
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function AnalyticReport() {
     const { items: rawData, isLoadingItems } = useFetchAll<ApiResponse>("/analytics-rpt", ["analytics-rpt"]);
-
+    const { t } = useTranslation();
     const data = useMemo(() => parseAnalyticData(rawData), [rawData]);
 
     // ─── AGGREGATE LEGAL STATUS FOR DONUT CHART ───────────────────────────
@@ -289,9 +290,9 @@ export default function AnalyticReport() {
         <div className="max-w-8xl mx-auto space-y-4">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Analytical Report</h1>
+                <h1 className="text-2xl font-bold text-slate-800 tracking-tight">{t("analyticReport.analyticalReport")}</h1>
                 <p className="text-sm text-slate-500 mt-1">
-                    Comprehensive insights into property distribution, legal status, and historical trends.
+                    {t("analyticReport.comprehensiveInsightsIntoPropertyDistrbutionLegalStatusAndHistoricalTrends")}
                 </p>
             </div>
 
@@ -305,8 +306,8 @@ export default function AnalyticReport() {
                             <BarChart3 size={20} />
                         </div>
                         <div>
-                            <h2 className="text-base font-bold text-slate-800">Campus Comparison Report</h2>
-                            <p className="text-xs text-slate-400 font-medium">Ranking based on total asset count vs area</p>
+                            <h2 className="text-base font-bold text-slate-800">{t("analyticReport.campusComparisonReport")}</h2>
+                            <p className="text-xs text-slate-400 font-medium">{t("analyticReport.rankingBasedOnTotalAssetCountVsArea")}</p>
                         </div>
                     </div>
                     <div className="flex-grow">
@@ -332,8 +333,8 @@ export default function AnalyticReport() {
                             <ShieldAlert size={20} />
                         </div>
                         <div>
-                            <h2 className="text-base font-bold text-slate-800">Legal Issues Concentration</h2>
-                            <p className="text-xs text-slate-400 font-medium">Risk identification by campus locations</p>
+                            <h2 className="text-base font-bold text-slate-800">{t("analyticReport.legalIssuesConcentration")}</h2>
+                            <p className="text-xs text-slate-400 font-medium">{t("analyticReport.riskIdentificationByCampusLocations")}</p>
                         </div>
                     </div>
                     <div className="flex-grow">
@@ -362,10 +363,10 @@ export default function AnalyticReport() {
                     </div>
                     <div>
                         <h2 className="text-base font-bold text-slate-800">
-                            Trend Analysis: Asset Growth vs Encroachment
+                            {t("analyticReport.trendAnalysis")}
                         </h2>
                         <p className="text-xs text-slate-400 font-medium">
-                            Year-over-year comparison of verified assets and encroached properties
+                            {t("analyticReport.yearOverYearCOmparisonOfVerifiedAssetsAndEncroachedProperties")}
                         </p>
                     </div>
                 </div>
