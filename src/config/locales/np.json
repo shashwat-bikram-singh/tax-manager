@@ -296,5 +296,47 @@
         "failedToUpdateStatus": "सूचना स्थिति अपडेट गर्न असफल भयो",
         "failedToMarkAllRead": "सबैलाई पढिएको मार्क गर्न असफल भयो",
         "allMarkedRead": "सबै सूचनाहरूलाई पढिएको मार्क गरियो"
-    }
+    },
+    "summaryReport":{
+        "locationDetails": "स्थान विवरण",
+        "Province": "प्रदेश",
+"district": "जिल्ला",
+"localBody": "स्थानीय तह",
+"wardNo": "वडा नं",
+"geographicRegion": "भौगोलिक क्षेत्र",
+"kittaNumber": "कित्ता नम्बर",
+"areaConstruction": "क्षेत्रफल र निर्माण",
+"landArea": "जग्गाको क्षेत्रफल (वर्ग मि.)",
+"buildingArea": "भवनको क्षेत्रफल (वर्ग मि.)",
+"noOfFloors": "तल्ला संख्या",
+"constructionYear": "निर्माण वर्ष",
+"landCoordinates": "जग्गाको निर्देशांक",
+"buildingCoordinates": "भवनको निर्देशांक",
+"financialLegal": "वित्तीय र कानूनी",
+"valuation": "मूल्यांकन (NPR)",
+"taxAmount": "कर रकम (NPR)",
+"ownershipTransferDate": "स्वामित्व हस्तान्तरण मिति",
+"legalStatus": "कानूनी स्थिति",
+"classifications": "वर्गीकरण",
+"ownershipType": "स्वामित्व प्रकार",
+"usageRight": "प्रयोग अधिकार",
+"usageName": "प्रयोग नाम",
+"description": "विवरण",
+"createdDate": "सिर्जना मिति",
+"sheetNumber": "सिट नम्बर"
+    },
+
+   "fieldValues": {
+  "Madesh Pradesh": "मधेश प्रदेश",
+  "Madhesh Pradesh": "मधेश प्रदेश",
+  "Bara": "बारा",
+  "Nijgadh Municipality": "निजगढ नगरपालिका",
+  "Terai": "तराई",
+  "Land": "जग्गा",
+  "Building": "भवन",
+  "Public": "सार्वजनिक",
+  "Private": "निजी",
+  "Lease": "भाडा",
+  "Owned": "स्वामित्व भएको"
+}
 }

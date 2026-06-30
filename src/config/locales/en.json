@@ -298,5 +298,13 @@
         "failedToUpdateStatus": "Failed to update notification status",
         "failedToMarkAllRead": "Failed to mark all as read",
         "allMarkedRead": "All notifications marked as read"
-    }
+    },
+
+        "fieldValues": {
+        "Madesh Pradesh": "Madesh Pradesh",
+        "Madhesh Pradesh": "Madhesh Pradesh",
+        "Bara": "Bara",
+        "Nijgadh Municipality": "Nijgadh Municipality",
+        "Terai": "Terai"
+    }       
 }
