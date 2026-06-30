@@ -1,5 +1,6 @@
 import { useFetchAll } from "@/hooks/useFetchAll";
 import type { LeaderboardData } from "@/type/dashboard";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 export default function LeaderboardPage() {
@@ -15,6 +16,7 @@ export default function LeaderboardPage() {
   }
 
   const ld = getLeaderboardData(leaderboardResponse);
+  const { t } = useTranslation();
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -26,8 +28,8 @@ export default function LeaderboardPage() {
           <span className="material-symbols-outlined text-xl">arrow_back</span>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Top Performing Offices</h1>
-          <p className="text-sm font-semibold text-gray-500 mt-1 uppercase tracking-widest">Full Leaderboard Ranking</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t("dashboard.topPerformingOffices")}</h1>
+          <p className="text-sm font-semibold text-gray-500 mt-1 uppercase tracking-widest">{t("dashboard.fullLeaderboardRanking")}</p>
         </div>
       </div>
 
@@ -59,12 +61,12 @@ export default function LeaderboardPage() {
                 >
                   <div
                     className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-black text-lg shadow-sm ${item.rankPosition === 1
-                        ? "bg-gradient-to-br from-yellow-300 to-yellow-500 text-yellow-900 border border-yellow-400"
-                        : item.rankPosition === 2
-                          ? "bg-gradient-to-br from-gray-200 to-gray-300 text-gray-800 border border-gray-300"
-                          : item.rankPosition === 3
-                            ? "bg-gradient-to-br from-amber-500 to-amber-700 text-amber-50 border border-amber-600"
-                            : "bg-white text-gray-400 font-bold border border-gray-200"
+                      ? "bg-gradient-to-br from-yellow-300 to-yellow-500 text-yellow-900 border border-yellow-400"
+                      : item.rankPosition === 2
+                        ? "bg-gradient-to-br from-gray-200 to-gray-300 text-gray-800 border border-gray-300"
+                        : item.rankPosition === 3
+                          ? "bg-gradient-to-br from-amber-500 to-amber-700 text-amber-50 border border-amber-600"
+                          : "bg-white text-gray-400 font-bold border border-gray-200"
                       }`}
                   >
                     #{item.rankPosition}

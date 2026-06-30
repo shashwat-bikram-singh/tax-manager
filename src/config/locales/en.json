@@ -18,7 +18,10 @@
         "decisionLogic": "Decision Logic€",
         "reports": "Reports",
         "summaryReport": "Summary Report",
-        "analyticEngine": "Analytic Engine"
+        "analyticEngine": "Analytic Engine",
+        "ownerDistribution": "Owner Distribution",
+        "highRiskPropertyAudit": "High Risk Property Audit",
+        "propertiesUnderLitigationOrEncrochment": "Properties Under Litigation Or Encrochment"
     },
     "dashboard": {
         "totalProperties": "Total Properties",
@@ -44,7 +47,14 @@
         "Failed to Load Dashboard": "Failed to Load Dashboard",
         "noDataAvailable": "No data available",
         "noActiveFYFound": "No active FY found",
-        "loading": "Loading..."
+        "loading": "Loading...",
+        "propertyDashboard": "Property Dashboard",
+        "tribhuvanUniversity": "Tribhuvan University - Institutional PMS",
+        "propertyLocationMap": "Property LocationMap",
+        "geographicDistributionOfAssetsAcrossNepal": "Geographic distribution of assets across Nepal",
+        "mapView": "Map View",
+        "overview": "Overview",
+        "fullLeaderboardRanking": "Full Leaderboard Ranking"
     },
     "common": {
         "search": "Search",
@@ -203,7 +213,21 @@
         "ownershipTransferMiti": "Ownership Transfer Miti",
         "currentUsage": "Current Usage",
         "propertyInformation": "Property Information",
-        "generalDetails": "General Details"
+        "generalDetails": "General Details",
+        "squareMeters": "Square Meters.Square Feet",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "taxAmount": "Tax Amount",
+        "tax&valuation": "Tax & Valuation",
+        "bigha": "Bigha",
+        "katha": "Katha",
+        "dhur": "Dhur",
+        "ropani": "Ropani",
+        "aana": "Aana",
+        "paisa": "Paisa",
+        "daam": "Daam",
+        "area(m2)": "Area (m²)",
+        "area(ft2)": "Area (ft²)"
     },
     "document": {
         "noPropertyFound": "No property found",
@@ -298,6 +322,31 @@
         "failedToUpdateStatus": "Failed to update notification status",
         "failedToMarkAllRead": "Failed to mark all as read",
         "allMarkedRead": "All notifications marked as read"
+    },
+    "taxComplianceReport": {
+        "totalTaxLiability": "Total Tax Liability",
+        "totalTaxPaid": "Total Tax Paid",
+        "liabilityBalance": "Liability Balance",
+        "taxLiabilityByProvince": "Tax Liability by Province",
+        "comparisonOfPaidTaxVsOutstandingBalance": "Comparison of Paid Tax vs Outstanding Balance"
+    },
+    "decisionLogic": {
+        "propertyRiskAndComplianceAnalysis": "Property Risk & Compliance Analysis",
+        "litigationHeatMap": "Litigation Heat Map",
+        "documentMissingIndex": "Document Missing Index",
+        "assetsWithoutVerifiableLalpurja": "Assets without Verifiable Lalpurja(Land Ownership Certificate)",
+        "activeCourtCasesDistributionByProvince": "Active Court Cases Distribution by Province",
+        "uploadDoc": "Upload Doc"
+    },
+    "analyticReport": {
+        "analyticalReport": "Analytical Report",
+        "comprehensiveInsightsIntoPropertyDistrbutionLegalStatusAndHistoricalTrends": "Comprehensive Insights Into Property Distrbution Legal Status and Historical Trends",
+        "campusComparisonReport": "Campus Comparison Report",
+        "rankingBasedOnTotalAssetCountVsArea": "Ranking Based On Total Asset Count Vs Area",
+        "legalIssuesConcentration": "Legal Issues Concentration",
+        "riskIdentificationByCampusLocations": "Risk Identification By Campus Locations",
+        "trendAnalysis": "Trend Analysis: Asset Growth vs Enroachment",
+        "yearOverYearCOmparisonOfVerifiedAssetsAndEncroachedProperties": "Year Over Year COmparison Of Verified Assets And Encroached Properties"
     },
 
         "fieldValues": {

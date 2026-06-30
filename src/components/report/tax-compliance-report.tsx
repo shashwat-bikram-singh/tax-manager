@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { useFetchAll } from "@/hooks/useFetchAll";
 import ReactApexChart from "react-apexcharts";
 import type { TaxDashboardData } from "@/type/tax-compliance";
+import { useTranslation } from "react-i18next";
+import { t } from "i18next";
 
 export default function TaxComplianceReport() {
   const { items: response } = useFetchAll<TaxDashboardData>(
@@ -20,6 +22,7 @@ export default function TaxComplianceReport() {
       balance: overall?.overallOutstandingBalance ?? 0,
     };
   }, [taxComplianceData]);
+  const { t } = useTranslation();
 
   // --- Chart Data ---
   const chartDataRaw = useMemo(
@@ -38,8 +41,8 @@ export default function TaxComplianceReport() {
   );
 
   const series = [
-    { name: "Total Tax Paid", data: chartDataRaw.map((i: any) => i.paid) },
-    { name: "Outstanding Balance", data: chartDataRaw.map((i: any) => i.unpaid) },
+    { name: t("taxComplianceReport.totalTaxPaid"), data: chartDataRaw.map((i: any) => i.paid) },
+    { name: t("taxComplianceReport.outstandingBalance"), data: chartDataRaw.map((i: any) => i.unpaid) },
   ];
 
   const options: ApexCharts.ApexOptions = {
@@ -97,7 +100,7 @@ export default function TaxComplianceReport() {
         {/* Total Tax Liability */}
         <div className="bg-white p-6 rounded-2xl space-y-2 border-l-4 border-primary shadow-sm hover:shadow-md transition-shadow">
           <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-            Total Tax Liability
+            {t("taxComplianceReport.totalTaxLiability")}
           </p>
           <h3 className="font-headline text-3xl font-black text-on-primary-fixed-variant">
             NPR {liability.toLocaleString()}
@@ -107,7 +110,7 @@ export default function TaxComplianceReport() {
         {/* Total Tax Paid */}
         <div className="bg-white p-6 rounded-2xl space-y-2 border-l-4 border-on-primary-fixed-variant shadow-sm hover:shadow-md transition-shadow">
           <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-            Total Tax Paid
+            {t("taxComplianceReport.totalTaxPaid")}
           </p>
           <h3 className="font-headline text-3xl font-black text-on-primary-fixed-variant">
             NPR {paid.toLocaleString()}
@@ -117,7 +120,7 @@ export default function TaxComplianceReport() {
         {/* Outstanding Balance */}
         <div className="bg-white p-6 rounded-2xl space-y-3 border-l-4 border-tertiary shadow-sm hover:shadow-md transition-shadow">
           <p className="text-[10px] font-black uppercase tracking-widest text-on-tertiary-container">
-            Liability Balance
+            {t("taxComplianceReport.liabilityBalance")}
           </p>
           <h3 className="font-headline text-3xl font-black text-on-primary-fixed-variant">
             NPR {balance.toLocaleString()}
@@ -130,10 +133,10 @@ export default function TaxComplianceReport() {
       <section className="bg-white p-6 rounded-3xl shadow-sm border border-outline-variant">
         <div className="mb-6">
           <h2 className="text-lg font-bold text-on-surface">
-            Tax Liability by Province
+            {t("taxComplianceReport.taxLiabilityByProvince")}
           </h2>
           <p className="text-sm text-on-surface-variant">
-            Comparison of Paid Tax vs Outstanding Balance
+            {t("taxComplianceReport.comparisonOfPaidTaxVsOutstandingBalance")}
           </p>
         </div>
 

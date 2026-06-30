@@ -173,6 +173,7 @@ function HighRiskAuditTable() {
     if (Array.isArray(rawPropertyData)) return rawPropertyData as any[];
     return [];
   }, [rawPropertyData]);
+  const { t } = useTranslation();
 
   const highRiskProperties = useMemo(() =>
     properties.filter((p) => {
@@ -200,11 +201,11 @@ function HighRiskAuditTable() {
         </div>
         <div>
           <h2 className="font-headline font-bold text-gray-800 text-base">
-            High-Risk Property Audit{" "}
+            {t("dashboard.highRiskPropertyAudit")}{" "}
             <span className="text-gray-400 font-medium text-sm">(अतिक्रमण जोखिम)</span>
           </h2>
           <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mt-0.5">
-            Properties under litigation or encroachment risk
+            {t("dashboard.propertyUnderLitigationOrEncrochment")}
           </p>
         </div>
         <span className="ml-auto bg-red-50 text-red-600 border border-red-100 text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
@@ -521,9 +522,9 @@ export default function Dashboard() {
       {/* ── Tab Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-md font-black text-gray-900 tracking-tight">Property Dashboard</h1>
+          <h1 className="text-md font-black text-gray-900 tracking-tight">{t("dashboard.propertyDashboard")}</h1>
           <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">
-            Tribhuvan University — Institutional PMS
+            {t("dashboard.tribhuvanUniversity")}
           </p>
         </div>
         <div className="flex items-center bg-surface-container-low rounded-lg border border-surface-container">
@@ -531,13 +532,13 @@ export default function Dashboard() {
             active={activeTab === "map"}
             onClick={() => setActiveTab("map")}
             icon={<Map size={10} />}
-            label="Map View"
+            label={t("dashboard.mapView")}
           />
           <TabButton
             active={activeTab === "overview"}
             onClick={() => setActiveTab("overview")}
             icon={<LayoutDashboard size={10} />}
-            label="Overview"
+            label={t("dashboard.overview")}
           />
         </div>
       </div>
@@ -561,8 +562,8 @@ export default function Dashboard() {
                 <MapPin className="w-4 h-4 text-blue-600" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-gray-900">Property Location Map</h2>
-                <p className="text-[10px] text-gray-400 mt-0.5">Geographic distribution of assets across Nepal</p>
+                <h2 className="text-sm font-bold text-gray-900">{t("dashboard.propertyLocationMap")}</h2>
+                <p className="text-[10px] text-gray-400 mt-0.5">{t("dashboard.geographicDistributionOfAssetsAcrossNepal")}</p>
               </div>
             </div>
             <div className="flex-1 rounded-xl overflow-hidden min-h-0">
@@ -789,7 +790,7 @@ export default function Dashboard() {
                   pie_chart
                 </span>
                 <h4 className="font-headline font-bold text-sm text-purple-600">
-                  Ownership Distribution
+                  {t("dashboard.ownerDistribution")}
                 </h4>
               </div>
 

@@ -1182,13 +1182,13 @@ export default function PropertyForm({
                         <section className="space-y-4">
                           <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-widest">Terai</span>
-                            <h3 className="text-sm font-semibold text-gray-600">Bigha · Kattha · Dhur</h3>
+                            <h3 className="text-sm font-semibold text-gray-600">{t("property.bigha")} . {t("property.katha")} . {t("property.dhur")}</h3>
                           </div>
                           <div className="grid grid-cols-3 gap-4">
                             {(["bigha", "kattha", "dhur"] as const).map((unit) => (
                               <FormField key={unit} control={form.control} name={unit} render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">{unit.charAt(0).toUpperCase() + unit.slice(1)}</FormLabel>
+                                  <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">{t("property." + unit)}</FormLabel>
                                   <FormControl>
                                     <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("terai", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
                                   </FormControl>
@@ -1203,7 +1203,7 @@ export default function PropertyForm({
                         <section className="space-y-4">
                           <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 text-[10px] font-bold uppercase tracking-widest">Hilly</span>
-                            <h3 className="text-sm font-semibold text-gray-600">Ropani · Aana · Paisa · Daam</h3>
+                            <h3 className="text-sm font-semibold text-gray-600">{t("property.ropani")} . {t("property.aana")} . {t("property.paisa")} . {t("property.daam")}</h3>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {(["ropani", "aana", "paisa", "daam"] as const).map((unit) => (

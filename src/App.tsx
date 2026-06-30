@@ -23,8 +23,22 @@ import GenericPage from "./components/generic-page/generic-page";
 import LeaderboardPage from "./components/dashboard/LeaderboardPage";
 import SummaryReport from "./components/report/summary-report";
 import AnalyticEngine from "./components/report/analytic-engine";
+import { jwtDecode } from "jwt-decode";
 
-// Unified authentication wrapper to allow any logged-in user (Admin or SuperAdmin)
+// ─── AUTH HELPERS ─────────────────────────────────────────────────────────────
+function getTokenRole(): string {
+  const token = sessionStorage.getItem("token");
+  if (!token) return "";
+  try {
+    const decoded: any = jwtDecode(token);
+    return (decoded?.Role ?? decoded?.role ?? "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+// ─── AUTHENTICATED ROUTE ──────────────────────────────────────────────────────
+// Allows any logged-in user
 const AuthenticatedRoute = ({ children }: { children: ReactNode }) => {
   const [authChecked, setAuthChecked] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -35,11 +49,25 @@ const AuthenticatedRoute = ({ children }: { children: ReactNode }) => {
     setAuthChecked(true);
   }, []);
 
-  if (!authChecked) return null; // or a spinner
+  if (!authChecked) return null;
 
   return isAuthenticated ? <>{children}</> : <Navigate to="/generic-page" replace />;
 };
 
+// ─── SUPER ADMIN ROUTE ────────────────────────────────────────────────────────
+// Only allows SuperAdmin; redirects everyone else to /app (dashboard)
+const SuperAdminRoute = ({ children }: { children: ReactNode }) => {
+  const role = getTokenRole();
+  if (role !== "superadmin") return <Navigate to="/app" replace />;
+  return <>{children}</>;
+};
+const AdministrationRoute = ({ children }: { children: ReactNode }) => {
+  const role = getTokenRole();
+  if (role !== "superadmin" && role !== "admin") return <Navigate to="/app" replace />;
+  return <>{children}</>;
+};
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
 function App() {
   const navigate = useNavigate();
 
@@ -49,13 +77,11 @@ function App() {
       {/* Redirect root to generic-page */}
       <Route path="/" element={<GenericPage />} />
 
-      {/* Public initial page */}
+      {/* Public pages */}
       <Route path="/generic-page" element={<GenericPage />} />
-
-      {/* Public login page */}
       <Route path="/login" element={<Login />} />
 
-      {/* Protected routes for authenticated users */}
+      {/* Protected routes for all authenticated users */}
       <Route
         path="/app"
         element={
@@ -64,36 +90,75 @@ function App() {
           </AuthenticatedRoute>
         }
       >
-        {/* Dashboard is the default landing page after login */}
+        {/* Dashboard — default landing page after login */}
         <Route index element={<Dashboard />} />
 
-        <Route path="office" element={<SubofficeList />} />
-        <Route path="leaderboardPage" element={<LeaderboardPage />} />
-        <Route path="user" element={<UserList />} />
-        <Route path="fiscalyear" element={<FiscalyearList />} />
-        <Route path="fiscalyear/add" element={<FiscalyearForm mode="add" />} />
-        <Route path="fiscalyear/edit/:id" element={<FiscalyearForm mode="edit" />} />
+        {/* ── SuperAdmin-only routes ── */}
+        <Route
+          path="office"
+          element={
+            <SuperAdminRoute>
+              <SubofficeList />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="office-form"
+          element={
+            <SuperAdminRoute>
+              <OfficeForm mode="add" />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="fiscalyear"
+          element={
+            <SuperAdminRoute>
+              <FiscalyearList />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="fiscalyear/add"
+          element={
+            <SuperAdminRoute>
+              <FiscalyearForm mode="add" />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="fiscalyear/edit/:id"
+          element={
+            <SuperAdminRoute>
+              <FiscalyearForm mode="edit" />
+            </SuperAdminRoute>
+          }
+        />
+        <Route path="tax-compliance" element={<AdministrationRoute><TaxPayerList /></AdministrationRoute>} />
+        <Route path="tax-compliance-report" element={<AdministrationRoute><TaxComplianceReport /></AdministrationRoute>} />
+        <Route path="result" element={<AdministrationRoute><Report /></AdministrationRoute>} />
+        <Route path="summary-report" element={<AdministrationRoute><SummaryReport /></AdministrationRoute>} />
+        <Route path="analytic-engine" element={<AdministrationRoute><AnalyticEngine /></AdministrationRoute>} />
+        <Route path="leaderboardPage" element={<SuperAdminRoute><LeaderboardPage /></SuperAdminRoute>} />
+        <Route path="user" element={<AdministrationRoute><UserList /></AdministrationRoute>} />
+        {/* ── Routes for all authenticated users ── */}
+
         <Route path="property" element={<PropertyList />} />
         <Route path="property/add" element={<PropertyForm mode="add" onSuccess={() => navigate("/app/property")} />} />
         <Route path="property/edit/:id" element={<EditProperty />} />
         <Route path="document-vault" element={<DocumentList />} />
         <Route path="document-vault/add" element={<DocumentForm mode="add" onSuccess={() => navigate("/app/document-vault")} />} />
-        <Route path="office-form" element={<OfficeForm mode="add" />} />
         <Route path="tax-payer/add" element={<TaxPayerForm mode="add" onSuccess={() => navigate("/app/tax-compliance")} onCancel={() => navigate("/app/tax-compliance")} />} />
         <Route path="tax-payer/edit/:id" element={<TaxPayerForm mode="edit" onCancel={() => navigate("/app/tax-compliance")} />} />
         <Route path="converter" element={<MeasurementConverter />} />
-        <Route path="tax-compliance" element={<TaxPayerList />} />
-        <Route path="tax-compliance-report" element={<TaxComplianceReport />} />
-        <Route path="result" element={<Report />} />
-        <Route path="summary-report" element={<SummaryReport />} />
-        <Route path="analytic-engine" element={<AnalyticEngine />} />
+
       </Route>
 
       {/* Catch-all for unknown routes */}
-      <Route path="/app" element={<NotFound />} />
+      <Route path="*" element={<NotFound />} />
 
     </Routes>
-  )
+  );
 }
 
-export default App
+export default App;

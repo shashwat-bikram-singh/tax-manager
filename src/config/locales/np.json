@@ -45,7 +45,17 @@
         "noDataAvailable": "कुनै डेटा उपलब्ध छैन",
         "noActiveFYFound": "कुनै सक्रिय आर्थिक वर्ष फेला परेन",
         "loading": "लोड हुँदैछ...",
-        "districtsBy": "जिल्ला अनुसार संपत्ति"
+        "districtsBy": "जिल्ला अनुसार संपत्ति",
+        "propertyDashboard": "सम्पत्ति ड्याशबोर्ड",
+        "tribhuvanUniversity": "त्रिभुवन विश्वविद्यालय - संस्थागत पी एम एस",
+        "propertyLocationMap": "सम्पत्ति स्थान नक्सा",
+        "geographicDistributionOfAssetsAcrossNepal": "नेपालभरका सम्पत्तिको भौगोलिक वितरण",
+        "mapView": "नक्सा दृश्य",
+        "overview": "अवलोकन",
+        "fullLeaderboardRanking": "पूर्ण लिडरबोर्ड र्याङ्किङ्ग",
+        "ownerDistribution": "मालिक वितरण",
+        "highRiskPropertyAudit": "उच्च जोखिम सम्पत्ति लेखापरीक्षण",
+        "propertyUnderLitigationOrEncrochment": "सम्पत्तिको मुद्दा वा अतिक्रमण"
     },
     "common": {
         "search": "खोज",
@@ -201,7 +211,20 @@
         "ownershipTransferMiti": "स्वामित्व हस्तान्तरण मिति",
         "generalDetails": "सामान्य विवरण",
         "physicalMeasurementsAndLocation": "भौतिक मापन र स्थान",
-        "propertyInformation": "सम्पत्ति जानकारी"
+        "propertyInformation": "सम्पत्ति जानकारी",
+        "bigha": "बिघा",
+        "katha": "कठ्ठा",
+        "dhur": "धुर",
+        "ropani": "रोपनी",
+        "aana": "आना",
+        "paisa": "पैसा",
+        "daam": "दाम",
+        "area(m2)": "क्षेत्र (m²)",
+        "area(ft2)": "क्षेत्र (ft²)",
+        "latitude": "अक्षांश",
+        "longitude": "देशांश",
+        "taxAmount": "कर रकम",
+        "tax&valuation": "कर र मूल्यांकन"
     },
     "document": {
         "documentSearch": "कागजात खोज्नुहोस्",
@@ -296,6 +319,31 @@
         "failedToUpdateStatus": "सूचना स्थिति अपडेट गर्न असफल भयो",
         "failedToMarkAllRead": "सबैलाई पढिएको मार्क गर्न असफल भयो",
         "allMarkedRead": "सबै सूचनाहरूलाई पढिएको मार्क गरियो"
+    },
+    "taxComplianceReport": {
+        "totalTaxLiability": "कुल कर दायित्व",
+        "totalTaxPaid": "कुल कर भुक्तानी",
+        "liabilityBalance": "दायित्व संतुलन",
+        "taxLiabilityByProvince": "प्रदेश अनुसार कर दायित्व",
+        "comparisonOfPaidTaxVsOutstandingBalance": "भुक्तानी गरिएको कर बनाम बकाया दायित्वको तुलना"
+    },
+    "decisionLogic": {
+        "propertyRiskAndComplianceAnalysis": "सम्पत्तिको जोखिम र अनुपालन विश्लेषण",
+        "litigationHeatMap": "मुद्धा-मामिला जोखिम नक्सा",
+        "documentMissingIndex": "हराएको कागजातको सूची",
+        "assetsWithoutVerifiableLalpurja": "ल्यान्पर्जा (जग्गा स्वामित्व प्रमाणपत्र) बिनाको सम्पत्ति",
+        "activeCourtCasesDistributionByProvince": "प्रदेश अनुसार सक्रिय अदालतका मुद्दाहरूको वितरण",
+        "uploadDoc": "कागजात अपलोड गर्नुहोस्"
+    },
+    "analyticReport": {
+        "analyticalReport": "विश्लेषणात्मक रिपोर्ट",
+        "comprehensiveInsightsIntoPropertyDistrbutionLegalStatusAndHistoricalTrends": "सम्पत्ति वितरण, कानूनी स्थिति र ऐतिहासिक प्रवृत्तिहरूमा आधारित विस्तृत विश्लेषण",
+        "campusComparisonReport": "क्याम्पस तुलना रिपोर्ट",
+        "rankingBasedOnTotalAssetCountVsArea": "सम्पत्तिको कुल सङ्ख्या र क्षेत्रमा आधारित क्रम",
+        "legalIssuesConcentration": "कानूनी मुद्दाहरूमा केन्द्रित",
+        "riskIdentificationByCampusLocations": "क्याम्पस अनुसार जोखिम पहिचान",
+        "trendAnalysis": "ट्रेड एनालिसिस: एसेट ग्रोथ भर्सेस इन्क्रोजमेन्ट",
+        "yearOverYearCOmparisonOfVerifiedAssetsAndEncroachedProperties": "परिसम्पत्ति र अतिक्रमण गरिएका सम्पत्तिको वर्षौंको तुलना"
     },
     "summaryReport":{
         "locationDetails": "स्थान विवरण",
