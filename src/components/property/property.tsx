@@ -94,17 +94,17 @@ interface Property {
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
-function getStatusBadge(legalStatus: string) {
+function getStatusBadge(legalStatus: string, displayText?: string) {
   const s = legalStatus?.toLowerCase() || "";
   if (s.includes("litigation"))
-    return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-red-100 text-red-600 border border-red-200">Litigation</span>;
+    return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-red-100 text-red-600 border border-red-200">{displayText ?? "Litigation"}</span>;
   if (s.includes("encroach"))
-    return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-amber-100 text-amber-600 border border-amber-200">Encroached</span>;
+    return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-amber-100 text-amber-600 border border-amber-200">{displayText ?? "Encroached"}</span>;
   if (s.includes("verified & clear"))
-    return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-green-100 text-green-600 border border-green-200">Verified & Clear</span>;
+    return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-green-100 text-green-600 border border-green-200">{displayText ?? "Verified & Clear"}</span>;
   if (s.includes("in registration") || s.includes("in-registration"))
-    return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-yellow-100 text-yellow-600 border border-yellow-200">In Registration</span>;
-  return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-green-100 text-green-600 border border-green-200">{legalStatus || "Normal"}</span>;
+    return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-yellow-100 text-yellow-600 border border-yellow-200">{displayText ?? "In Registration"}</span>;
+  return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-green-100 text-green-600 border border-green-200">{(displayText ?? legalStatus) || "Normal"}</span>;
 }
 
 function getDocuments(docString?: string | null): PropertyDocument[] {
@@ -122,16 +122,18 @@ const DetailRow = ({
   label,
   value,
   isBadge,
+  badgeValue,
 }: {
   label: string;
   value: string | number | null | undefined;
   isBadge?: boolean;
+  badgeValue?: string;
 }) => (
   <div className="flex flex-col gap-1">
     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
     <div className="min-h-[24px] flex items-center">
       {isBadge && value ? (
-        getStatusBadge(String(value))
+        getStatusBadge(String(value), badgeValue)
       ) : (
         <span className="text-sm font-medium text-slate-800">
           {value !== null && value !== undefined && value !== ""
@@ -147,6 +149,11 @@ const DetailRow = ({
 export default function PropertyList() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const translateValue = (value?: string | number | null) => {
+    if (value === null || value === undefined || value === "") return value;
+    if (typeof value === "number") return value;
+    return t(`fieldValues.${value}`, { defaultValue: value });
+  };
   const { items: propertyData, isLoadingItems } = useFetchAll<Property>("/api/property", ["property"]);
   const { delete: deleteProperty } = useMutate<Property>("/api/property", "property");
 
@@ -570,15 +577,15 @@ export default function PropertyList() {
               <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-2 mb-4 text-slate-700">
                   <MapPin size={16} className="text-blue-500" />
-                  <h3 className="font-bold text-sm uppercase tracking-wider">Location Details</h3>
+                  <h3 className="font-bold text-sm uppercase tracking-wider">{t("summaryReport.locationDetails", { defaultValue: "Location Details" })}</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
-                  <DetailRow label="Province" value={selectedProperty.province} />
-                  <DetailRow label="District" value={selectedProperty.district} />
-                  <DetailRow label="Local Body" value={selectedProperty.localBody} />
-                  <DetailRow label="Ward No" value={selectedProperty.wardNo} />
-                  <DetailRow label="Geographic Region" value={selectedProperty.geographicRegion} />
-                  <DetailRow label="Kitta Number" value={selectedProperty.kittaNumber} />
+                  <DetailRow label={t("summaryReport.Province", { defaultValue: "Province" })} value={translateValue(selectedProperty.province)} />
+                  <DetailRow label={t("summaryReport.district", { defaultValue: "District" })} value={translateValue(selectedProperty.district)} />
+                  <DetailRow label={t("summaryReport.localBody", { defaultValue: "Local Body" })} value={translateValue(selectedProperty.localBody)} />
+                  <DetailRow label={t("summaryReport.wardNo", { defaultValue: "Ward No" })} value={selectedProperty.wardNo} />
+                  <DetailRow label={t("summaryReport.geographicRegion", { defaultValue: "Geographic Region" })} value={translateValue(selectedProperty.geographicRegion)} />
+                  <DetailRow label={t("summaryReport.kittaNumber", { defaultValue: "Kitta Number" })} value={selectedProperty.kittaNumber} />
                 </div>
               </div>
 
@@ -586,21 +593,21 @@ export default function PropertyList() {
               <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-2 mb-4 text-slate-700">
                   <LandPlot size={16} className="text-green-500" />
-                  <h3 className="font-bold text-sm uppercase tracking-wider">Area & Construction</h3>
+                  <h3 className="font-bold text-sm uppercase tracking-wider">{t("summaryReport.areaConstruction", { defaultValue: "Area & Construction" })}</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
-                  <DetailRow label="Land Area (sq.m)" value={selectedProperty.landArea} />
-                  <DetailRow label="Building Area (sq.m)" value={selectedProperty.buildingArea} />
-                  <DetailRow label="No. of Floors" value={selectedProperty.noOfFloors} />
-                  <DetailRow label="Construction Year" value={selectedProperty.constructionYear} />
+                  <DetailRow label={t("summaryReport.landArea", { defaultValue: "Land Area (sq.m)" })} value={selectedProperty.landArea} />
+                  <DetailRow label={t("summaryReport.buildingArea", { defaultValue: "Building Area (sq.m)" })} value={selectedProperty.buildingArea} />
+                  <DetailRow label={t("summaryReport.noOfFloors", { defaultValue: "No. of Floors" })} value={selectedProperty.noOfFloors} />
+                  <DetailRow label={t("summaryReport.constructionYear", { defaultValue: "Construction Year" })} value={selectedProperty.constructionYear} />
                   <DetailRow
-                    label="Land Coordinates"
+                    label={t("summaryReport.landCoordinates", { defaultValue: "Land Coordinates" })}
                     value={selectedProperty.land_Latitude && selectedProperty.land_Longitude
                       ? `${selectedProperty.land_Latitude}, ${selectedProperty.land_Longitude}`
                       : null}
                   />
                   <DetailRow
-                    label="Building Coordinates"
+                    label={t("summaryReport.buildingCoordinates", { defaultValue: "Building Coordinates" })}
                     value={selectedProperty.building_Latitude && selectedProperty.building_Longitude
                       ? `${selectedProperty.building_Latitude}, ${selectedProperty.building_Longitude}`
                       : null}
@@ -612,13 +619,13 @@ export default function PropertyList() {
               <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-2 mb-4 text-slate-700">
                   <Banknote size={16} className="text-amber-500" />
-                  <h3 className="font-bold text-sm uppercase tracking-wider">Financial & Legal</h3>
+                  <h3 className="font-bold text-sm uppercase tracking-wider">{t("summaryReport.financialLegal", { defaultValue: "Financial & Legal" })}</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
-                  <DetailRow label="Valuation (NPR)" value={selectedProperty.valuation} />
-                  <DetailRow label="Tax Amount (NPR)" value={selectedProperty.taxAmount} />
-                  <DetailRow label="Ownership Transfer Date" value={selectedProperty.ownershipTransferDate} />
-                  <DetailRow label="Legal Status" value={selectedProperty.legalStatus} isBadge />
+                  <DetailRow label={t("summaryReport.valuation", { defaultValue: "Valuation (NPR)" })} value={selectedProperty.valuation} />
+                  <DetailRow label={t("summaryReport.taxAmount", { defaultValue: "Tax Amount (NPR)" })} value={selectedProperty.taxAmount} />
+                  <DetailRow label={t("summaryReport.ownershipTransferDate", { defaultValue: "Ownership Transfer Date" })} value={selectedProperty.ownershipTransferDate} />
+                  <DetailRow label={t("summaryReport.legalStatus", { defaultValue: "Legal Status" })} value={selectedProperty.legalStatus} badgeValue={translateValue(selectedProperty.legalStatus) as string} isBadge />
                 </div>
               </div>
 
@@ -626,12 +633,12 @@ export default function PropertyList() {
               <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-2 mb-4 text-slate-700">
                   <Scale size={16} className="text-purple-500" />
-                  <h3 className="font-bold text-sm uppercase tracking-wider">Classifications</h3>
+                  <h3 className="font-bold text-sm uppercase tracking-wider">{t("summaryReport.classifications", { defaultValue: "Classifications" })}</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
-                  <DetailRow label="Ownership Type" value={selectedProperty.ownershipType} />
-                  <DetailRow label="Usage Right" value={selectedProperty.usageRight} />
-                  <DetailRow label="Usage Name" value={selectedProperty.usageName} />
+                  <DetailRow label={t("summaryReport.ownershipType", { defaultValue: "Ownership Type" })} value={translateValue(selectedProperty.ownershipType)} />
+                  <DetailRow label={t("summaryReport.usageRight", { defaultValue: "Usage Right" })} value={translateValue(selectedProperty.usageRight)} />
+                  <DetailRow label={t("summaryReport.usageName", { defaultValue: "Usage Name" })} value={translateValue(selectedProperty.usageName)} />
                 </div>
               </div>
 
@@ -639,7 +646,7 @@ export default function PropertyList() {
               <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Description</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t("summaryReport.description", { defaultValue: "Description" })}</span>
                     <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border min-h-[60px]">
                       {selectedProperty.description || "-"}
                     </p>

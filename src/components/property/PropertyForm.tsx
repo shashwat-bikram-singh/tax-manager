@@ -166,6 +166,7 @@ const SearchableSelect = ({
   isLoading = false,
   onClear,
 }: SearchableSelectProps) => {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState("");
   const [showOptions, setShowOptions] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -241,7 +242,7 @@ const SearchableSelect = ({
           onFocus={() => {
             if (!disabled) setShowOptions(true);
           }}
-          placeholder={isLoading ? "Loading..." : placeholder}
+          placeholder={isLoading ? t("common.loading") : placeholder}
           disabled={disabled || isLoading}
           className="w-full h-12 px-4 bg-gray-50 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
         />
@@ -263,7 +264,7 @@ const SearchableSelect = ({
       {showOptions && !disabled && (
         <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-auto">
           {isLoading ? (
-            <li className="p-4 text-center text-sm text-gray-500">Loading...</li>
+            <li className="p-4 text-center text-sm text-gray-500">{t("common.loading")}</li>
           ) : filtered.length > 0 ? (
             filtered.map((item, index) => (
               <li
@@ -277,7 +278,7 @@ const SearchableSelect = ({
             ))
           ) : (
             <li className="p-4 text-center text-sm text-gray-400 italic">
-              No matches found
+              {t("common.noMatchesFound")}
             </li>
           )}
         </ul>
@@ -288,30 +289,41 @@ const SearchableSelect = ({
 
 // ─── Badge Component ──────────────────────────────────────────────────────────
 export function StatusBadge({ status }: { status?: string }) {
+  const { t } = useTranslation();
   if (status === "verified") {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
         <ShieldCheck className="w-3.5 h-3.5" />
-        Verified
+        {t("property.statusVerified")}
       </span>
     );
   }
   if (status === "pending") {
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold">
-        Pending
+        {t("property.statusPending")}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200 text-xs font-semibold">
-      Unverified
+      {t("property.statusUnverified")}
     </span>
   );
 }
 
 // ─── Measurement Converter Card ───────────────────────────────────────────────
 export function MeasurementConverter() {
+  const { t, i18n } = useTranslation();
+  const activeLanguage = i18n.resolvedLanguage || i18n.language || "en";
+  const isNepali = activeLanguage.startsWith("np");
+  const numberLocale = isNepali ? "ne-NP" : "en-US";
+  const formatNumber = (value: number, digits = 2) =>
+    new Intl.NumberFormat(numberLocale, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(value);
+
   const [measureType, setMeasureType] = useState<"terai" | "hilly">("terai");
   const [terai, setTerai] = useState({ bigha: "", kattha: "", dhur: "" });
   const [hilly, setHilly] = useState({ ropani: "", aana: "", paisa: "", daam: "" });
@@ -325,6 +337,7 @@ export function MeasurementConverter() {
   const sqft = sqm * SQM_TO_SQFT;
   const reverseTerai = sqmToTerai(Number(sqmInput) || 0);
   const reverseHilly = sqmToHilly(Number(sqmInput) || 0);
+  const getLabelKey = (unit: string) => (unit === "kattha" ? "katha" : unit);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
@@ -332,15 +345,15 @@ export function MeasurementConverter() {
         <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
           <span className="material-symbols-outlined text-white text-base">straighten</span>
         </div>
-        <h3 className="text-sm font-bold text-gray-900 tracking-tight">Measurement Converter</h3>
+        <h3 className="text-sm font-bold text-gray-900 tracking-tight">{t("converter.title")}</h3>
       </div>
       <div className="flex gap-1 bg-gray-100 p-1 rounded-lg text-xs font-medium">
-        <button type="button" onClick={() => setMeasureType("terai")} className={`flex-1 py-1.5 rounded-md transition-all ${measureType === "terai" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Terai (B·K·D)</button>
-        <button type="button" onClick={() => setMeasureType("hilly")} className={`flex-1 py-1.5 rounded-md transition-all ${measureType === "hilly" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>Hilly (R·A·P·D)</button>
+        <button type="button" onClick={() => setMeasureType("terai")} className={`flex-1 py-1.5 rounded-md transition-all ${measureType === "terai" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>{t("converter.terai")}</button>
+        <button type="button" onClick={() => setMeasureType("hilly")} className={`flex-1 py-1.5 rounded-md transition-all ${measureType === "hilly" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>{t("converter.hilly")}</button>
       </div>
       <div className="flex gap-1 bg-indigo-50 border border-indigo-100 p-1 rounded-lg text-xs font-medium">
-        <button type="button" onClick={() => setMode("forward")} className={`flex-1 py-1.5 rounded-md transition-all ${mode === "forward" ? "bg-indigo-600 text-white shadow-sm" : "text-indigo-500 hover:text-indigo-700"}`}>Standard → m²</button>
-        <button type="button" onClick={() => setMode("reverse")} className={`flex-1 py-1.5 rounded-md transition-all ${mode === "reverse" ? "bg-indigo-600 text-white shadow-sm" : "text-indigo-500 hover:text-indigo-700"}`}>m² → Standard</button>
+        <button type="button" onClick={() => setMode("forward")} className={`flex-1 py-1.5 rounded-md transition-all ${mode === "forward" ? "bg-indigo-600 text-white shadow-sm" : "text-indigo-500 hover:text-indigo-700"}`}>{t("converter.standardToSqm")}</button>
+        <button type="button" onClick={() => setMode("reverse")} className={`flex-1 py-1.5 rounded-md transition-all ${mode === "reverse" ? "bg-indigo-600 text-white shadow-sm" : "text-indigo-500 hover:text-indigo-700"}`}>{t("converter.sqmToStandard")}</button>
       </div>
       {mode === "forward" && (
         <>
@@ -348,8 +361,8 @@ export function MeasurementConverter() {
             <div className="grid grid-cols-3 gap-2">
               {(["bigha", "kattha", "dhur"] as const).map((unit) => (
                 <div key={unit}>
-                  <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{unit}</label>
-                  <input type="number" min="0" value={terai[unit]} onChange={(e) => setTerai((p) => ({ ...p, [unit]: e.target.value }))} className="w-full text-center bg-gray-50 border-gray-300 rounded-lg px-2 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" placeholder="0" />
+                  <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{t(`property.${getLabelKey(unit)}`)}</label>
+                  <input type="number" min="0" value={terai[unit]} onChange={(e) => setTerai((p) => ({ ...p, [unit]: e.target.value }))} className="w-full text-center bg-gray-50 border-gray-300 rounded-lg px-2 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" placeholder={isNepali ? "०" : "0"} />
                 </div>
               ))}
             </div>
@@ -357,19 +370,19 @@ export function MeasurementConverter() {
             <div className="grid grid-cols-4 gap-1.5">
               {(["ropani", "aana", "paisa", "daam"] as const).map((unit) => (
                 <div key={unit}>
-                  <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{unit.charAt(0).toUpperCase() + unit.slice(1)}</label>
-                  <input type="number" min="0" value={hilly[unit]} onChange={(e) => setHilly((p) => ({ ...p, [unit]: e.target.value }))} className="w-full text-center bg-gray-50 border-gray-300 rounded-lg px-1 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" placeholder="0" />
+                  <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{t(`property.${unit}`)}</label>
+                  <input type="number" min="0" value={hilly[unit]} onChange={(e) => setHilly((p) => ({ ...p, [unit]: e.target.value }))} className="w-full text-center bg-gray-50 border-gray-300 rounded-lg px-1 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" placeholder={isNepali ? "०" : "0"} />
                 </div>
               ))}
             </div>
           )}
-          <div className="bg-[#0f2646] rounded-xl p-4 text-white">
-            <p className="text-[10px] uppercase tracking-widest text-blue-200 font-semibold mb-1">Standardized Area</p>
-            <p className="text-3xl font-black tracking-tight">{sqm.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            <p className="text-blue-300 text-xs mt-0.5">Square Meters (m²)</p>
-            <div className="mt-3 pt-3 border-t border-white/10">
-              <p className="text-xl font-bold">{sqft.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-              <p className="text-blue-300 text-xs mt-0.5">Square Feet (sq ft)</p>
+          <div className="bg-blue-100 rounded-xl p-4 text-blue-950">
+            <p className="text-[10px] uppercase tracking-widest text-blue-700 font-semibold mb-1">{t("converter.standardizedArea")}</p>
+            <p className="text-3xl font-black tracking-tight">{formatNumber(sqm, 2)}</p>
+            <p className="text-blue-700 text-xs mt-0.5">{t("converter.squareMeters")}</p>
+            <div className="mt-3 pt-3 border-t border-blue-200">
+              <p className="text-xl font-bold">{formatNumber(sqft, 2)}</p>
+              <p className="text-blue-700 text-xs mt-0.5">{t("converter.squareFeet")}</p>
             </div>
           </div>
         </>
@@ -377,14 +390,18 @@ export function MeasurementConverter() {
       {mode === "reverse" && (
         <div className="space-y-3">
           <div>
-            <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Enter Square Meters</label>
-            <input type="number" placeholder="e.g. 500" value={sqmInput} onChange={(e) => setSqmInput(e.target.value)} className="w-full bg-gray-50 border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{t("converter.enterSquareMeters")}</label>
+            <input type="number" placeholder={t("converter.squareMeterPlaceholder")} value={sqmInput} onChange={(e) => setSqmInput(e.target.value)} className="w-full bg-gray-50 border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-            <p className="text-[10px] uppercase tracking-widest text-indigo-400 font-semibold mb-2">{measureType === "terai" ? "Terai Equivalent" : "Hilly Equivalent"}</p>
+            <p className="text-[10px] uppercase tracking-widest text-indigo-400 font-semibold mb-2">{measureType === "terai" ? t("converter.teraiEquivalent") : t("converter.hillyEquivalent")}</p>
             {measureType === "terai" ? (
               <div className="grid grid-cols-3 gap-2 text-center">
-                {[{ label: "Bigha", val: reverseTerai.bigha }, { label: "Kattha", val: reverseTerai.kattha }, { label: "Dhur", val: reverseTerai.dhur.toFixed(2) }].map((item) => (
+                {[
+                  { label: t("property.bigha"), val: formatNumber(reverseTerai.bigha, 0) },
+                  { label: t("property.katha"), val: formatNumber(reverseTerai.kattha, 0) },
+                  { label: t("property.dhur"), val: formatNumber(reverseTerai.dhur, 2) },
+                ].map((item) => (
                   <div key={item.label} className="bg-white rounded-lg p-2 border border-indigo-100">
                     <p className="text-lg font-black text-indigo-700">{item.val}</p>
                     <p className="text-[10px] text-gray-400 font-semibold uppercase">{item.label}</p>
@@ -393,7 +410,12 @@ export function MeasurementConverter() {
               </div>
             ) : (
               <div className="grid grid-cols-4 gap-1.5 text-center">
-                {[{ label: "Ropani", val: reverseHilly.ropani }, { label: "Aana", val: reverseHilly.aana }, { label: "Paisa", val: reverseHilly.paisa }, { label: "Daam", val: reverseHilly.daam.toFixed(2) }].map((item) => (
+                {[
+                  { label: t("property.ropani"), val: formatNumber(reverseHilly.ropani, 0) },
+                  { label: t("property.aana"), val: formatNumber(reverseHilly.aana, 0) },
+                  { label: t("property.paisa"), val: formatNumber(reverseHilly.paisa, 0) },
+                  { label: t("property.daam"), val: formatNumber(reverseHilly.daam, 2) },
+                ].map((item) => (
                   <div key={item.label} className="bg-white rounded-lg p-2 border border-indigo-100">
                     <p className="text-sm font-black text-indigo-700">{item.val}</p>
                     <p className="text-[9px] text-gray-400 font-semibold uppercase">{item.label}</p>
@@ -406,8 +428,13 @@ export function MeasurementConverter() {
       )}
       <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
         <p className="text-[11px] text-amber-800 leading-snug">
-          <span className="font-bold">Note:</span>{" "}
-          1 {measureType === "terai" ? `Bigha = ${TERAI_BIGHA_TO_SQM.toLocaleString()} m²` : `Ropani = ${HILLY_ROPANI_TO_SQM.toLocaleString()} m²`} (1964 standard)
+          <span className="font-bold">{t("converter.note")}</span>{" "}
+          {t("converter.noteText", {
+            one: formatNumber(1, 0),
+            unit: measureType === "terai" ? t("property.bigha") : t("property.ropani"),
+            value: formatNumber(measureType === "terai" ? TERAI_BIGHA_TO_SQM : HILLY_ROPANI_TO_SQM, 2),
+            reference: t("converter.referenceYearNote"),
+          })}
         </p>
       </div>
     </div>
@@ -425,6 +452,11 @@ export default function PropertyForm({
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const translateDisplayValue = (value?: string | number | null) => {
+    if (value === null || value === undefined || value === "") return "";
+    if (typeof value === "number") return value.toString();
+    return t(`fieldValues.${value}`, { defaultValue: value });
+  };
   const officeId = parseInt(sessionStorage.getItem("OfficeId") || "1");
 
   // ── Role detection ──────────────────────────────────────────────────────
@@ -553,6 +585,8 @@ export default function PropertyForm({
   const isLeasedOutRights =
     selectedUsageRightObj?.name?.toLowerCase() === "leased-out rights" ||
     (selectedUsageRightObj as any)?.usageRight?.toLowerCase() === "leased-out rights";
+
+  const unitLabelKey = (unit: string) => (unit === "kattha" ? "katha" : unit);
 
   useEffect(() => {
     if (isLeasedOutRights) {
@@ -861,8 +895,8 @@ export default function PropertyForm({
                                     options={allOfficeList}
                                     value={field.value ?? ""}
                                     onChange={(v) => field.onChange(v || "")}
-                                    getLabel={(item) => item.name || (item as any).office || ""}
-                                    placeholder="Select Office"
+                                    getLabel={(item) => translateDisplayValue(item.name || (item as any).office)}
+                                    placeholder={t("property.selectOffice", { defaultValue: "Select Office" })}
                                     disabled={loading || isLoadingAllOffices}
                                     isLoading={isLoadingAllOffices}
                                   />
@@ -886,8 +920,8 @@ export default function PropertyForm({
                                   options={propertyTypeList}
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
-                                  getLabel={(item) => item.propertyType}
-                                  placeholder="Select Property Type"
+                                  getLabel={(item) => translateDisplayValue(item.propertyType)}
+                                  placeholder={t("property.selectPropertyType", { defaultValue: "Select Property Type" })}
                                   disabled={loading || isLoadingPropertyType}
                                   isLoading={isLoadingPropertyType}
                                 />
@@ -915,8 +949,8 @@ export default function PropertyForm({
                                       form.setValue("localbody", "");
                                     }
                                   }}
-                                  getLabel={(item) => item.name || item.province}
-                                  placeholder="Select Province"
+                                  getLabel={(item) => translateDisplayValue(item.name || item.province)}
+                                  placeholder={t("property.selectProvince", { defaultValue: "Select Province" })}
                                   disabled={loading || isLoadingProvince}
                                   isLoading={isLoadingProvince}
                                 />
@@ -941,8 +975,8 @@ export default function PropertyForm({
                                     field.onChange(v || "");
                                     if (!v) form.setValue("localbody", "");
                                   }}
-                                  getLabel={(item) => item.name || (item as any).district}
-                                  placeholder="Select District"
+                                  getLabel={(item) => translateDisplayValue(item.name || (item as any).district)}
+                                  placeholder={t("property.selectDistrict", { defaultValue: "Select District" })}
                                   disabled={loading || isLoadingDistrict}
                                   isLoading={isLoadingDistrict}
                                 />
@@ -964,8 +998,8 @@ export default function PropertyForm({
                                   options={localbodyList}
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
-                                  getLabel={(item) => item.name || (item as any).localbody}
-                                  placeholder="Select Local Body"
+                                  getLabel={(item) => translateDisplayValue(item.name || (item as any).localbody)}
+                                  placeholder={t("property.selectLocalBody", { defaultValue: "Select Local Body" })}
                                   disabled={loading || isLoadingLocalbody}
                                   isLoading={isLoadingLocalbody}
                                 />
@@ -1006,8 +1040,8 @@ export default function PropertyForm({
                                   options={geographicRegionList}
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
-                                  getLabel={(item) => item.name || (item as any).geographicRegion}
-                                  placeholder="Select Region"
+                                  getLabel={(item) => translateDisplayValue(item.name || (item as any).geographicRegion)}
+                                  placeholder={t("property.selectRegion", { defaultValue: "Select Region" })}
                                   disabled={loading || isLoadingGeographicRegion}
                                   isLoading={isLoadingGeographicRegion}
                                 />
@@ -1022,7 +1056,7 @@ export default function PropertyForm({
                           <FormField control={form.control} name="noOfFloor" render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
-                                {t("property.noOfFloor")} <span className="text-red-500">*</span>
+                                {t("property.noOfFloor", { defaultValue: "No. of Floors" })} <span className="text-red-500">*</span>
                               </FormLabel>
                               <FormControl>
                                 <Input
@@ -1031,7 +1065,7 @@ export default function PropertyForm({
                                   min="0"
                                   value={field.value ?? ""}
                                   onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
-                                  placeholder="e.g. 3"
+                                  placeholder={t("property.floorPlaceholder", { defaultValue: "e.g. 3" })}
                                   disabled={loading}
                                   className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
                                 />
@@ -1052,7 +1086,7 @@ export default function PropertyForm({
                                 {...field}
                                 value={field.value ?? ""}
                                 onChange={(e) => field.onChange(e.target.value || "")}
-                                placeholder="e.g. 4529-B"
+                                placeholder={t("property.kittaPlaceholder", { defaultValue: "e.g. 4529-B" })}
                                 disabled={loading}
                                 className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white transition-all shadow-none"
                               />
@@ -1154,8 +1188,8 @@ export default function PropertyForm({
                                   options={legalStatusList}
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
-                                  getLabel={(item) => item.name || (item as any).legalStatus}
-                                  placeholder="Select Legal Status"
+                                  getLabel={(item) => translateDisplayValue(item.name || (item as any).legalStatus)}
+                                  placeholder={t("property.selectLegalStatus", { defaultValue: "Select Legal Status" })}
                                   disabled={loading}
                                 />
                               </FormControl>
@@ -1181,14 +1215,14 @@ export default function PropertyForm({
                         {/* Terai */}
                         <section className="space-y-4">
                           <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-widest">Terai</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-widest">{t("property.terai")}</span>
                             <h3 className="text-sm font-semibold text-gray-600">{t("property.bigha")} . {t("property.katha")} . {t("property.dhur")}</h3>
                           </div>
                           <div className="grid grid-cols-3 gap-4">
                             {(["bigha", "kattha", "dhur"] as const).map((unit) => (
                               <FormField key={unit} control={form.control} name={unit} render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">{t("property." + unit)}</FormLabel>
+                                  <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">{t(`property.${unitLabelKey(unit)}`)}</FormLabel>
                                   <FormControl>
                                     <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("terai", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
                                   </FormControl>
@@ -1202,14 +1236,14 @@ export default function PropertyForm({
                         {/* Hilly */}
                         <section className="space-y-4">
                           <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 text-[10px] font-bold uppercase tracking-widest">Hilly</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 text-[10px] font-bold uppercase tracking-widest">{t("property.hilly")}</span>
                             <h3 className="text-sm font-semibold text-gray-600">{t("property.ropani")} . {t("property.aana")} . {t("property.paisa")} . {t("property.daam")}</h3>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {(["ropani", "aana", "paisa", "daam"] as const).map((unit) => (
                               <FormField key={unit} control={form.control} name={unit} render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">{unit.charAt(0).toUpperCase() + unit.slice(1)}</FormLabel>
+                                  <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">{t(`property.${unit}`)}</FormLabel>
                                   <FormControl>
                                     <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("hilly", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
                                   </FormControl>
@@ -1223,13 +1257,13 @@ export default function PropertyForm({
                         {/* Metric */}
                         <section className="space-y-4">
                           <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-widest">Metric</span>
-                            <h3 className="text-sm font-semibold text-gray-600">Square Meters · Square Feet</h3>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-widest">{t("property.metric")}</span>
+                            <h3 className="text-sm font-semibold text-gray-600">{t("property.squareMetersAndSquareFeet")}</h3>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <FormField control={form.control} name="areaInSqMeters" render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">Area (m²) <span className="text-red-500">*</span></FormLabel>
+                                <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">{t("property.area(m2)")} <span className="text-red-500">*</span></FormLabel>
                                 <FormControl>
                                   <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} onChange={makeNumberHandler("sqm", field.onChange)} placeholder="0.00" className="text-center bg-gray-50 border-gray-200 h-12 rounded-xl font-bold text-gray-700" />
                                 </FormControl>
@@ -1238,7 +1272,7 @@ export default function PropertyForm({
                             )} />
                             <FormField control={form.control} name="areaInSqft" render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">Area (sq ft) <span className="text-xs text-gray-300 normal-case font-normal">auto</span></FormLabel>
+                                <FormLabel className="text-[10px] uppercase text-gray-400 font-bold">{t("property.area(ft2)")} <span className="text-xs text-gray-300 normal-case font-normal">{t("common.auto")}</span></FormLabel>
                                 <FormControl>
                                   <Input {...field} type="number" min="0" step="any" value={field.value ?? ""} readOnly tabIndex={-1} placeholder="0.00" className="text-center bg-gray-100 border-gray-200 h-12 rounded-xl font-bold text-gray-500 cursor-not-allowed" />
                                 </FormControl>
@@ -1252,7 +1286,7 @@ export default function PropertyForm({
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
                           <FormField control={form.control} name="latitude" render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Latitude</FormLabel>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.latitude")}</FormLabel>
                               <FormControl>
                                 <Input {...field} value={field.value ?? 0} onChange={(e) => field.onChange(e.target.value || 0)} disabled={loading} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
                               </FormControl>
@@ -1261,7 +1295,7 @@ export default function PropertyForm({
                           )} />
                           <FormField control={form.control} name="longitude" render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Longitude</FormLabel>
+                              <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">{t("property.longitude")}</FormLabel>
                               <FormControl>
                                 <Input {...field} value={field.value ?? 0} onChange={(e) => field.onChange(e.target.value || 0)} disabled={loading} className="bg-gray-50 border-gray-200 h-12 rounded-xl focus:bg-white" />
                               </FormControl>
@@ -1276,7 +1310,7 @@ export default function PropertyForm({
                     <div className="space-y-6">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
-                        <h3 className="text-base font-bold text-gray-800 tracking-tight">Tax & Valuation</h3>
+                        <h3 className="text-base font-bold text-gray-800 tracking-tight">{t("property.taxAndValuation")}</h3>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                         <FormField control={form.control} name="valuation" render={({ field }) => (
@@ -1300,7 +1334,7 @@ export default function PropertyForm({
                         <FormField control={form.control} name="taxAmount" render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
-                              Tax Amount <span className="text-red-500">*</span>
+                              {t("property.taxAmount")} <span className="text-red-500">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -1340,7 +1374,7 @@ export default function PropertyForm({
                                     value={field.value}
                                     onChange={(v) => field.onChange(v || "")}
                                     getLabel={(item) => item.name || (item as any).ownershipType}
-                                    placeholder="Select Ownership"
+                                    placeholder={t("property.selectOwnership")}
                                     disabled={loading}
                                   />
                                 </FormControl>
@@ -1362,7 +1396,7 @@ export default function PropertyForm({
                                   value={field.value}
                                   onChange={(v) => field.onChange(v || "")}
                                   getLabel={(item) => item.name || (item as any).usageRight}
-                                  placeholder="Select Usage Rights"
+                                    placeholder={t("property.selectUsageRights")}
                                   disabled={loading}
                                 />
                               </FormControl>
@@ -1384,7 +1418,7 @@ export default function PropertyForm({
                                     value={field.value}
                                     onChange={(v) => field.onChange(v || "")}
                                     getLabel={(item) => item.name || (item as any).usageType}
-                                    placeholder="Select Usage Type"
+                                    placeholder={t("property.selectUsageType")}
                                     disabled={loading}
                                   />
                                 </FormControl>
@@ -1414,7 +1448,7 @@ export default function PropertyForm({
                       className="h-12 px-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 transition-all active:scale-95"
                     >
                       {loading
-                        ? "Saving..."
+                        ? t("common.saving")
                         : mode === "edit"
                           ? t("common.update")
                           : t("common.save")}

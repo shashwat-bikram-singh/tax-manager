@@ -24,10 +24,11 @@ import LeaderboardPage from "./components/dashboard/LeaderboardPage";
 import SummaryReport from "./components/report/summary-report";
 import AnalyticEngine from "./components/report/analytic-engine";
 import { jwtDecode } from "jwt-decode";
+import { useAuthStore } from "./store/authStore";
 
 // ─── AUTH HELPERS ─────────────────────────────────────────────────────────────
 function getTokenRole(): string {
-  const token = sessionStorage.getItem("token");
+  const token = useAuthStore.getState().token || sessionStorage.getItem("token");
   if (!token) return "";
   try {
     const decoded: any = jwtDecode(token);
@@ -44,7 +45,7 @@ const AuthenticatedRoute = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("token");
+    const token = useAuthStore.getState().token || sessionStorage.getItem("token");
     setIsAuthenticated(!!token);
     setAuthChecked(true);
   }, []);

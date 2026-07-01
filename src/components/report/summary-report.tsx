@@ -93,17 +93,17 @@ interface Property {
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
-function getStatusBadge(legalStatus: string) {
+function getStatusBadge(legalStatus: string, displayText?: string) {
     const s = legalStatus?.toLowerCase() || "";
     if (s.includes("litigation"))
-        return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-red-100 text-red-600 border border-red-200">Litigation</span>;
+        return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-red-100 text-red-600 border border-red-200">{(displayText ?? legalStatus) || "-"}</span>;
     if (s.includes("encroach"))
-        return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-amber-100 text-amber-600 border border-amber-200">Encroached</span>;
+        return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-amber-100 text-amber-600 border border-amber-200">{(displayText ?? legalStatus) || "-"}</span>;
     if (s.includes("verified & clear"))
-        return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-green-100 text-green-600 border border-green-200">Verified & Clear</span>;
+        return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-green-100 text-green-600 border border-green-200">{(displayText ?? legalStatus) || "-"}</span>;
     if (s.includes("in registration") || s.includes("in-registration"))
-        return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-yellow-100 text-yellow-600 border border-yellow-200">In Registration</span>;
-    return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-green-100 text-green-600 border border-green-200">{legalStatus || "Normal"}</span>;
+        return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-yellow-100 text-yellow-600 border border-yellow-200">{(displayText ?? legalStatus) || "-"}</span>;
+    return <span className="px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-widest bg-green-100 text-green-600 border border-green-200">{(displayText ?? legalStatus) || "-"}</span>;
 }
 
 function getDocuments(docString?: string | null): PropertyDocument[] {
@@ -124,14 +124,23 @@ function getDocuments(docString?: string | null): PropertyDocument[] {
 
 // ─── COMPONENT ───────────────────────────────────────────────────────────────
 export default function SummaryReport() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const numberLocale = i18n.language?.startsWith("np") ? "ne-NP" : "en-US";
+    const formatNumber = (value: number) => new Intl.NumberFormat(numberLocale).format(value);
     const translateValue = (value?: string | number | null) => {
         if (value === null || value === undefined || value === "") return "-";
-        if (typeof value === "number") return value;
+        if (typeof value === "number") return formatNumber(value);
         return t(`fieldValues.${value}`, { defaultValue: value });
     };
     const { token } = useAuthStore();
-    const decoded: any = token ? jwtDecode(token) : {};
+    const decoded: any = (() => {
+        if (!token) return {};
+        try {
+            return jwtDecode(token);
+        } catch {
+            return {};
+        }
+    })();
     const Role = decoded.Role || "User";
 
     const { items: propertyData, isLoadingItems } = useFetchAll<Property>("/api/property", ["property"]);
@@ -159,12 +168,25 @@ export default function SummaryReport() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
 
+    const columnLabelMap: Record<string, string> = {
+        id: t("common.sn"),
+        name: t("property.propertyName"),
+        propertyType: t("property.propertyType"),
+        province: t("property.province"),
+        landArea: t("property.area"),
+        buildingArea: t("property.area"),
+        legalStatus: t("property.legalStatus"),
+        usageName: t("property.usageName"),
+        ownershipType: t("property.ownershipType"),
+        actions: t("property.actions"),
+    };
+
     const getAreaDisplay = (item: Property) => {
         const land = item.landArea;
         const building = item.buildingArea;
-        if (land && building) return `${land} sq.m / ${building} sq.m`;
-        if (land) return `${land} sq.m`;
-        if (building) return `${building} sq.m`;
+        if (land && building) return `${formatNumber(land)} ${t("summaryReport.sqmShort")} / ${formatNumber(building)} ${t("summaryReport.sqmShort")}`;
+        if (land) return `${formatNumber(land)} ${t("summaryReport.sqmShort")}`;
+        if (building) return `${formatNumber(building)} ${t("summaryReport.sqmShort")}`;
         return "-";
     };
 
@@ -218,7 +240,7 @@ export default function SummaryReport() {
     const closeModal = () => { setIsModalOpen(false); setSelectedFileUrl(null); };
 
     const handleViewDocumentById = async (docId: number) => {
-        if (!docId) return alert("No valid document ID provided.");
+        if (!docId) return alert(t("summaryReport.noValidDocumentId"));
         setIsFileLoading(true);
         try {
             const response = await axiosInstance.get<ApiResponseViewFile>(`/api/view-document?id=${docId}`);
@@ -226,11 +248,11 @@ export default function SummaryReport() {
                 setSelectedFileUrl(response.data.url);
                 setIsModalOpen(true);
             } else {
-                alert("No file URL found for this document.");
+                alert(t("summaryReport.noFileUrlFound"));
             }
         } catch (error) {
             console.error(error);
-            alert("Failed to fetch file.");
+            alert(t("summaryReport.failedToFetchFile"));
         } finally {
             setIsFileLoading(false);
         }
@@ -246,7 +268,7 @@ export default function SummaryReport() {
             const a = document.createElement("a");
             a.style.display = "none";
             a.href = url;
-            a.download = selectedFileUrl.split("/").pop()?.split("?")[0] || "document.pdf";
+            a.download = selectedFileUrl.split("/").pop()?.split("?")[0] || t("summaryReport.documentFileName");
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -260,11 +282,11 @@ export default function SummaryReport() {
         if (propertyToDelete?.id) {
             try {
                 await deleteProperty.mutateAsync(propertyToDelete.id);
-                toast.success("Property deleted successfully");
+                toast.success(t("property.deleteSuccess"));
                 setDeleteDialogOpen(false);
                 setPropertyToDelete(null);
             } catch {
-                toast.error("Failed to delete property");
+                toast.error(t("property.deleteError"));
             }
         }
     };
@@ -290,7 +312,7 @@ export default function SummaryReport() {
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
             <div className="min-h-[24px] flex items-center">
                 {isBadge && value ? (
-                    getStatusBadge(String(value))
+                    getStatusBadge(String(value), t(`fieldValues.${String(value)}`, { defaultValue: String(value) }))
                 ) : (
                     <span className="text-sm font-medium text-slate-800">
                         {value !== null && value !== undefined && value !== ""
@@ -325,7 +347,7 @@ export default function SummaryReport() {
                                 <Input
                                     ref={searchInputRef}
                                     type="search"
-                                    placeholder="Search"
+                                    placeholder={t("common.search")}
                                     className="pl-9 w-full bg-slate-50 border-2 focus:bg-white focus:ring-blue-500 focus:border-blue-500 transition-all"
                                     value={searchTerm}
                                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -339,7 +361,7 @@ export default function SummaryReport() {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-40">
-                                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                                <DropdownMenuLabel>{t("summaryReport.toggleColumns")}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 {Object.entries(columnVisibility).map(([key, visible]) => (
                                     <DropdownMenuCheckboxItem
@@ -347,7 +369,7 @@ export default function SummaryReport() {
                                         checked={visible}
                                         onCheckedChange={() => setColumnVisibility({ ...columnVisibility, [key]: !visible })}
                                     >
-                                        {key.charAt(0).toUpperCase() + key.slice(1)}
+                                        {columnLabelMap[key] ?? key}
                                     </DropdownMenuCheckboxItem>
                                 ))}
                             </DropdownMenuContent>
@@ -364,7 +386,7 @@ export default function SummaryReport() {
                                     onClick={() => handleSort("id")}
                                 >
                                     <div className="flex items-center justify-center gap-1">
-                                        ID{" "}
+                                        {t("common.sn")} {" "}
                                         {sortConfig.key === "id"
                                             ? sortConfig.direction === "asc"
                                                 ? <ArrowUp className="w-3 h-3 text-blue-600" />
@@ -401,7 +423,7 @@ export default function SummaryReport() {
                                     {columnVisibility.propertyType && <TableCell className="text-sm text-slate-600 py-2">{translateValue(item.propertyType)}</TableCell>}
                                     {columnVisibility.province && <TableCell className="text-sm text-slate-600 py-4">{translateValue(item.province)}</TableCell>}
                                     {(columnVisibility.landArea || columnVisibility.buildingArea) && <TableCell className="text-sm text-slate-600 py-2">{getAreaDisplay(item)}</TableCell>}
-                                    {columnVisibility.legalStatus && <TableCell className="text-sm text-slate-600 py-2">{getStatusBadge(item.legalStatus ?? "")}</TableCell>}
+                                    {columnVisibility.legalStatus && <TableCell className="text-sm text-slate-600 py-2">{getStatusBadge(item.legalStatus ?? "", translateValue(item.legalStatus) as string)}</TableCell>}
                                     {columnVisibility.usageName && <TableCell className="text-sm text-slate-600 py-2">{translateValue(item.usageName)}</TableCell>}
                                     {columnVisibility.ownershipType && <TableCell className="text-sm text-slate-600 py-2">{translateValue(item.ownershipType)}</TableCell>}
                                     {/* {columnVisibility.actions && (
@@ -414,9 +436,9 @@ export default function SummaryReport() {
                                                     onClick={() => {
                                                         const latestDocId = getLatestDocumentId(item);
                                                         if (latestDocId) handleViewDocumentById(latestDocId);
-                                                        else alert("No documents attached to this property.");
+                                                        else alert(t("summaryReport.noDocumentsAttached"));
                                                     }}
-                                                    title="View Latest Document"
+                                                    title={t("summaryReport.viewLatestDocument")}
                                                 >
                                                     <Eye size={16} strokeWidth={2} />
                                                 </Button>
@@ -430,8 +452,8 @@ export default function SummaryReport() {
                                 <TableCell colSpan={Object.values(columnVisibility).filter(Boolean).length + 1} className="h-64 text-center">
                                     <div className="flex flex-col items-center justify-center text-slate-400">
                                         <FileX className="w-12 h-12 mb-3 opacity-50" />
-                                        <p className="text-sm font-medium">No properties found.</p>
-                                        <p className="text-xs mt-1">Try adjusting your search or filters.</p>
+                                        <p className="text-sm font-medium">{t("property.noPropertiesFound")}</p>
+                                        <p className="text-xs mt-1">{t("property.tryAdjustingYourSearchOrFilters")}</p>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -443,27 +465,30 @@ export default function SummaryReport() {
             {/* Pagination */}
             <div className="hidden sm:flex items-center justify-between px-2 pt-4">
                 <div className="text-sm text-slate-500">
-                    Showing{" "}
-                    <span className="font-medium text-slate-900">{filteredProperties.length === 0 ? 0 : (currentPage - 1) * entriesPerPage + 1}</span>
-                    {" "}to{" "}
-                    <span className="font-medium text-slate-900">{Math.min(currentPage * entriesPerPage, filteredProperties.length)}</span>
-                    {" "}of{" "}
-                    <span className="font-medium text-slate-900">{filteredProperties.length}</span> results
+                    {t("summaryReport.showing")} {" "}
+                    <span className="font-medium text-slate-900">{formatNumber(filteredProperties.length === 0 ? 0 : (currentPage - 1) * entriesPerPage + 1)}</span>
+                    {" "}{t("summaryReport.to")} {" "}
+                    <span className="font-medium text-slate-900">{formatNumber(Math.min(currentPage * entriesPerPage, filteredProperties.length))}</span>
+                    {" "}{t("summaryReport.of")} {" "}
+                    <span className="font-medium text-slate-900">{formatNumber(filteredProperties.length)}</span> {t("summaryReport.results")}
                 </div>
                 <div className="flex items-center space-x-6 lg:space-x-8">
                     <div className="flex items-center space-x-2">
-                        <p className="text-sm font-medium text-slate-700">Rows per page</p>
+                        <p className="text-sm font-medium text-slate-700">{t("summaryReport.rowsPerPage")}</p>
                         <Select value={entriesPerPage.toString()} onValueChange={(v) => { setEntriesPerPage(Number(v)); setCurrentPage(1); }}>
                             <SelectTrigger className="h-8 w-[70px]"><SelectValue placeholder={entriesPerPage} /></SelectTrigger>
+                            <SelectTrigger className="h-8 w-[70px]"><SelectValue placeholder={formatNumber(entriesPerPage)} /></SelectTrigger>
                             <SelectContent side="top">
-                                {[10, 20, 30, 40, 50].map((size) => <SelectItem key={size} value={size.toString()}>{size}</SelectItem>)}
+                                {[10, 20, 30, 40, 50].map((size) => <SelectItem key={size} value={size.toString()}>{formatNumber(size)}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
                     <div className="flex items-center space-x-2">
                         <div className="flex w-[100px] items-center justify-center text-sm font-medium text-slate-700">
-                            Page {currentPage} of {totalPages}
+                            {t("summaryReport.pageOf", { page: formatNumber(currentPage), totalPages: formatNumber(totalPages) })}
                         </div>
+                                                            {columnVisibility.id && <TableCell className="text-center text-sm text-slate-500 font-medium py-2">{formatNumber(item.id)}</TableCell>}
+                                                            <p className="text-xs text-slate-500">{t("summaryReport.id")}: {formatNumber(selectedProperty.id)} • {translateValue(selectedProperty.propertyType)}</p>
                         <div className="flex items-center space-x-1">
                             <Button variant="outline" className="hidden h-8 w-8 p-0 lg:flex" onClick={() => goToPage(1)} disabled={currentPage === 1}><ChevronsLeft className="h-4 w-4" /></Button>
                             <Button variant="outline" className="h-8 w-8 p-0" onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /></Button>
@@ -478,11 +503,11 @@ export default function SummaryReport() {
             {deleteDialogOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-                        <h3 className="text-lg font-semibold text-slate-900">Delete Property</h3>
-                        <p className="mt-2 text-sm text-slate-500">Are you sure you want to delete this property? This action cannot be undone.</p>
+                        <h3 className="text-lg font-semibold text-slate-900">{t("summaryReport.deleteProperty")}</h3>
+                        <p className="mt-2 text-sm text-slate-500">{t("summaryReport.deletePropertyMessage")}</p>
                         <div className="mt-4 flex justify-end gap-2">
-                            <Button variant="outline" onClick={handleCancel}>Cancel</Button>
-                            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+                            <Button variant="outline" onClick={handleCancel}>{t("common.cancel")}</Button>
+                            <Button variant="destructive" onClick={handleDelete}>{t("common.delete")}</Button>
                         </div>
                     </div>
                 </div>
@@ -498,7 +523,7 @@ export default function SummaryReport() {
                                 <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><Building2 size={20} /></div>
                                 <div>
                                     <h2 className="text-lg font-bold text-slate-800">{selectedProperty.name}</h2>
-                                    <p className="text-xs text-slate-500">ID: {selectedProperty.id} • {selectedProperty.propertyType}</p>
+                                    <p className="text-xs text-slate-500">{t("summaryReport.id")}: {selectedProperty.id} • {translateValue(selectedProperty.propertyType)}</p>
                                 </div>
                             </div>
                             <button onClick={closeDetailsModal} className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-all">
@@ -515,7 +540,7 @@ export default function SummaryReport() {
                                     <h3 className="font-bold text-sm uppercase tracking-wider">{t('summaryReport.locationDetails')}</h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
-                                    <DetailRow label={t("summaryReport.Province", { defaultValue: "Province" })} value={translateValue(selectedProperty.province)} />
+                                    <DetailRow label={t("summaryReport.province", { defaultValue: "Province" })} value={translateValue(selectedProperty.province)} />
                                     <DetailRow label={t("summaryReport.district", { defaultValue: "District" })} value={translateValue(selectedProperty.district)} />
                                     <DetailRow label={t("summaryReport.localBody", { defaultValue: "Local Body" })} value={translateValue(selectedProperty.localBody)} />
                                     <DetailRow label={t("summaryReport.wardNo", { defaultValue: "Ward No" })} value={selectedProperty.wardNo} />
@@ -586,7 +611,7 @@ export default function SummaryReport() {
                                 <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                                     <div className="flex items-center gap-2 mb-4 text-slate-700">
                                         <FileText size={16} className="text-red-500" />
-                                        <h3 className="font-bold text-sm uppercase tracking-wider">Attached Documents</h3>
+                                        <h3 className="font-bold text-sm uppercase tracking-wider">{t("summaryReport.attachedDocuments")}</h3>
                                     </div>
                                     <div className="space-y-2">
                                         {getDocuments(selectedProperty.document).map((doc) => (
@@ -626,13 +651,13 @@ export default function SummaryReport() {
                         <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-slate-50">
                             <div className="flex items-center gap-3">
                                 <div className="bg-red-100 p-2 rounded-lg">
-                                    <span className="text-red-600 font-bold text-xs">PDF</span>
+                                    <span className="text-red-600 font-bold text-xs">{t("summaryReport.pdfBadge")}</span>
                                 </div>
                                 <div className="overflow-hidden">
                                     <h3 className="text-sm font-bold text-slate-800 truncate max-w-[200px] md:max-w-md">
-                                        {selectedFileUrl.split("/").pop()?.split("?")[0] || "Document Preview"}
+                                        {selectedFileUrl.split("/").pop()?.split("?")[0] || t("summaryReport.documentPreview")}
                                     </h3>
-                                    <p className="text-[10px] text-slate-400 italic font-medium">Secure Cloud Viewer</p>
+                                    <p className="text-[10px] text-slate-400 italic font-medium">{t("summaryReport.secureCloudViewer")}</p>
                                 </div>
                             </div>
                             <button
@@ -654,7 +679,7 @@ export default function SummaryReport() {
                                     >
                                         <div className="flex flex-col items-center justify-center h-full p-4 text-slate-600 bg-slate-50">
                                             <p className="mb-4 font-semibold text-sm">
-                                                Your browser doesn't support embedded PDFs.
+                                                {t("summaryReport.pdfNotSupported")}
                                             </p>
                                             <a
                                                 href={selectedFileUrl}
@@ -662,19 +687,19 @@ export default function SummaryReport() {
                                                 rel="noopener noreferrer"
                                                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold text-xs shadow transition-all"
                                             >
-                                                Open PDF in New Tab
+                                                {t("summaryReport.openPdfInNewTab")}
                                             </a>
                                         </div>
                                     </object>
                                 </div>
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center p-4 bg-slate-300 overflow-auto">
-                                    <img
-                                        src={selectedFileUrl}
-                                        alt="Preview"
-                                        className="max-w-full max-h-full object-contain rounded-lg shadow-xl bg-white p-1"
-                                        onError={(e) => { e.currentTarget.src = "https://placehold.co/600x400?text=Preview+Not+Available"; }}
-                                    />
+                                        <img
+                                            src={selectedFileUrl}
+                                            alt={t("summaryReport.previewAlt")}
+                                            className="max-w-full max-h-full object-contain rounded-lg shadow-xl bg-white p-1"
+                                            onError={(e) => { e.currentTarget.src = `https://placehold.co/600x400?text=${encodeURIComponent(t("summaryReport.previewNotAvailable"))}`; }}
+                                        />
                                 </div>
                             )}
                         </div>
@@ -685,7 +710,7 @@ export default function SummaryReport() {
                                 onClick={closeModal}
                                 className="px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-50 rounded-lg transition"
                             >
-                                Close
+                                {t("common.close")}
                             </button>
                             <div className="flex items-center gap-4">
                                 {Role === "Admin" ? (
@@ -694,11 +719,11 @@ export default function SummaryReport() {
                                         onClick={handleDownload}
                                         className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 transition-all active:scale-95"
                                     >
-                                        <Download className="h-4 w-4" /> Download Document
+                                        <Download className="h-4 w-4" /> {t("summaryReport.downloadDocument")}
                                     </button>
                                 ) : (
                                     <div className="flex items-center gap-2 text-slate-500 bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
-                                        <span className="text-[10px] font-bold uppercase tracking-widest italic">View Only Mode</span>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest italic">{t("summaryReport.viewOnlyMode")}</span>
                                     </div>
                                 )}
                             </div>

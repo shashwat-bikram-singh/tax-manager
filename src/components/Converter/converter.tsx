@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+
 // ─── Conversion Constants ─────────────────────────────────────────────────────
 const TERAI_BIGHA_TO_SQM = 6772.63;
 const TERAI_KATTHA_TO_SQM = TERAI_BIGHA_TO_SQM / 20;
@@ -13,6 +15,7 @@ const SQM_TO_SQFT = 10.7639;
 function calcTerai(bigha = 0, kattha = 0, dhur = 0) {
     return (bigha * TERAI_BIGHA_TO_SQM) + (kattha * TERAI_KATTHA_TO_SQM) + (dhur * TERAI_DHUR_TO_SQM);
 }
+
 function calcHilly(ropani = 0, aana = 0, paisa = 0, daam = 0) {
     return (ropani * HILLY_ROPANI_TO_SQM) + (aana * HILLY_AANA_TO_SQM) + (paisa * HILLY_PAISA_TO_SQM) + (daam * HILLY_DAAM_TO_SQM);
 }
@@ -31,7 +34,6 @@ function convertSqmToTerai(sqm: number) {
     return { bigha, kattha, dhur };
 }
 
-
 function convertSqmToHilly(sqm: number) {
     let remaining = sqm;
 
@@ -49,11 +51,18 @@ function convertSqmToHilly(sqm: number) {
     return { ropani, aana, paisa, daam };
 }
 
-
-
-
 // ─── Measurement Converter Card ───────────────────────────────────────────────
 export function MeasurementConverter() {
+    const { t, i18n } = useTranslation();
+    const activeLanguage = i18n.resolvedLanguage || i18n.language || "en";
+    const isNepali = activeLanguage.startsWith("np");
+    const numberLocale = isNepali ? "ne-NP" : "en-US";
+    const formatNumber = (value: number, digits = 2) =>
+        new Intl.NumberFormat(numberLocale, {
+            minimumFractionDigits: digits,
+            maximumFractionDigits: digits,
+        }).format(value);
+
     const [measureType, setMeasureType] = useState<"terai" | "hilly">("terai");
     const [terai, setTerai] = useState({ bigha: "", kattha: "", dhur: "" });
     const [hilly, setHilly] = useState({ ropani: "", aana: "", paisa: "", daam: "" });
@@ -67,6 +76,7 @@ export function MeasurementConverter() {
         : calcHilly(Number(hilly.ropani), Number(hilly.aana), Number(hilly.paisa), Number(hilly.daam));
 
     const sqft = sqm * SQM_TO_SQFT;
+    const getLabelKey = (unit: string) => (unit === "kattha" ? "katha" : unit);
 
     return (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
@@ -75,7 +85,7 @@ export function MeasurementConverter() {
                 <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-white text-base">straighten</span>
                 </div>
-                <h3 className="text-sm font-bold text-gray-900 tracking-tight">Measurement Converter</h3>
+                <h3 className="text-sm font-bold text-gray-900 tracking-tight">{t("converter.title")}</h3>
             </div>
 
             {/* Region Toggle */}
@@ -84,12 +94,12 @@ export function MeasurementConverter() {
                     type="button"
                     onClick={() => setMeasureType("terai")}
                     className={`flex-1 py-1.5 rounded-md transition-all ${measureType === "terai" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-                >Terai (B·K·D)</button>
+                >{t("converter.terai")}</button>
                 <button
                     type="button"
                     onClick={() => setMeasureType("hilly")}
                     className={`flex-1 py-1.5 rounded-md transition-all ${measureType === "hilly" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-                >Hilly (R·A·P·D)</button>
+                >{t("converter.hilly")}</button>
             </div>
 
             {/* Mode Toggle */}
@@ -100,7 +110,7 @@ export function MeasurementConverter() {
                     className={`flex-1 py-1.5 rounded-md transition-all ${mode === "forward" ? "bg-indigo-600 text-white shadow-sm" : "text-indigo-500 hover:text-indigo-700"
                         }`}
                 >
-                    Standard → m²
+                    {t("converter.standardToSqm")}
                 </button>
                 <button
                     type="button"
@@ -108,7 +118,7 @@ export function MeasurementConverter() {
                     className={`flex-1 py-1.5 rounded-md transition-all ${mode === "reverse" ? "bg-indigo-600 text-white shadow-sm" : "text-indigo-500 hover:text-indigo-700"
                         }`}
                 >
-                    m² → Standard
+                    {t("converter.sqmToStandard")}
                 </button>
             </div>
 
@@ -119,14 +129,14 @@ export function MeasurementConverter() {
                         <div className="grid grid-cols-3 gap-2">
                             {(["bigha", "kattha", "dhur"] as const).map((unit) => (
                                 <div key={unit}>
-                                    <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{unit}</label>
+                                    <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{t(`property.${getLabelKey(unit)}`)}</label>
                                     <input
                                         type="number"
                                         min="0"
                                         value={terai[unit]}
                                         onChange={(e) => setTerai((p) => ({ ...p, [unit]: e.target.value }))}
                                         className="w-full text-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                                        placeholder="0"
+                                        placeholder={isNepali ? "०" : "0"}
                                     />
                                 </div>
                             ))}
@@ -135,14 +145,14 @@ export function MeasurementConverter() {
                         <div className="grid grid-cols-4 gap-1.5">
                             {(["ropani", "aana", "paisa", "daam"] as const).map((unit) => (
                                 <div key={unit}>
-                                    <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{unit.charAt(0).toUpperCase() + unit.slice(1)}</label>
+                                    <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{t(`property.${unit}`)}</label>
                                     <input
                                         type="number"
                                         min="0"
                                         value={hilly[unit]}
                                         onChange={(e) => setHilly((p) => ({ ...p, [unit]: e.target.value }))}
                                         className="w-full text-center bg-gray-50 border border-gray-200 rounded-lg px-1 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                                        placeholder="0"
+                                        placeholder={isNepali ? "०" : "0"}
                                     />
                                 </div>
                             ))}
@@ -150,13 +160,13 @@ export function MeasurementConverter() {
                     )}
 
                     {/* Standardized Area Result */}
-                    <div className="bg-[#0f2646] rounded-xl p-4 text-white">
-                        <p className="text-[10px] uppercase tracking-widest text-blue-200 font-semibold mb-1">Standardized Area</p>
-                        <p className="text-3xl font-black tracking-tight">{sqm.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                        <p className="text-blue-300 text-xs mt-0.5">Square Meters (m²)</p>
-                        <div className="mt-3 pt-3 border-t border-white/10">
-                            <p className="text-xl font-bold">{sqft.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                            <p className="text-blue-300 text-xs mt-0.5">Square Feet (sq ft)</p>
+                    <div className="bg-blue-100 rounded-xl p-4 text-blue-950">
+                        <p className="text-[10px] uppercase tracking-widest text-blue-700 font-semibold mb-1">{t("converter.standardizedArea")}</p>
+                        <p className="text-3xl font-black tracking-tight">{formatNumber(sqm, 2)}</p>
+                        <p className="text-blue-700 text-xs mt-0.5">{t("converter.squareMeters")}</p>
+                        <div className="mt-3 pt-3 border-t border-blue-200">
+                            <p className="text-xl font-bold">{formatNumber(sqft, 2)}</p>
+                            <p className="text-blue-700 text-xs mt-0.5">{t("converter.squareFeet")}</p>
                         </div>
                     </div>
                 </>
@@ -166,10 +176,10 @@ export function MeasurementConverter() {
             {mode === "reverse" && (
                 <div className="space-y-3">
                     <div>
-                        <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">Enter Square Meters</label>
+                        <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{t("converter.enterSquareMeters")}</label>
                         <input
                             type="number"
-                            placeholder="e.g. 500"
+                            placeholder={t("converter.squareMeterPlaceholder")}
                             value={sqmInput}
                             onChange={(e) => setSqmInput(e.target.value)}
                             className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -178,30 +188,28 @@ export function MeasurementConverter() {
 
                     <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
                         <p className="text-[10px] uppercase tracking-widest text-indigo-400 font-semibold mb-2">
-                            {measureType === "terai" ? "Terai Equivalent" : "Hilly Equivalent"}
+                            {measureType === "terai" ? t("converter.teraiEquivalent") : t("converter.hillyEquivalent")}
                         </p>
                         {measureType === "terai" ? (
                             <div className="grid grid-cols-3 gap-2 text-center">
-                                <div className="bg-white rounded-lg p-2 border border-indigo-100">
-                                    <p className="text-lg font-black text-indigo-700">{reverseTerai.bigha}</p>
-                                    <p className="text-[10px] text-gray-400 font-semibold uppercase">Bigha</p>
-                                </div>
-                                <div className="bg-white rounded-lg p-2 border border-indigo-100">
-                                    <p className="text-lg font-black text-indigo-700">{reverseTerai.kattha}</p>
-                                    <p className="text-[10px] text-gray-400 font-semibold uppercase">Kattha</p>
-                                </div>
-                                <div className="bg-white rounded-lg p-2 border border-indigo-100">
-                                    <p className="text-lg font-black text-indigo-700">{reverseTerai.dhur.toFixed(2)}</p>
-                                    <p className="text-[10px] text-gray-400 font-semibold uppercase">Dhur</p>
-                                </div>
+                                {[
+                                    { label: t("property.bigha"), val: formatNumber(reverseTerai.bigha, 0) },
+                                    { label: t("property.katha"), val: formatNumber(reverseTerai.kattha, 0) },
+                                    { label: t("property.dhur"), val: formatNumber(reverseTerai.dhur, 2) },
+                                ].map((item) => (
+                                    <div key={item.label} className="bg-white rounded-lg p-2 border border-indigo-100">
+                                        <p className="text-lg font-black text-indigo-700">{item.val}</p>
+                                        <p className="text-[10px] text-gray-400 font-semibold uppercase">{item.label}</p>
+                                    </div>
+                                ))}
                             </div>
                         ) : (
                             <div className="grid grid-cols-4 gap-1.5 text-center">
                                 {[
-                                    { label: "Ropani", val: reverseHilly.ropani },
-                                    { label: "Aana", val: reverseHilly.aana },
-                                    { label: "Paisa", val: reverseHilly.paisa },
-                                    { label: "Daam", val: reverseHilly.daam.toFixed(2) },
+                                    { label: t("property.ropani"), val: formatNumber(reverseHilly.ropani, 0) },
+                                    { label: t("property.aana"), val: formatNumber(reverseHilly.aana, 0) },
+                                    { label: t("property.paisa"), val: formatNumber(reverseHilly.paisa, 0) },
+                                    { label: t("property.daam"), val: formatNumber(reverseHilly.daam, 2) },
                                 ].map((item) => (
                                     <div key={item.label} className="bg-white rounded-lg p-2 border border-indigo-100">
                                         <p className="text-sm font-black text-indigo-700">{item.val}</p>
@@ -217,8 +225,13 @@ export function MeasurementConverter() {
             {/* Conversion note */}
             <div className="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
                 <p className="text-[11px] text-amber-800 leading-snug">
-                    <span className="font-bold">Note:</span>{" "}
-                    1 {measureType === "terai" ? `Bigha = ${TERAI_BIGHA_TO_SQM.toLocaleString()} m²` : `Ropani = ${HILLY_ROPANI_TO_SQM.toLocaleString()} m²`} (1964 standard)
+                    <span className="font-bold">{t("converter.note")}</span>{" "}
+                    {t("converter.noteText", {
+                        one: formatNumber(1, 0),
+                        unit: measureType === "terai" ? t("property.bigha") : t("property.ropani"),
+                        value: formatNumber(measureType === "terai" ? TERAI_BIGHA_TO_SQM : HILLY_ROPANI_TO_SQM, 2),
+                        reference: t("converter.referenceYearNote"),
+                    })}
                 </p>
             </div>
         </div>
